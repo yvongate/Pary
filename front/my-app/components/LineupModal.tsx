@@ -102,49 +102,53 @@ export default function LineupModal({ match, onClose }: LineupModalProps) {
                 Réessayer
               </button>
             </div>
-          ) : lineups?.lineups ? (
+          ) : lineups?.home_lineup || lineups?.away_lineup ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Équipe domicile */}
-              {lineups.lineups.home && (
+              {lineups.home_lineup && (
                 <div className="space-y-4">
                   <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-4">
-                    <h3 className="text-xl font-bold">{lineups.lineups.home.team || match.home_team}</h3>
-                    {lineups.lineups.home.formation && (
+                    <h3 className="text-xl font-bold">{lineups.home_team || match.home_team}</h3>
+                    {lineups.home_formation && (
                       <p className="text-sm text-gray-400 mt-1">
-                        Formation: <span className="text-white font-semibold">{lineups.lineups.home.formation}</span>
+                        Formation: <span className="text-white font-semibold">{lineups.home_formation}</span>
                       </p>
                     )}
                   </div>
 
-                  {lineups.lineups.home.players && renderPlayers(lineups.lineups.home.players, true)}
-                  {lineups.lineups.home.players && renderPlayers(lineups.lineups.home.players, false)}
+                  {lineups.home_lineup.players && renderPlayers(lineups.home_lineup.players, true)}
+                  {lineups.home_lineup.players && renderPlayers(lineups.home_lineup.players, false)}
                 </div>
               )}
 
               {/* Équipe extérieur */}
-              {lineups.lineups.away && (
+              {lineups.away_lineup && (
                 <div className="space-y-4">
                   <div className="bg-orange-500/20 border border-orange-500 rounded-lg p-4">
-                    <h3 className="text-xl font-bold">{lineups.lineups.away.team || match.away_team}</h3>
-                    {lineups.lineups.away.formation && (
+                    <h3 className="text-xl font-bold">{lineups.away_team || match.away_team}</h3>
+                    {lineups.away_formation && (
                       <p className="text-sm text-gray-400 mt-1">
-                        Formation: <span className="text-white font-semibold">{lineups.lineups.away.formation}</span>
+                        Formation: <span className="text-white font-semibold">{lineups.away_formation}</span>
                       </p>
                     )}
                   </div>
 
-                  {lineups.lineups.away.players && renderPlayers(lineups.lineups.away.players, true)}
-                  {lineups.lineups.away.players && renderPlayers(lineups.lineups.away.players, false)}
+                  {lineups.away_lineup.players && renderPlayers(lineups.away_lineup.players, true)}
+                  {lineups.away_lineup.players && renderPlayers(lineups.away_lineup.players, false)}
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-4 text-center">
+              <p className="text-yellow-400">Aucune composition disponible pour ce match</p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        {lineups?.source && (
+        {!loading && !error && (
           <div className="sticky bottom-0 bg-gray-800 p-4 border-t border-gray-700 text-center text-xs text-gray-500">
-            Source: {lineups.source}
+            Les compositions peuvent ne pas être disponibles pour tous les matchs
           </div>
         )}
       </div>
