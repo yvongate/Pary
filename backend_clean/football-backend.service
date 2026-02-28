@@ -1,0 +1,20 @@
+[Unit]
+Description=Football Predictions Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/backend_clean
+Environment="PATH=/var/www/backend_clean/venv/bin"
+Environment="PYTHONPATH=/var/www/backend_clean"
+ExecStart=/var/www/backend_clean/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/var/log/football-backend/output.log
+StandardError=append:/var/log/football-backend/error.log
+
+[Install]
+WantedBy=multi-user.target

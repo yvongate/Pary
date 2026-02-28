@@ -1,0 +1,42 @@
+# Root level gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.Python
+
+# Environment
+.env
+.env.local
+*.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentation archive (ancien docs)
+docs_archive/
+
+# Temporary files
+*.tmp
+*.bak
+nul
+*.stackdump
+comande.txt
+mdpsupa.txt
+texte.txt
+cook.png
