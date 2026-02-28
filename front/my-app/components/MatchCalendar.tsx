@@ -106,8 +106,9 @@ export default function MatchCalendar() {
     return dateStr < today;
   };
 
-  const formatTime = (dateStr: string, timeStr?: string) => {
+  const formatTime = (dateStr?: string, timeStr?: string) => {
     if (timeStr) return timeStr;
+    if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
     return date.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
