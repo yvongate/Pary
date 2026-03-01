@@ -5,7 +5,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 import utils.football_data_org as fd_api
-import scrapers.sofascore_api
 import scrapers.ruedesjoueurs_scraper
 import scrapers.ruedesjoueurs_finder
 import core.ai_preview_generator as ai_preview_generator
@@ -531,96 +530,6 @@ def get_live_team_standing(
         "last_updated": datetime.now().isoformat(),
         "team_data": team_data
     }
-
-@app.get("/lineups")
-def get_lineups(
-    home_team: str = Query(..., description="Nom de l'quipe  domicile"),
-    away_team: str = Query(..., description="Nom de l'quipe  l'extrieur"),
-    date: str = Query(..., description="Date du match (YYYY-MM-DD)"),
-):
-    """Rcupre les compositions d'quipes d'un match depuis SofaScore"""
-    lineups = sofascore_api.get_lineups_by_teams(home_team, away_team, date)
-
-    if not lineups:
-        return {
-            "error": "Lineups not found",
-            "message": f"Impossible de trouver les lineups pour {home_team} vs {away_team} le {date}"
-        }
-
-    return {
-        "home_team": home_team,
-        "away_team": away_team,
-        "date": date,
-        "lineups": lineups,
-        "source": "SofaScore"
-    }
-
-
-@app.get("/match/preview")
-def get_match_preview_endpoint(
-    home_team: str = Query(..., description="Nom de l'quipe  domicile"),
-    away_team: str = Query(..., description="Nom de l'quipe  l'extrieur"),
-    date: str = Query(..., description="Date du match (YYYY-MM-DD)"),
-):
-    """
-    Rcupre l'avant-match complet depuis SofaScore/FlashScore
-
-    Retourne :
-    - Texte d'avant-match (analyse, contexte, forme)
-    - Joueurs absents (blessures, suspensions)
-    - Historique des confrontations directes
-    - Statistiques cls
-    """
-    context = sofascore_api.get_match_context(home_team, away_team, date)
-
-    if not context:
-        return {
-            "error": "Preview not found",
-            "message": f"Impossible de trouver l'avant-match pour {home_team} vs {away_team} le {date}"
-        }
-
-    return {
-        "home_team": home_team,
-        "away_team": away_team,
-        "date": date,
-        "context": context,
-        "source": "SofaScore"
-    }
-
-
-@app.get("/match/injuries")
-def get_match_injuries(
-    home_team: str = Query(..., description="Nom de l'quipe  domicile"),
-    away_team: str = Query(..., description="Nom de l'quipe  l'extrieur"),
-    date: str = Query(..., description="Date du match (YYYY-MM-DD)"),
-):
-    """
-    Rcupre les joueurs absents (blessures, suspensions) pour un match
-    """
-    match_id = sofascore_api.search_match(home_team, away_team, date)
-    if not match_id:
-        return {
-            "error": "Match not found",
-            "message": f"Match {home_team} vs {away_team} ({date}) introuvable"
-        }
-
-    missing = sofascore_api.get_missing_players(match_id)
-
-    if missing is None:
-        return {
-            "error": "Injuries data not available",
-            "message": "Donnes d'absences non disponibles"
-        }
-
-    return {
-        "home_team": home_team,
-        "away_team": away_team,
-        "date": date,
-        "match_id": match_id,
-        "missing_players": missing,
-        "source": "SofaScore"
-    }
-
 
 @app.get("/match/analysis")
 def get_match_analysis(

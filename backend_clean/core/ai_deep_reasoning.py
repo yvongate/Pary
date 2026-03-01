@@ -18,7 +18,7 @@ def generate_deep_analysis_prediction(
     current_rankings: Dict,
     rdj_context: Optional[Dict] = None,
     weather: Optional[Dict] = None,
-    formations: Optional[Dict] = None
+    detailed_stats: Optional[Dict] = None
 ) -> Dict:
     """
     L'IA recoit TOUTES les donnees et fait un raisonnement ultra-profond
@@ -28,9 +28,9 @@ def generate_deep_analysis_prediction(
         home_history: Historique complet equipe domicile
         away_history: Historique complet equipe exterieur
         current_rankings: LES 12 TABLEAUX de soccerstats
-        rdj_context: Contexte Rue des Joueurs
-        weather: Meteo
-        formations: Formations si disponibles
+        rdj_context: Contexte Rue des Joueurs (blessures, compositions, analyses)
+        weather: Meteo (informatif uniquement, n'affecte pas les calculs)
+        detailed_stats: Stats détaillées W-D-L, buts, gaps (soccerstats_working)
 
     Returns:
         {
@@ -186,42 +186,79 @@ STATISTIQUES AGREGEES {away_team} EXTERIEUR:
 SECTION 4: CONTEXTE & JOUEURS ABSENTS (Rue des Joueurs)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-{rdj_context.get('injuries_summary', 'Aucune info joueurs absents')}
+BLESSURES/SUSPENSIONS:
+{rdj_context.get('injuries_text', 'Aucune info joueurs absents')}
 
-ANALYSE COMPLETE:
-{rdj_context.get('full_text', '')[:1000]}
+COMPOSITIONS PROBABLES:
+{rdj_context.get('lineups_text', 'Non disponible')}
+
+ANALYSE COMPLETE DU MATCH:
+{rdj_context.get('full_text', '')[:2000]}
 """
 
     # ================================================================
-    # SECTION 5: METEO
+    # SECTION 5: CONDITIONS METEOROLOGIQUES
     # ================================================================
 
     if weather:
+        weather_sentence = _generate_weather_sentence(weather)
+
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 5: CONDITIONS METEOROLOGIQUES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Temperature: {weather.get('temperature', 'N/A')}°C
-Vent: {weather.get('wind_speed', 'N/A')} km/h
-Conditions: {weather.get('condition', 'N/A')}
+{weather_sentence}
+
+NOTE: Les calculs mathématiques ne sont PAS affectés par la météo. Cette information enrichit ton analyse contextuelle.
 """
 
     # ================================================================
-    # SECTION 6: FORMATIONS
+    # SECTION 6: STATISTIQUES DETAILLEES (W-D-L, Buts, Gaps)
     # ================================================================
 
-    if formations:
+    if detailed_stats and (detailed_stats.get('home') or detailed_stats.get('away')):
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SECTION 6: FORMATIONS PREVUES
+SECTION 6: STATISTIQUES DETAILLEES DE LA SAISON
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{home_team}: {formations.get('home_formation', 'Inconnue')}
-{away_team}: {formations.get('away_formation', 'Inconnue')}
 """
+
+        if detailed_stats.get('home'):
+            home_stats = detailed_stats['home']
+            prompt += f"""
+{home_team}:
+  Position: {home_stats.get('position', 'N/A')}e
+  Matchs joués: {home_stats.get('played', 'N/A')}
+  Bilan: {home_stats.get('won', 0)}V - {home_stats.get('drawn', 0)}N - {home_stats.get('lost', 0)}D
+  Buts: {home_stats.get('goals_for', 0)} marqués, {home_stats.get('goals_against', 0)} encaissés (diff: {home_stats.get('goal_difference', 0):+d})
+  Points: {home_stats.get('points', 'N/A')}
+"""
+            if home_stats.get('gap_to_top') is not None:
+                prompt += f"  Écart au leader: {home_stats.get('gap_to_top', 0):+d} pts\n"
+            if home_stats.get('gap_to_top4') is not None:
+                prompt += f"  Écart au top 4: {home_stats.get('gap_to_top4', 0):+d} pts\n"
+            if home_stats.get('gap_to_relegation') is not None:
+                prompt += f"  Écart à la relégation: {home_stats.get('gap_to_relegation', 0):+d} pts\n"
+
+        if detailed_stats.get('away'):
+            away_stats = detailed_stats['away']
+            prompt += f"""
+{away_team}:
+  Position: {away_stats.get('position', 'N/A')}e
+  Matchs joués: {away_stats.get('played', 'N/A')}
+  Bilan: {away_stats.get('won', 0)}V - {away_stats.get('drawn', 0)}N - {away_stats.get('lost', 0)}D
+  Buts: {away_stats.get('goals_for', 0)} marqués, {away_stats.get('goals_against', 0)} encaissés (diff: {away_stats.get('goal_difference', 0):+d})
+  Points: {away_stats.get('points', 'N/A')}
+"""
+            if away_stats.get('gap_to_top') is not None:
+                prompt += f"  Écart au leader: {away_stats.get('gap_to_top', 0):+d} pts\n"
+            if away_stats.get('gap_to_top4') is not None:
+                prompt += f"  Écart au top 4: {away_stats.get('gap_to_top4', 0):+d} pts\n"
+            if away_stats.get('gap_to_relegation') is not None:
+                prompt += f"  Écart à la relégation: {away_stats.get('gap_to_relegation', 0):+d} pts\n"
 
     # ================================================================
     # INSTRUCTIONS DE RAISONNEMENT
@@ -315,6 +352,88 @@ CONFIANCE: [0-100]%
             'confidence': 0,
             'reasoning': ''
         }
+
+
+def _generate_weather_sentence(weather: Dict) -> str:
+    """
+    Génère une phrase météo analysée et contextualisée
+
+    Args:
+        weather: Dict avec temperature, wind_speed, precipitation, condition
+
+    Returns:
+        Phrase complète analysant la météo et son impact potentiel
+    """
+    temp = weather.get('temperature', 15)
+    wind = weather.get('wind_speed', 10)
+    rain = weather.get('precipitation', 0)
+    condition = weather.get('condition', 'Clear')
+
+    # Température
+    if temp < 0:
+        temp_desc = "temps glacial"
+        temp_impact = "Le froid intense pourrait rendre les joueurs moins réactifs et le ballon plus dur."
+    elif temp < 5:
+        temp_desc = "temps très froid"
+        temp_impact = "Le froid pourrait légèrement affecter le contrôle du ballon."
+    elif temp < 10:
+        temp_desc = "temps frais"
+        temp_impact = "Température fraîche mais sans impact significatif sur le jeu."
+    elif temp < 25:
+        temp_desc = "temps agréable"
+        temp_impact = "Conditions idéales qui ne devraient pas affecter le jeu."
+    elif temp < 30:
+        temp_desc = "temps chaud"
+        temp_impact = "La chaleur pourrait légèrement fatiguer les joueurs en fin de match."
+    else:
+        temp_desc = "chaleur intense"
+        temp_impact = "La chaleur extrême pourrait fatiguer rapidement les joueurs et réduire l'intensité du jeu."
+
+    # Pluie
+    if rain > 5:
+        rain_desc = "pluie forte"
+        rain_impact = "Le ballon sera glissant, favorisant les erreurs techniques et les occasions de corners."
+    elif rain > 1:
+        rain_desc = "pluie légère"
+        rain_impact = "Légère humidité sur le terrain, le ballon pourrait être un peu plus rapide."
+    else:
+        rain_desc = None
+        rain_impact = None
+
+    # Vent
+    if wind > 40:
+        wind_desc = "vent très fort"
+        wind_impact = "Le vent perturbera les trajectoires de ballon, notamment sur les centres et corners."
+    elif wind > 25:
+        wind_desc = "vent fort"
+        wind_impact = "Le vent pourrait affecter les passes longues et les corners."
+    elif wind > 15:
+        wind_desc = "vent modéré"
+        wind_impact = None
+    else:
+        wind_desc = None
+        wind_impact = None
+
+    # Construction de la phrase
+    parts = []
+
+    # Partie 1: Description
+    if rain_desc:
+        if wind_desc:
+            parts.append(f"{rain_desc.capitalize()} avec {wind_desc} et {temp_desc} ({temp}°C)")
+        else:
+            parts.append(f"{rain_desc.capitalize()} avec {temp_desc} ({temp}°C)")
+    elif wind_desc:
+        parts.append(f"{temp_desc.capitalize()} ({temp}°C) avec {wind_desc}")
+    else:
+        parts.append(f"{temp_desc.capitalize()} de {temp}°C")
+
+    # Partie 2: Impact
+    impacts = [imp for imp in [temp_impact, rain_impact, wind_impact] if imp]
+    if impacts:
+        parts.append(". ".join(impacts))
+
+    return ". ".join(parts) + "."
 
 
 def _parse_ai_prediction(text: str) -> Dict:

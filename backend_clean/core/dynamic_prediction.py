@@ -16,13 +16,16 @@ import os
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+from scipy.optimize import minimize
+from scipy.special import gammaln  # Pour log-vraisemblance Poisson
 
 import scrapers.soccerstats_overview as soccerstats_overview
 import scrapers.soccerstats_working as soccerstats_working
 from core.data_collector import DataCollector
 from core.formation_analyzer import FormationAnalyzer
-import scrapers.sofascore_api as sofascore_api
 from core.ai_deep_reasoning import generate_deep_analysis_prediction
+import scrapers.ruedesjoueurs_finder as rdj_finder
+import scrapers.ruedesjoueurs_scraper as rdj_scraper
 
 
 class DynamicPredictor:
@@ -356,10 +359,264 @@ class DynamicPredictor:
 
         return 10  # Pas trouv = rang moyen
 
+    def _analyze_contextual_adjustments(self, home_team: str, away_team: str,
+                                       rdj_context: Optional[Dict]) -> Dict:
+        """
+        Analyse les contextes CRITIQUES pour calculer des facteurs d'ajustement
+
+        Prend en compte :
+        - Blessures/suspensions des joueurs clés (Rue des Joueurs)
+        - Derbies/matchs à enjeu (jeu plus tendu)
+
+        Returns:
+            {
+                'home_shots_factor': 0.85,  # Multiplicateur pour λ_home
+                'away_shots_factor': 1.0,
+                'home_corners_factor': 0.90,
+                'away_corners_factor': 1.0,
+                'adjustments_applied': ['Haaland blessé (-15%)', ...],
+                'confidence_impact': -0.1  # Impact sur confiance
+            }
+        """
+        home_shots_factor = 1.0
+        away_shots_factor = 1.0
+        home_corners_factor = 1.0
+        away_corners_factor = 1.0
+        adjustments = []
+        confidence_impact = 0.0
+
+        # 1. BLESSURES / SUSPENSIONS (Rue des Joueurs)
+        if rdj_context and rdj_context.get('injuries_text'):
+            injuries_text = rdj_context['injuries_text'].lower()
+
+            # Liste de joueurs clés par équipe (à enrichir)
+            key_attackers = {
+                'man city': ['haaland', 'de bruyne', 'foden'],
+                'arsenal': ['saka', 'jesus', 'odegaard'],
+                'liverpool': ['salah', 'nunez', 'jota'],
+                'real madrid': ['vinicius', 'benzema', 'rodrygo'],
+                'barcelona': ['lewandowski', 'raphinha', 'pedri'],
+                'psg': ['mbappe', 'neymar', 'messi'],
+                'bayern': ['kane', 'sane', 'musiala']
+            }
+
+            # Détecter blessures HOME
+            home_key_players = key_attackers.get(home_team.lower(), [])
+            for player in home_key_players:
+                if player in injuries_text and any(word in injuries_text for word in ['blessé', 'absent', 'suspendu', 'forfait']):
+                    home_shots_factor *= 0.85  # -15% si joueur clé absent
+                    home_corners_factor *= 0.90  # -10% corners
+                    adjustments.append(f"{player.title()} ({home_team}) blessé/absent (-15% tirs)")
+                    confidence_impact -= 0.05
+                    break  # Un seul ajustement par équipe
+
+            # Détecter blessures AWAY
+            away_key_players = key_attackers.get(away_team.lower(), [])
+            for player in away_key_players:
+                if player in injuries_text and any(word in injuries_text for word in ['blessé', 'absent', 'suspendu', 'forfait']):
+                    away_shots_factor *= 0.85
+                    away_corners_factor *= 0.90
+                    adjustments.append(f"{player.title()} ({away_team}) blessé/absent (-15% tirs)")
+                    confidence_impact -= 0.05
+                    break
+
+        # 2. DERBIES / MATCHS À ENJEU (via RDJ)
+        if rdj_context and rdj_context.get('full_text'):
+            full_text = rdj_context['full_text'].lower()
+            if any(word in full_text for word in ['derby', 'classique', 'choc', 'affiche']):
+                # Derbies = plus de tension, jeu haché, moins de fluidité
+                home_shots_factor *= 0.93
+                away_shots_factor *= 0.93
+                adjustments.append("Match à enjeu/Derby : -7% tirs (jeu plus tendu)")
+                confidence_impact -= 0.05
+
+        if not adjustments:
+            adjustments.append("Aucun ajustement contextuel nécessaire")
+
+        return {
+            'home_shots_factor': home_shots_factor,
+            'away_shots_factor': away_shots_factor,
+            'home_corners_factor': home_corners_factor,
+            'away_corners_factor': away_corners_factor,
+            'adjustments_applied': adjustments,
+            'confidence_impact': confidence_impact
+        }
+
+    def analyze_poisson_bidirectional(self, home_history: List[Dict], away_history: List[Dict],
+                                     current_rankings: Dict, home_team: str, away_team: str) -> Dict:
+        """
+        Modèle de Poisson BIDIRECTIONNEL pour prédire les tirs et corners
+
+        Au lieu de 2 régressions indépendantes, ce modèle prédit :
+        - λ_home (taux de tirs pour home)
+        - λ_away (taux de tirs pour away)
+
+        Avec la contrainte que λ_home + λ_away ≈ total réaliste (28 tirs, 11 corners)
+
+        Modèle :
+        λ_home = exp(β₀ + β₁×attaque_home + β₂×défense_away + β₃×forme_home)
+        λ_away = exp(β₀ + β₁×attaque_away + β₂×défense_home + β₃×forme_away)
+
+        Args:
+            home_history: Historique matchs domicile
+            away_history: Historique matchs extérieur
+            current_rankings: Classements actuels
+            home_team: Nom équipe domicile
+            away_team: Nom équipe extérieur
+
+        Returns:
+            Dict avec paramètres Poisson pour home et away
+        """
+
+        # Préparer les données HOME
+        home_matches = [m for m in home_history if m['home'] == True]
+
+        if len(home_matches) < 5:
+            return {'error': 'Pas assez de matchs historiques pour home', 'min_required': 5}
+
+        # Préparer les données AWAY
+        away_matches = [m for m in away_history if m['home'] == False]
+
+        if len(away_matches) < 5:
+            return {'error': 'Pas assez de matchs historiques pour away', 'min_required': 5}
+
+        max_rank = 20
+
+        # Collecter données HOME
+        X_home = []
+        y_shots_home = []
+        y_corners_home = []
+
+        for match in home_matches:
+            opponent = match['opponent']
+            team_off_rank = self._get_team_rank(home_team, 'offence_home', current_rankings)
+            opp_def_rank = self._get_team_rank(opponent, 'defence_away', current_rankings)
+            team_form_rank = self._get_team_rank(home_team, 'form_last_8', current_rankings)
+
+            if team_off_rank > 0 and opp_def_rank > 0 and team_form_rank > 0:
+                # Inverser (1 = meilleur → valeur haute)
+                off_inv = (max_rank + 1) - team_off_rank
+                def_inv = (max_rank + 1) - opp_def_rank
+                form_inv = (max_rank + 1) - team_form_rank
+
+                X_home.append([off_inv, def_inv, form_inv])
+                y_shots_home.append(match['shots'])
+                y_corners_home.append(match['corners'])
+
+        # Collecter données AWAY
+        X_away = []
+        y_shots_away = []
+        y_corners_away = []
+
+        for match in away_matches:
+            opponent = match['opponent']
+            team_off_rank = self._get_team_rank(away_team, 'offence_away', current_rankings)
+            opp_def_rank = self._get_team_rank(opponent, 'defence_home', current_rankings)
+            team_form_rank = self._get_team_rank(away_team, 'form_last_8', current_rankings)
+
+            if team_off_rank > 0 and opp_def_rank > 0 and team_form_rank > 0:
+                off_inv = (max_rank + 1) - team_off_rank
+                def_inv = (max_rank + 1) - opp_def_rank
+                form_inv = (max_rank + 1) - team_form_rank
+
+                X_away.append([off_inv, def_inv, form_inv])
+                y_shots_away.append(match['shots'])
+                y_corners_away.append(match['corners'])
+
+        X_home = np.array(X_home)
+        y_shots_home = np.array(y_shots_home)
+        y_corners_home = np.array(y_corners_home)
+        X_away = np.array(X_away)
+        y_shots_away = np.array(y_shots_away)
+        y_corners_away = np.array(y_corners_away)
+
+        # Fonction de log-vraisemblance Poisson pour TIRS (bidirectionnel)
+        def poisson_log_likelihood_shots(params):
+            """
+            Params = [β₀_home, β₁_home, β₂_home, β₃_home, β₀_away, β₁_away, β₂_away, β₃_away]
+            """
+            # Paramètres HOME
+            beta_home = params[0:4]
+            # Paramètres AWAY
+            beta_away = params[4:8]
+
+            # Prédictions λ (taux Poisson)
+            lambda_home = np.exp(X_home @ beta_home)
+            lambda_away = np.exp(X_away @ beta_away)
+
+            # Log-vraisemblance Poisson : y*log(λ) - λ - log(y!)
+            # On ignore log(y!) car constant
+            ll_home = np.sum(y_shots_home * np.log(lambda_home + 1e-10) - lambda_home)
+            ll_away = np.sum(y_shots_away * np.log(lambda_away + 1e-10) - lambda_away)
+
+            # Contrainte : on veut que la moyenne de (λ_home + λ_away) ≈ 28
+            avg_total = np.mean(lambda_home) + np.mean(lambda_away)
+            penalty = 10 * (avg_total - 28)**2  # Pénalité si total != 28
+
+            # Maximiser log-vraisemblance = minimiser négatif
+            return -(ll_home + ll_away) + penalty
+
+        # Fonction de log-vraisemblance Poisson pour CORNERS (bidirectionnel)
+        def poisson_log_likelihood_corners(params):
+            beta_home = params[0:4]
+            beta_away = params[4:8]
+
+            lambda_home = np.exp(X_home @ beta_home)
+            lambda_away = np.exp(X_away @ beta_away)
+
+            ll_home = np.sum(y_corners_home * np.log(lambda_home + 1e-10) - lambda_home)
+            ll_away = np.sum(y_corners_away * np.log(lambda_away + 1e-10) - lambda_away)
+
+            avg_total = np.mean(lambda_home) + np.mean(lambda_away)
+            penalty = 10 * (avg_total - 11)**2  # Pénalité si total != 11 corners
+
+            return -(ll_home + ll_away) + penalty
+
+        # Valeurs initiales (régression linéaire simple comme point de départ)
+        initial_params = np.array([0.5, 0.1, 0.1, 0.05, 0.5, 0.1, 0.1, 0.05])
+
+        # Optimisation TIRS
+        result_shots = minimize(
+            poisson_log_likelihood_shots,
+            initial_params,
+            method='L-BFGS-B',
+            options={'maxiter': 1000}
+        )
+
+        # Optimisation CORNERS
+        result_corners = minimize(
+            poisson_log_likelihood_corners,
+            initial_params,
+            method='L-BFGS-B',
+            options={'maxiter': 1000}
+        )
+
+        return {
+            'shots': {
+                'beta_home': result_shots.x[0:4].tolist(),
+                'beta_away': result_shots.x[4:8].tolist(),
+                'success': result_shots.success,
+                'log_likelihood': -result_shots.fun
+            },
+            'corners': {
+                'beta_home': result_corners.x[0:4].tolist(),
+                'beta_away': result_corners.x[4:8].tolist(),
+                'success': result_corners.success,
+                'log_likelihood': -result_corners.fun
+            },
+            'stats': {
+                'home_matches_analyzed': len(X_home),
+                'away_matches_analyzed': len(X_away),
+                'avg_shots_home': float(np.mean(y_shots_home)),
+                'avg_shots_away': float(np.mean(y_shots_away)),
+                'avg_corners_home': float(np.mean(y_corners_home)),
+                'avg_corners_away': float(np.mean(y_corners_away))
+            },
+            'max_rank': max_rank
+        }
+
     def predict_match(self, home_team: str, away_team: str, league_code: str = "england",
-                     match_date: Optional[datetime] = None,
-                     home_formation: Optional[str] = None,
-                     away_formation: Optional[str] = None) -> Dict:
+                     match_date: Optional[datetime] = None) -> Dict:
         """
         PRDICTION DYNAMIQUE - Calcule tout en temps rel pour ce match spcifique
 
@@ -368,8 +625,6 @@ class DynamicPredictor:
             away_team: quipe  l'extrieur
             league_code: england, spain, italy, france, germany
             match_date: Date du match (pour la mto)
-            home_formation: Formation quipe domicile (ex: "4-3-3") - si None, utilise dfaut
-            away_formation: Formation quipe extrieur (ex: "5-3-2") - si None, utilise dfaut
 
         Returns:
             Prdiction complte avec explications
@@ -393,17 +648,6 @@ class DynamicPredictor:
         print(f"    {home_team}: {len(home_history)} matchs trouvs")
         print(f"    {away_team}: {len(away_history)} matchs trouvs")
 
-        # 2b. Enrichir avec les formations (si activ)
-        if self.use_formations:
-            print(f"\n tape 2b: Enrichissement avec formations (peut prendre du temps)...")
-            # Note: On limite  50 matchs pour ne pas tre trop lent
-            home_history = self.formation_analyzer.enrich_history_with_formations(
-                home_history[:50], home_team
-            )
-            away_history = self.formation_analyzer.enrich_history_with_formations(
-                away_history[:50], away_team
-            )
-
         if len(home_history) < 5 or len(away_history) < 5:
             return {
                 'error': 'Pas assez de matchs historiques',
@@ -411,41 +655,83 @@ class DynamicPredictor:
                 'away_matches': len(away_history)
             }
 
-        # 3. Analyser la corrlation pour l'quipe  domicile
-        print(f"\n tape 3: Analyse de corrlation pour {home_team} (domicile)...")
-        home_correlation = self.analyze_correlation_multiple(home_history, current_rankings, home_team, is_home=True)
+        # 2c. NOUVEAU - Scraper Rue des Joueurs pour contexte blessures/analyses
+        print(f"\n tape 2c: Rcupration du contexte Rue des Joueurs...")
+        rdj_context = None
+        try:
+            # Essayer de trouver l'URL du match
+            rdj_url = rdj_finder.find_match_url(home_team, away_team)
 
-        if 'error' in home_correlation:
-            return home_correlation
+            if rdj_url:
+                print(f"    [OK] URL trouve: {rdj_url[:60]}...")
+                # Scraper l'analyse
+                rdj_data = rdj_scraper.scrape_match_preview(rdj_url)
 
-        # 4. Analyser la corrlation pour l'quipe  l'extrieur
-        print(f"\n tape 4: Analyse de corrlation pour {away_team} (extrieur)...")
-        away_correlation = self.analyze_correlation_multiple(away_history, current_rankings, away_team, is_home=False)
+                if rdj_data:
+                    rdj_context = {
+                        'url': rdj_url,
+                        'injuries_text': rdj_data.get('injuries_text', ''),
+                        'lineups_text': rdj_data.get('lineups_text', ''),
+                        'full_text': rdj_data.get('full_text', ''),
+                        'sections': rdj_data.get('sections', {})
+                    }
+                    print(f"    [OK] Analyse rcupre ({len(rdj_context['full_text'])} caractres)")
+                    if rdj_context['injuries_text']:
+                        print(f"    [INFO] Blessures/suspensions dtectes")
+                else:
+                    print(f"    [WARNING] chec scraping RDJ")
+            else:
+                print(f"    [INFO] Aucune analyse RDJ trouve pour ce match")
+        except Exception as e:
+            print(f"    [WARNING] Erreur RDJ: {e}")
+            rdj_context = None
 
-        if 'error' in away_correlation:
-            return away_correlation
+        # 2d. NOUVEAU - Récupérer stats détaillées soccerstats_working
+        print(f"\n tape 2d: Rcupration des stats dtailles (W-D-L, buts, gaps)...")
+        home_detailed_stats = None
+        away_detailed_stats = None
+        try:
+            home_detailed_stats = soccerstats_working.get_team_context(home_team, league_code)
+            away_detailed_stats = soccerstats_working.get_team_context(away_team, league_code)
 
-        # 5. Rcuprer les rangs dfensifs ACTUELS des adversaires
-        print(f"\n tape 5: Rcupration des rangs dfensifs ACTUELS...")
-        away_def_rank = self._get_team_rank(away_team, 'defence_away', current_rankings)
-        home_def_rank = self._get_team_rank(home_team, 'defence_home', current_rankings)
+            if home_detailed_stats:
+                print(f"    {home_team}: {home_detailed_stats['won']}V-{home_detailed_stats['drawn']}N-{home_detailed_stats['lost']}D, "
+                      f"{home_detailed_stats['goals_for']}-{home_detailed_stats['goals_against']} buts, "
+                      f"{home_detailed_stats['points']} pts (pos {home_detailed_stats['position']})")
+            if away_detailed_stats:
+                print(f"    {away_team}: {away_detailed_stats['won']}V-{away_detailed_stats['drawn']}N-{away_detailed_stats['lost']}D, "
+                      f"{away_detailed_stats['goals_for']}-{away_detailed_stats['goals_against']} buts, "
+                      f"{away_detailed_stats['points']} pts (pos {away_detailed_stats['position']})")
+        except Exception as e:
+            print(f"    [WARNING] Erreur stats dtailles: {e}")
 
-        print(f"    {away_team} (dfense extrieur): {away_def_rank}e")
-        print(f"    {home_team} (dfense domicile): {home_def_rank}e")
+        # 3. NOUVEAU - Modle de Poisson BIDIRECTIONNEL
+        print(f"\n tape 3: Modlisation Poisson bidirectionnelle...")
+        poisson_model = self.analyze_poisson_bidirectional(
+            home_history, away_history, current_rankings, home_team, away_team
+        )
 
-        # 6. Calculer les prdictions brutes (REGRESSION MULTIPLE)
-        print(f"\n tape 6: Calcul des prdictions...")
+        if 'error' in poisson_model:
+            return poisson_model
 
-        # Rcuprer TOUS les rangs ncessaires pour la rgression multiple
-        max_rank = 20
+        print(f"    [OK] Modle Poisson entran")
+        print(f"    Home matchs analyss: {poisson_model['stats']['home_matches_analyzed']}")
+        print(f"    Away matchs analyss: {poisson_model['stats']['away_matches_analyzed']}")
+
+        # 4. Rcuprer les rangs ACTUELS pour prdire CE match
+        print(f"\n tape 4: Rcupration des rangs actuels...")
+
+        max_rank = poisson_model['max_rank']
 
         # Rangs pour l'quipe  DOMICILE
         home_off_rank = self._get_team_rank(home_team, 'offence_home', current_rankings)
         home_form_rank = self._get_team_rank(home_team, 'form_last_8', current_rankings)
+        away_def_rank = self._get_team_rank(away_team, 'defence_away', current_rankings)
 
         # Rangs pour l'quipe  L'EXTERIEUR
         away_off_rank = self._get_team_rank(away_team, 'offence_away', current_rankings)
         away_form_rank = self._get_team_rank(away_team, 'form_last_8', current_rankings)
+        home_def_rank = self._get_team_rank(home_team, 'defence_home', current_rankings)
 
         # INVERSER tous les rangs (1 = meilleur → valeur haute)
         home_off_inv = (max_rank + 1) - home_off_rank
@@ -456,104 +742,97 @@ class DynamicPredictor:
         home_def_inv = (max_rank + 1) - home_def_rank
         away_form_inv = (max_rank + 1) - away_form_rank
 
-        print(f"    {home_team}: Attaque={home_off_rank}({home_off_inv}), Forme={home_form_rank}({home_form_inv})")
-        print(f"    {away_team}: Dfense={away_def_rank}({away_def_inv})")
-        print(f"    {away_team}: Attaque={away_off_rank}({away_off_inv}), Forme={away_form_rank}({away_form_inv})")
-        print(f"    {home_team}: Dfense={home_def_rank}({home_def_inv})")
+        print(f"    {home_team}: Attaque={home_off_rank}({home_off_inv}), Dfense={home_def_rank}({home_def_inv}), Forme={home_form_rank}({home_form_inv})")
+        print(f"    {away_team}: Attaque={away_off_rank}({away_off_inv}), Dfense={away_def_rank}({away_def_inv}), Forme={away_form_rank}({away_form_inv})")
 
-        # Prdiction quipe DOMICILE (3 variables)
-        # Tirs = coef_offence×Attaque_home + coef_defence×Dfense_away + coef_form×Forme_home + intercept
-        home_shots_raw = (
-            home_correlation['shots']['coef_offence'] * home_off_inv +
-            home_correlation['shots']['coef_defence'] * away_def_inv +
-            home_correlation['shots']['coef_form'] * home_form_inv +
-            home_correlation['shots']['intercept']
-        )
-        home_corners_raw = (
-            home_correlation['corners']['coef_offence'] * home_off_inv +
-            home_correlation['corners']['coef_defence'] * away_def_inv +
-            home_correlation['corners']['coef_form'] * home_form_inv +
-            home_correlation['corners']['intercept']
-        )
+        # 5. Calculer λ (taux Poisson) pour CE match
+        print(f"\n tape 5: Calcul des prdictions (modle de Poisson)...")
 
-        # Prdiction quipe EXTERIEUR (3 variables)
-        away_shots_raw = (
-            away_correlation['shots']['coef_offence'] * away_off_inv +
-            away_correlation['shots']['coef_defence'] * home_def_inv +
-            away_correlation['shots']['coef_form'] * away_form_inv +
-            away_correlation['shots']['intercept']
-        )
-        away_corners_raw = (
-            away_correlation['corners']['coef_offence'] * away_off_inv +
-            away_correlation['corners']['coef_defence'] * home_def_inv +
-            away_correlation['corners']['coef_form'] * away_form_inv +
-            away_correlation['corners']['intercept']
-        )
+        # Vecteur caractristiques HOME : [attaque_home, dfense_away, forme_home]
+        X_home_match = np.array([home_off_inv, away_def_inv, home_form_inv, 1.0])  # +1 pour intercept
 
-        # 7. Rcuprer les donnes contextuelles EN TEMPS REL
-        print(f"\n tape 7: Rcupration des donnes contextuelles...")
+        # Vecteur caractristiques AWAY : [attaque_away, dfense_home, forme_away]
+        X_away_match = np.array([away_off_inv, home_def_inv, away_form_inv, 1.0])
 
-        # Mto du jour (INFORMATIF UNIQUEMENT - pas d'ajustement)
+        # λ = exp(β · X)
+        beta_shots_home = np.array(poisson_model['shots']['beta_home'])
+        beta_shots_away = np.array(poisson_model['shots']['beta_away'])
+        beta_corners_home = np.array(poisson_model['corners']['beta_home'])
+        beta_corners_away = np.array(poisson_model['corners']['beta_away'])
+
+        # Prdictions TIRS
+        lambda_shots_home = np.exp(np.dot(beta_shots_home, X_home_match))
+        lambda_shots_away = np.exp(np.dot(beta_shots_away, X_away_match))
+
+        # Prdictions CORNERS
+        lambda_corners_home = np.exp(np.dot(beta_corners_home, X_home_match))
+        lambda_corners_away = np.exp(np.dot(beta_corners_away, X_away_match))
+
+        home_shots_raw = float(lambda_shots_home)
+        away_shots_raw = float(lambda_shots_away)
+        home_corners_raw = float(lambda_corners_home)
+        away_corners_raw = float(lambda_corners_away)
+
+        print(f"    {home_team}: λ_tirs={home_shots_raw:.1f}, λ_corners={home_corners_raw:.1f}")
+        print(f"    {away_team}: λ_tirs={away_shots_raw:.1f}, λ_corners={away_corners_raw:.1f}")
+        print(f"    Total prdictions (base): {home_shots_raw + away_shots_raw:.1f} tirs, {home_corners_raw + away_corners_raw:.1f} corners")
+        print(f"    NOTE: Le total est contraint  ~28 tirs et ~11 corners via le modle de Poisson")
+
+        # 5b. NOUVEAU - Rcuprer mto pour ajustements contextuels
+        print(f"\n tape 5b: Rcupration mto et analyse contexte...")
         city = self.collector.get_team_city(home_team)
         weather = self.collector.get_weather(city, match_date)
         print(f"    Mto  {city}: {weather['temperature']}C, vent {weather['wind_speed']} km/h, {weather['condition']}")
+
+        # 5c. NOUVEAU - Appliquer les ajustements contextuels CRITIQUES (blessures, derbies)
+        print(f"\n tape 5c: Application des ajustements contextuels (blessures, derbies)...")
+        contextual_adjustments = self._analyze_contextual_adjustments(
+            home_team, away_team,
+            rdj_context
+        )
+
+        print(f"    Ajustements dtects:")
+        for adj in contextual_adjustments['adjustments_applied']:
+            print(f"      - {adj}")
+
+        # Appliquer les facteurs contextuels aux λ
+        home_shots_adjusted = home_shots_raw * contextual_adjustments['home_shots_factor']
+        away_shots_adjusted = away_shots_raw * contextual_adjustments['away_shots_factor']
+        home_corners_adjusted = home_corners_raw * contextual_adjustments['home_corners_factor']
+        away_corners_adjusted = away_corners_raw * contextual_adjustments['away_corners_factor']
+
+        print(f"\n    Aprs ajustements contextuels:")
+        print(f"      {home_team}: {home_shots_raw:.1f} → {home_shots_adjusted:.1f} tirs (×{contextual_adjustments['home_shots_factor']:.2f})")
+        print(f"      {away_team}: {away_shots_raw:.1f} → {away_shots_adjusted:.1f} tirs (×{contextual_adjustments['away_shots_factor']:.2f})")
+        print(f"      Total ajust: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
+
+        # Utiliser les valeurs ajustes comme nouvelles valeurs raw
+        home_shots_raw = home_shots_adjusted
+        away_shots_raw = away_shots_adjusted
+        home_corners_raw = home_corners_adjusted
+        away_corners_raw = away_corners_adjusted
+
+        # 6. Estimer la possession (informatif)
+        print(f"\n tape 6: Estimation de la possession...")
+        home_possession, away_possession = self._estimate_possession_split(
+            home_off_rank, away_off_rank,
+            home_def_rank, away_def_rank,
+            max_rank
+        )
+        print(f"    Possession estime: {home_team} {home_possession*100:.1f}% - {away_team} {away_possession*100:.1f}%")
+
+        # 7. Interprtation impact mto (informatif)
+        print(f"\n tape 7: Interprtation impact mto...")
 
         # Interprtation de l'impact (informatif, pas de calcul)
         weather_impact = self._interpret_weather_impact(weather)
         print(f"    Impact potentiel: {weather_impact}")
 
-        # 7b. Rcuprer les formations prvues (si disponibles)
-        formation_shots_factor = 1.0
-        formation_corners_factor = 1.0
-        formation_analysis = None
-
-        if self.use_formations and home_formation and away_formation:
-            print(f"\n tape 7b: Utilisation des formations...")
-            print(f"     {home_team}: {home_formation}")
-            print(f"     {away_team}: {away_formation}")
-
-            try:
-                # Calculer les facteurs RELS  partir des donnes historiques
-                home_shots_f, home_corners_f, home_stats = (
-                    self.formation_analyzer.get_formation_factor_from_data(
-                        home_formation, away_formation, home_history
-                    )
-                )
-
-                away_shots_f, away_corners_f, away_stats = (
-                    self.formation_analyzer.get_formation_factor_from_data(
-                        away_formation, home_formation, away_history
-                    )
-                )
-
-                # Utiliser les facteurs de l'quipe  domicile (principale)
-                formation_shots_factor = home_shots_f
-                formation_corners_factor = home_corners_f
-                formation_analysis = {
-                    'home_stats': home_stats,
-                    'away_stats': away_stats
-                }
-
-                print(f"\n    Analyse {home_team} en {home_formation}:")
-                print(f"      Matchs analyss: {home_stats.get('matches_analyzed', 0)}")
-                if home_stats.get('method') == 'data_driven':
-                    print(f"      Moy. tirs (cette formation): {home_stats.get('avg_shots_with_formation', 0)}")
-                    print(f"      Moy. tirs (toutes formations): {home_stats.get('avg_shots_global', 0)}")
-                    print(f"       Facteur tirs: {home_shots_f:.3f} ({home_stats.get('shots_change_pct', 0):+.1f}%)")
-                    print(f"       Facteur corners: {home_corners_f:.3f} ({home_stats.get('corners_change_pct', 0):+.1f}%)")
-                else:
-                    print(f"       {home_stats.get('reason', 'Donnes insuffisantes')}")
-            except Exception as e:
-                print(f"     Erreur rcupration formations: {e}")
-        else:
-            if self.use_formations:
-                print(f"\n tape 7b: Formations non disponibles - utilisation des calculs de base uniquement")
-
-        # Appliquer SEULEMENT l'ajustement formations (PAS mto)
-        home_shots = max(0, home_shots_raw * formation_shots_factor)
-        home_corners = max(0, home_corners_raw * formation_corners_factor)
-        away_shots = max(0, away_shots_raw * formation_shots_factor)
-        away_corners = max(0, away_corners_raw * formation_corners_factor)
+        # Prédictions finales (déjà ajustées pour blessures/derbies)
+        home_shots = max(0, home_shots_raw)
+        home_corners = max(0, home_corners_raw)
+        away_shots = max(0, away_shots_raw)
+        away_corners = max(0, away_corners_raw)
 
         # 8. Construire le rsultat
         result = {
@@ -572,27 +851,27 @@ class DynamicPredictor:
                 'total_corners': round(home_corners + away_corners, 1)
             },
             'confidence': {
-                'home_shots_r2': round(home_correlation['shots']['r2'], 3),
-                'home_corners_r2': round(home_correlation['corners']['r2'], 3),
-                'away_shots_r2': round(away_correlation['shots']['r2'], 3),
-                'away_corners_r2': round(away_correlation['corners']['r2'], 3),
-                'overall': round((home_correlation['shots']['r2'] +
-                                home_correlation['corners']['r2'] +
-                                away_correlation['shots']['r2'] +
-                                away_correlation['corners']['r2']) / 4, 3)
+                'model_type': 'Poisson bidirectionnel',
+                'shots_log_likelihood': round(poisson_model['shots']['log_likelihood'], 2),
+                'corners_log_likelihood': round(poisson_model['corners']['log_likelihood'], 2),
+                'shots_optimization_success': poisson_model['shots']['success'],
+                'corners_optimization_success': poisson_model['corners']['success'],
+                'note': 'Confiance basée sur log-vraisemblance du modèle de Poisson (plus élevé = meilleur)'
             },
             'analysis': {
                 'home_team': {
-                    'matches_analyzed': home_correlation['stats']['matches_analyzed'],
-                    'formula_shots': home_correlation['shots']['formula'],
-                    'formula_corners': home_correlation['corners']['formula'],
+                    'matches_analyzed': poisson_model['stats']['home_matches_analyzed'],
+                    'model': 'Poisson: λ = exp(β₀ + β₁×Attaque + β₂×Défense_adv + β₃×Forme)',
+                    'avg_shots_historical': round(poisson_model['stats']['avg_shots_home'], 1),
+                    'avg_corners_historical': round(poisson_model['stats']['avg_corners_home'], 1),
                     'opponent_defence_rank': away_def_rank,
                     'match_history': [m for m in home_history if m['home'] == True][:30]
                 },
                 'away_team': {
-                    'matches_analyzed': away_correlation['stats']['matches_analyzed'],
-                    'formula_shots': away_correlation['shots']['formula'],
-                    'formula_corners': away_correlation['corners']['formula'],
+                    'matches_analyzed': poisson_model['stats']['away_matches_analyzed'],
+                    'model': 'Poisson: λ = exp(β₀ + β₁×Attaque + β₂×Défense_adv + β₃×Forme)',
+                    'avg_shots_historical': round(poisson_model['stats']['avg_shots_away'], 1),
+                    'avg_corners_historical': round(poisson_model['stats']['avg_corners_away'], 1),
                     'opponent_defence_rank': home_def_rank,
                     'match_history': [m for m in away_history if m['home'] == False][:30]
                 }
@@ -600,19 +879,20 @@ class DynamicPredictor:
             'context': {
                 'weather': {
                     **weather,
-                    'impact_description': weather_impact  # Description de l'impact (informatif)
+                    'impact_description': weather_impact  # Description de l'impact (informatif UNIQUEMENT)
                 },
-                'formations': {
-                    'home_formation': home_formation,
-                    'away_formation': away_formation,
-                    'home_type': self.formation_analyzer.classify_formation(home_formation) if home_formation else None,
-                    'away_type': self.formation_analyzer.classify_formation(away_formation) if away_formation else None,
-                    'analysis': formation_analysis  # Statistiques RELLES
+                'detailed_stats': {
+                    'home': home_detailed_stats,
+                    'away': away_detailed_stats
                 },
                 'adjustments': {
-                    'formation_shots_factor': round(formation_shots_factor, 3),
-                    'formation_corners_factor': round(formation_corners_factor, 3),
-                    'note': 'Mto non utilise dans le calcul - affiche  titre informatif uniquement'
+                    'model_type': 'Poisson bidirectionnel',
+                    'possession_home': round(home_possession * 100, 1),
+                    'possession_away': round(away_possession * 100, 1),
+                    'total_shots_constraint': 28.0,
+                    'total_corners_constraint': 11.0,
+                    'contextual_adjustments': contextual_adjustments['adjustments_applied'],
+                    'note': 'Modèle de Poisson bidirectionnel avec contrainte sur le total (~28 tirs, ~11 corners). Ajustements uniquement pour blessures joueurs clés et derbies. Météo affichée à titre informatif uniquement.'
                 }
             },
             'rankings_used': {
@@ -636,11 +916,11 @@ class DynamicPredictor:
                 home_history=home_history,
                 away_history=away_history,
                 current_rankings=current_rankings,
-                rdj_context=None,  # Pas disponible pour l'instant
+                rdj_context=rdj_context,  # Contexte complet avec blessures/analyses RDJ
                 weather=weather,
-                formations={
-                    'home_formation': home_formation,
-                    'away_formation': away_formation
+                detailed_stats={
+                    'home': home_detailed_stats,
+                    'away': away_detailed_stats
                 }
             )
 
@@ -663,14 +943,7 @@ class DynamicPredictor:
 
         print(f"\n Prdiction termine!")
         print(f"    {home_team}: {result['predictions']['home_shots']} tirs, {result['predictions']['home_corners']} corners")
-        if home_formation:
-            print(f"     Formation: {home_formation} ({result['context']['formations']['home_type']})")
         print(f"    {away_team}: {result['predictions']['away_shots']} tirs, {result['predictions']['away_corners']} corners")
-        if away_formation:
-            print(f"     Formation: {away_formation} ({result['context']['formations']['away_type']})")
-        print(f"    Confiance globale: {result['confidence']['overall']:.1%}")
-        if home_formation and away_formation:
-            print(f"    Ajustement formations: {formation_shots_factor:.2f}x (tirs), {formation_corners_factor:.2f}x (corners)")
         print(f"\n     Mto (informatif): {weather_impact}")
         print(f"{'='*60}\n")
 
@@ -719,6 +992,105 @@ class DynamicPredictor:
             impacts.append("Pluie lgre - pelouse humide, quelques glissades possibles")
 
         return " | ".join(impacts) if impacts else "Conditions normales"
+
+    def _estimate_possession_split(self, home_off_rank: int, away_off_rank: int,
+                                   home_def_rank: int, away_def_rank: int,
+                                   max_rank: int = 20) -> Tuple[float, float]:
+        """
+        Estime le % de possession basé sur les forces offensives/défensives
+
+        Logique :
+        - Équipe avec meilleure attaque + meilleure défense = plus de possession
+        - Possession ≈ contrôle du ballon ≈ opportunités de tirer
+
+        Args:
+            home_off_rank: Rang offensif domicile (1 = meilleur)
+            away_off_rank: Rang offensif extérieur
+            home_def_rank: Rang défensif domicile
+            away_def_rank: Rang défensif extérieur
+            max_rank: Nombre d'équipes dans le championnat
+
+        Returns:
+            (home_possession, away_possession) - somme = 1.0
+        """
+        # Score composite : moyenne des rangs (plus bas = meilleur)
+        # Une bonne attaque garde le ballon, une bonne défense le récupère
+        home_control_score = (home_off_rank + home_def_rank) / 2
+        away_control_score = (away_off_rank + away_def_rank) / 2
+
+        # Convertir en % de possession (entre 35-65% pour réalisme)
+        # Plus le score est BAS, plus la possession est HAUTE
+        total_score = home_control_score + away_control_score
+
+        if total_score == 0:
+            return 0.5, 0.5
+
+        # Inversion : meilleur score (bas) → haute possession
+        # away_control / total donne la part de "faiblesse" de away
+        # ce qui correspond à la "force" de home
+        home_possession = 0.35 + (0.30 * (away_control_score / total_score))
+        away_possession = 1.0 - home_possession
+
+        return home_possession, away_possession
+
+    def _normalize_total_shots(self, home_shots: float, away_shots: float,
+                              expected_total: float = 28.0) -> Tuple[float, float]:
+        """
+        Force le total de tirs à être réaliste
+
+        Un match typique = 25-30 tirs totaux (toutes compétitions confondues)
+        Si home + away est aberrant, ajuste proportionnellement
+
+        Args:
+            home_shots: Tirs prédits pour domicile
+            away_shots: Tirs prédits pour extérieur
+            expected_total: Total attendu pour un match typique
+
+        Returns:
+            (home_normalized, away_normalized) - total ≈ expected_total
+        """
+        current_total = home_shots + away_shots
+
+        if current_total <= 0:
+            return home_shots, away_shots
+
+        # Facteur de normalisation
+        adjustment_factor = expected_total / current_total
+
+        # Limiter l'ajustement pour éviter des changements trop brutaux
+        # Si le total est dans une fourchette acceptable (23-33), ajustement léger
+        if 23 <= current_total <= 33:
+            adjustment_factor = 0.7 + (0.3 * adjustment_factor)  # Ajustement partiel
+
+        return home_shots * adjustment_factor, away_shots * adjustment_factor
+
+    def _normalize_total_corners(self, home_corners: float, away_corners: float,
+                                expected_total: float = 11.0) -> Tuple[float, float]:
+        """
+        Force le total de corners à être réaliste
+
+        Un match typique = 10-12 corners totaux
+
+        Args:
+            home_corners: Corners prédits pour domicile
+            away_corners: Corners prédits pour extérieur
+            expected_total: Total attendu pour un match typique
+
+        Returns:
+            (home_normalized, away_normalized) - total ≈ expected_total
+        """
+        current_total = home_corners + away_corners
+
+        if current_total <= 0:
+            return home_corners, away_corners
+
+        adjustment_factor = expected_total / current_total
+
+        # Limiter l'ajustement si dans fourchette acceptable (9-13)
+        if 9 <= current_total <= 13:
+            adjustment_factor = 0.7 + (0.3 * adjustment_factor)
+
+        return home_corners * adjustment_factor, away_corners * adjustment_factor
 
     def _get_league_csv_code(self, soccerstats_code: str) -> str:
         """Convertit le code soccerstats vers le code CSV"""
