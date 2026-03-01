@@ -1305,13 +1305,22 @@ def get_upcoming_predictions(
         # Formatter les rsultats
         formatted_predictions = []
         for pred in predictions:
+            # Helper pour formater les dates (SQLite renvoie des strings)
+            match_date = pred.get('match_date')
+            if match_date and hasattr(match_date, 'isoformat'):
+                match_date = match_date.isoformat()
+
+            created_at = pred.get('created_at')
+            if created_at and hasattr(created_at, 'isoformat'):
+                created_at = created_at.isoformat()
+
             formatted_predictions.append({
                 'match_id': pred['match_id'],
                 'home_team': pred['home_team'],
                 'away_team': pred['away_team'],
                 'league_code': pred['league_code'],
                 'league_name': LEAGUES.get(pred['league_code'], {}).get('name', pred['league_code']),
-                'match_date': pred['match_date'].isoformat() if pred.get('match_date') else None,
+                'match_date': match_date,
 
                 # Prdictions TIRS
                 'shots': {
@@ -1344,7 +1353,7 @@ def get_upcoming_predictions(
                 # Mto (informatif)
                 'weather': pred.get('weather'),
 
-                'created_at': pred['created_at'].isoformat() if pred.get('created_at') else None
+                'created_at': created_at
             })
 
         return {
@@ -1389,13 +1398,26 @@ def get_prediction_detail(match_id: str):
                 'match_id': match_id
             }
 
+        # Helper pour formater les dates (SQLite renvoie des strings)
+        match_date = prediction.get('match_date')
+        if match_date and hasattr(match_date, 'isoformat'):
+            match_date = match_date.isoformat()
+
+        created_at = prediction.get('created_at')
+        if created_at and hasattr(created_at, 'isoformat'):
+            created_at = created_at.isoformat()
+
+        updated_at = prediction.get('updated_at')
+        if updated_at and hasattr(updated_at, 'isoformat'):
+            updated_at = updated_at.isoformat()
+
         return {
             'match_id': prediction['match_id'],
             'home_team': prediction['home_team'],
             'away_team': prediction['away_team'],
             'league_code': prediction['league_code'],
             'league_name': LEAGUES.get(prediction['league_code'], {}).get('name', prediction['league_code']),
-            'match_date': prediction['match_date'].isoformat() if prediction.get('match_date') else None,
+            'match_date': match_date,
 
             # Prdictions TIRS
             'shots': {
@@ -1427,8 +1449,8 @@ def get_prediction_detail(match_id: str):
             'weather': prediction.get('weather'),
             'rankings_used': prediction.get('rankings_used'),
 
-            'created_at': prediction['created_at'].isoformat() if prediction.get('created_at') else None,
-            'updated_at': prediction['updated_at'].isoformat() if prediction.get('updated_at') else None
+            'created_at': created_at,
+            'updated_at': updated_at
         }
 
     except Exception as e:
