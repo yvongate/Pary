@@ -32,7 +32,7 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
     # Charger les fixtures
     fixtures = data_service.load_fixtures()
 
-    if not fixtures:
+    if fixtures is None or fixtures.empty:
         print("[WARNING] Aucune fixture trouvée")
         return []
 

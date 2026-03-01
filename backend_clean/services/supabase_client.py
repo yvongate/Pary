@@ -14,9 +14,17 @@ class SupabaseClient:
 
     def __init__(self):
         """Initialise la connexion  Supabase"""
+        import os
+        # Utiliser les variables d'environnement
+        supabase_url = os.getenv("SUPABASE_URL", "").replace("https://", "").replace("http://", "")
+        supabase_password = os.getenv("SUPABASE_PASSWORD", "voicilemotdepassedepary")
+
+        # Extraire le project ID de l'URL
+        project_id = supabase_url.split(".")[0] if supabase_url else "qibilvupnrqyxsoxpbze"
+
         self.connection_string = (
-            "postgresql://postgres:voicilemotdepassedepary"
-            "@db.qibilvupnrqyxsoxpbze.supabase.co:5432/postgres"
+            f"postgresql://postgres.{project_id}:{supabase_password}"
+            f"@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
         )
         self.conn = None
 
