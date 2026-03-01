@@ -22,6 +22,7 @@ import scrapers.soccerstats_working as soccerstats_working
 from core.data_collector import DataCollector
 from core.formation_analyzer import FormationAnalyzer
 import scrapers.sofascore_api as sofascore_api
+from core.ai_deep_reasoning import generate_deep_analysis_prediction
 
 
 class DynamicPredictor:
@@ -633,6 +634,43 @@ class DynamicPredictor:
                 'timestamp': datetime.now().isoformat()
             }
         }
+
+        # 9. Gnrer le raisonnement IA (Deep Reasoning)
+        print(f"\n tape 8: Gnration du raisonnement IA profond...")
+        try:
+            ai_result = generate_deep_analysis_prediction(
+                match={
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'league': league_code
+                },
+                home_history=home_history,
+                away_history=away_history,
+                current_rankings=current_rankings,
+                rdj_context=None,  # Pas disponible pour l'instant
+                weather=weather,
+                formations={
+                    'home_formation': home_formation,
+                    'away_formation': away_formation
+                }
+            )
+
+            # Ajouter le raisonnement IA au rsultat
+            result['predictions']['ai_reasoning_shots'] = ai_result.get('full_reasoning', '')
+            result['predictions']['ai_reasoning_corners'] = ai_result.get('full_reasoning', '')
+            result['predictions']['ai_shots_min'] = ai_result.get('shots_min')
+            result['predictions']['ai_shots_max'] = ai_result.get('shots_max')
+            result['predictions']['ai_corners_min'] = ai_result.get('corners_min')
+            result['predictions']['ai_corners_max'] = ai_result.get('corners_max')
+            result['predictions']['ai_confidence'] = ai_result.get('confidence', 0)
+
+            print(f"    [OK] Raisonnement IA gnr ({len(ai_result.get('full_reasoning', ''))//100*100}+ caractres)")
+            print(f"    IA suggre: Tirs {ai_result.get('shots_min')}-{ai_result.get('shots_max')}, Corners {ai_result.get('corners_min')}-{ai_result.get('corners_max')}")
+
+        except Exception as e:
+            print(f"    [WARNING] chec gnration IA: {e}")
+            result['predictions']['ai_reasoning_shots'] = None
+            result['predictions']['ai_reasoning_corners'] = None
 
         print(f"\n Prdiction termine!")
         print(f"    {home_team}: {result['predictions']['home_shots']} tirs, {result['predictions']['home_corners']} corners")
