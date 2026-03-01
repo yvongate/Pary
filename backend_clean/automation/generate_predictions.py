@@ -245,7 +245,7 @@ def run_auto_predictions(hours_ahead: int = 48) -> Dict:
 
     for i, match in enumerate(upcoming_matches, 1):
         print(f"\n--- Match {i}/{len(upcoming_matches)} ---")
-        result = generate_prediction_for_match(match, predictor, db_sqlite)
+        result = generate_prediction_for_match(match, predictor, db)
         results.append(result)
 
         if result['success']:
