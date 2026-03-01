@@ -507,58 +507,47 @@ class DynamicPredictor:
         formation_corners_factor = 1.0
         formation_analysis = None
 
-        if self.use_formations:
+        if self.use_formations and home_formation and away_formation:
             print(f"\n tape 7b: Utilisation des formations...")
-
-            # Utiliser les formations passées en paramètre OU défaut
-            if not home_formation:
-                home_formation = '4-3-3'  # Défaut
-                print(f"     {home_team}: 4-3-3 (defaut)")
-            else:
-                print(f"     {home_team}: {home_formation}")
-
-            if not away_formation:
-                away_formation = '4-3-3'  # Défaut
-                print(f"     {away_team}: 4-3-3 (defaut)")
-            else:
-                print(f"     {away_team}: {away_formation}")
+            print(f"     {home_team}: {home_formation}")
+            print(f"     {away_team}: {away_formation}")
 
             try:
-                if home_formation and away_formation:
-                    # Calculer les facteurs RELS  partir des donnes historiques
-                    home_shots_f, home_corners_f, home_stats = (
-                        self.formation_analyzer.get_formation_factor_from_data(
-                            home_formation, away_formation, home_history
-                        )
+                # Calculer les facteurs RELS  partir des donnes historiques
+                home_shots_f, home_corners_f, home_stats = (
+                    self.formation_analyzer.get_formation_factor_from_data(
+                        home_formation, away_formation, home_history
                     )
+                )
 
-                    away_shots_f, away_corners_f, away_stats = (
-                        self.formation_analyzer.get_formation_factor_from_data(
-                            away_formation, home_formation, away_history
-                        )
+                away_shots_f, away_corners_f, away_stats = (
+                    self.formation_analyzer.get_formation_factor_from_data(
+                        away_formation, home_formation, away_history
                     )
+                )
 
-                    # Utiliser les facteurs de l'quipe  domicile (principale)
-                    formation_shots_factor = home_shots_f
-                    formation_corners_factor = home_corners_f
-                    formation_analysis = {
-                        'home_stats': home_stats,
-                        'away_stats': away_stats
-                    }
+                # Utiliser les facteurs de l'quipe  domicile (principale)
+                formation_shots_factor = home_shots_f
+                formation_corners_factor = home_corners_f
+                formation_analysis = {
+                    'home_stats': home_stats,
+                    'away_stats': away_stats
+                }
 
-                    print(f"\n    Analyse {home_team} en {home_formation}:")
-                    print(f"      Matchs analyss: {home_stats.get('matches_analyzed', 0)}")
-                    if home_stats.get('method') == 'data_driven':
-                        print(f"      Moy. tirs (cette formation): {home_stats.get('avg_shots_with_formation', 0)}")
-                        print(f"      Moy. tirs (toutes formations): {home_stats.get('avg_shots_global', 0)}")
-                        print(f"       Facteur tirs: {home_shots_f:.3f} ({home_stats.get('shots_change_pct', 0):+.1f}%)")
-                        print(f"       Facteur corners: {home_corners_f:.3f} ({home_stats.get('corners_change_pct', 0):+.1f}%)")
-                    else:
-                        print(f"       {home_stats.get('reason', 'Donnes insuffisantes')}")
+                print(f"\n    Analyse {home_team} en {home_formation}:")
+                print(f"      Matchs analyss: {home_stats.get('matches_analyzed', 0)}")
+                if home_stats.get('method') == 'data_driven':
+                    print(f"      Moy. tirs (cette formation): {home_stats.get('avg_shots_with_formation', 0)}")
+                    print(f"      Moy. tirs (toutes formations): {home_stats.get('avg_shots_global', 0)}")
+                    print(f"       Facteur tirs: {home_shots_f:.3f} ({home_stats.get('shots_change_pct', 0):+.1f}%)")
+                    print(f"       Facteur corners: {home_corners_f:.3f} ({home_stats.get('corners_change_pct', 0):+.1f}%)")
                 else:
-                    print(f"     Formations non disponibles encore")
+                    print(f"       {home_stats.get('reason', 'Donnes insuffisantes')}")
             except Exception as e:
                 print(f"     Erreur rcupration formations: {e}")
+        else:
+            if self.use_formations:
+                print(f"\n tape 7b: Formations non disponibles - utilisation des calculs de base uniquement")
 
         # Appliquer SEULEMENT l'ajustement formations (PAS mto)
         home_shots = max(0, home_shots_raw * formation_shots_factor)
