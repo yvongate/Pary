@@ -36,9 +36,12 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
         print("[WARNING] Aucune fixture trouvée")
         return []
 
-    # Filtrer les matchs des prochaines heures
+    # Filtrer les matchs des prochaines heures (depuis maintenant)
     now = datetime.now()
     future_limit = now + timedelta(hours=hours_ahead)
+
+    print(f"[DEBUG] Now: {now}")
+    print(f"[DEBUG] Future limit: {future_limit}")
 
     upcoming = []
     print(f"[DEBUG] Fixtures DataFrame shape: {fixtures.shape}")
