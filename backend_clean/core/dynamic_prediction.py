@@ -499,7 +499,7 @@ class DynamicPredictor:
                 def_inv = (max_rank + 1) - opp_def_rank
                 form_inv = (max_rank + 1) - team_form_rank
 
-                X_home.append([off_inv, def_inv, form_inv])
+                X_home.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_home.append(match['shots'])
                 y_corners_home.append(match['corners'])
 
@@ -519,7 +519,7 @@ class DynamicPredictor:
                 def_inv = (max_rank + 1) - opp_def_rank
                 form_inv = (max_rank + 1) - team_form_rank
 
-                X_away.append([off_inv, def_inv, form_inv])
+                X_away.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_away.append(match['shots'])
                 y_corners_away.append(match['corners'])
 
@@ -659,8 +659,11 @@ class DynamicPredictor:
         print(f"\n tape 2c: Rcupration du contexte Rue des Joueurs...")
         rdj_context = None
         try:
+            # Convertir le league_code pour RDJ (england → E0, spain → SP1, etc.)
+            rdj_league_code = self._get_league_csv_code(league_code)
+
             # Essayer de trouver l'URL du match
-            rdj_url = rdj_finder.find_match_url(home_team, away_team)
+            rdj_url = rdj_finder.find_match_url(home_team, away_team, league_code=rdj_league_code)
 
             if rdj_url:
                 print(f"    [OK] URL trouve: {rdj_url[:60]}...")
@@ -748,11 +751,11 @@ class DynamicPredictor:
         # 5. Calculer λ (taux Poisson) pour CE match
         print(f"\n tape 5: Calcul des prdictions (modle de Poisson)...")
 
-        # Vecteur caractristiques HOME : [attaque_home, dfense_away, forme_home]
-        X_home_match = np.array([home_off_inv, away_def_inv, home_form_inv, 1.0])  # +1 pour intercept
+        # Vecteur caractristiques HOME : [intercept, attaque_home, dfense_away, forme_home]
+        X_home_match = np.array([1.0, home_off_inv, away_def_inv, home_form_inv])
 
-        # Vecteur caractristiques AWAY : [attaque_away, dfense_home, forme_away]
-        X_away_match = np.array([away_off_inv, home_def_inv, away_form_inv, 1.0])
+        # Vecteur caractristiques AWAY : [intercept, attaque_away, dfense_home, forme_away]
+        X_away_match = np.array([1.0, away_off_inv, home_def_inv, away_form_inv])
 
         # λ = exp(β · X)
         beta_shots_home = np.array(poisson_model['shots']['beta_home'])
