@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.data_service import get_data_service
 from core.dynamic_prediction import DynamicPredictor
 from services.sqlite_database_service import SQLiteDatabaseService
+from services.supabase_client import SupabaseClient
 
 
 def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
@@ -46,6 +47,8 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
     upcoming = []
     print(f"[DEBUG] Fixtures DataFrame shape: {fixtures.shape}")
     print(f"[DEBUG] Columns: {list(fixtures.columns)}")
+    print(f"[DEBUG] First 3 rows:")
+    print(fixtures.head(3).to_dict('records'))
 
     for idx, fixture in fixtures.iterrows():
         try:
@@ -221,7 +224,7 @@ def run_auto_predictions(hours_ahead: int = 48) -> Dict:
 
     for i, match in enumerate(upcoming_matches, 1):
         print(f"\n--- Match {i}/{len(upcoming_matches)} ---")
-        result = generate_prediction_for_match(match, predictor, db)
+        result = generate_prediction_for_match(match, predictor, db_sqlite)
         results.append(result)
 
         if result['success']:
