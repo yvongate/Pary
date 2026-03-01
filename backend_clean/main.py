@@ -25,15 +25,13 @@ app.add_middleware(
 )
 
 # 8 championnats
+# Championnats supportés pour les prédictions (avec scraping soccerstats.com)
 LEAGUES = {
     "E0": {"name": "Premier League", "country": "England"},
-    "E1": {"name": "Championship", "country": "England"},
-    "D1": {"name": "Bundesliga", "country": "Germany"},
     "SP1": {"name": "La Liga", "country": "Spain"},
     "I1": {"name": "Serie A", "country": "Italy"},
     "F1": {"name": "Ligue 1", "country": "France"},
-    "F2": {"name": "Ligue 2", "country": "France"},
-    "P1": {"name": "Primeira Liga", "country": "Portugal"},
+    "D1": {"name": "Bundesliga", "country": "Germany"},
 }
 
 # Mapping vers codes soccerstats.com
@@ -142,6 +140,10 @@ def get_fixtures(
     df = load_fixtures()
     if df is None:
         return {"matches": [], "count": 0, "source": "football-data.co.uk", "error": "Fixtures CSV non disponible"}
+
+    # Filtrer uniquement les championnats supportés
+    SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1']
+    df = df[df['Div'].isin(SUPPORTED_LEAGUES)]
 
     # Normaliser les dates pour comparaison (enlever l'heure)
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

@@ -37,6 +37,14 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
         print("[WARNING] Aucune fixture trouvée")
         return []
 
+    # Filtrer uniquement les championnats supportés
+    SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1']
+    fixtures = fixtures[fixtures['Div'].isin(SUPPORTED_LEAGUES)]
+
+    if fixtures.empty:
+        print(f"[WARNING] Aucune fixture trouvée pour les championnats supportés: {SUPPORTED_LEAGUES}")
+        return []
+
     # Filtrer les matchs des prochaines heures (depuis maintenant)
     now = datetime.now()
     future_limit = now + timedelta(hours=hours_ahead)
