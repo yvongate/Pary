@@ -107,7 +107,7 @@ export default function PredictionsPage() {
               Aucune prédiction disponible pour le moment
             </p>
             <p className="text-sm text-yellow-600 mt-2">
-              Les prédictions sont générées automatiquement 1-2h avant chaque match
+              Les prédictions sont générées automatiquement chaque jour à 10:00 pour les matchs des prochaines 48h
             </p>
           </div>
         )}
