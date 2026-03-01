@@ -52,26 +52,40 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
 
     for idx, fixture in fixtures.iterrows():
         try:
-            # Parser la date du match (format dans fixtures.csv: dd/mm/yyyy)
-            date_str = fixture['Date'] if 'Date' in fixture else None
+            # Parser la date du match
+            date_str = fixture['Date']
             time_str = fixture.get('Time', '')
 
-            if pd.isna(date_str):
-                continue
+            if idx < 3:  # Debug les 3 premières lignes
+                print(f"[DEBUG] Row {idx}: Date='{date_str}' (type={type(date_str)}), Time='{time_str}'")
 
-            # Combiner date et heure si disponible
-            if time_str and not pd.isna(time_str):
-                datetime_str = f"{date_str} {time_str}"
-                match_date = pd.to_datetime(datetime_str, format='%d/%m/%Y %H:%M', errors='coerce')
+            # Si la date est déjà un Timestamp pandas (déjà parsée par load_fixtures)
+            if isinstance(date_str, pd.Timestamp):
+                match_date = date_str
+                # Ajouter l'heure si disponible
+                if time_str and not pd.isna(time_str):
+                    try:
+                        hour, minute = map(int, str(time_str).split(':'))
+                        match_date = match_date.replace(hour=hour, minute=minute)
+                    except:
+                        pass
+            elif pd.isna(date_str):
+                continue
             else:
-                match_date = pd.to_datetime(date_str, format='%d/%m/%Y', errors='coerce')
+                # Parser manuellement (ne devrait pas arriver si load_fixtures fonctionne)
+                if time_str and not pd.isna(time_str):
+                    datetime_str = f"{date_str} {time_str}"
+                    match_date = pd.to_datetime(datetime_str, format='%d/%m/%Y %H:%M', errors='coerce')
+                else:
+                    match_date = pd.to_datetime(date_str, format='%d/%m/%Y', errors='coerce')
 
             if pd.isna(match_date):
                 continue
 
             # Vérifier si c'est dans la fenêtre
             if now <= match_date <= future_limit:
-                print(f"[DEBUG] Match trouvé: {fixture['HomeTeam']} vs {fixture['AwayTeam']} le {match_date}")
+                if idx < 10:  # Debug les 10 premiers matchs trouvés
+                    print(f"[DEBUG] ✓ Match trouvé: {fixture['HomeTeam']} vs {fixture['AwayTeam']} le {match_date}")
                 upcoming.append({
                     'home_team': fixture['HomeTeam'],
                     'away_team': fixture['AwayTeam'],
@@ -80,7 +94,7 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
                     'fixture': fixture
                 })
         except Exception as e:
-            print(f"[DEBUG] Erreur parsing fixture: {e}")
+            print(f"[DEBUG] ERREUR row {idx}: {e}")
             continue
 
     return upcoming
@@ -198,6 +212,13 @@ def run_auto_predictions(hours_ahead: int = 48) -> Dict:
     # Initialiser les services
     predictor = DynamicPredictor()
     db = SQLiteDatabaseService()
+
+    # Tenter aussi Supabase (optionnel)
+    try:
+        db_supabase = SupabaseClient()
+        db_supabase.connect()
+    except:
+        db_supabase = None
 
     # Récupérer les matchs à venir
     print(f"\n[1] Recherche des matchs dans les prochaines {hours_ahead}h...")
