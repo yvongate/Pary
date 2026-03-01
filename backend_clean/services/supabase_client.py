@@ -28,10 +28,10 @@ class SupabaseClient:
         # Le mot de passe est la clé service_role ou le mot de passe configuré
         password = os.getenv("SUPABASE_PASSWORD") or supabase_key or "voicilemotdepassedepary"
 
-        # Connection directe (pas pooler pour éviter problèmes)
+        # Connection avec pooler IPv4 (transaction mode)
         self.connection_string = (
-            f"postgresql://postgres:{password}"
-            f"@db.{project_ref}.supabase.co:5432/postgres"
+            f"postgresql://postgres.{project_ref}:{password}"
+            f"@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
         )
         self.conn = None
 

@@ -41,10 +41,13 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
     future_limit = now + timedelta(hours=hours_ahead)
 
     upcoming = []
-    for _, fixture in fixtures.iterrows():
+    print(f"[DEBUG] Fixtures DataFrame shape: {fixtures.shape}")
+    print(f"[DEBUG] Columns: {list(fixtures.columns)}")
+
+    for idx, fixture in fixtures.iterrows():
         try:
             # Parser la date du match (format dans fixtures.csv: dd/mm/yyyy)
-            date_str = fixture.get('Date')
+            date_str = fixture['Date'] if 'Date' in fixture else None
             time_str = fixture.get('Time', '')
 
             if pd.isna(date_str):
@@ -62,14 +65,16 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
 
             # Vérifier si c'est dans la fenêtre
             if now <= match_date <= future_limit:
+                print(f"[DEBUG] Match trouvé: {fixture['HomeTeam']} vs {fixture['AwayTeam']} le {match_date}")
                 upcoming.append({
-                    'home_team': fixture.get('HomeTeam'),
-                    'away_team': fixture.get('AwayTeam'),
-                    'league_code': fixture.get('Div'),
+                    'home_team': fixture['HomeTeam'],
+                    'away_team': fixture['AwayTeam'],
+                    'league_code': fixture['Div'],
                     'match_date': match_date,
                     'fixture': fixture
                 })
         except Exception as e:
+            print(f"[DEBUG] Erreur parsing fixture: {e}")
             continue
 
     return upcoming
@@ -195,8 +200,10 @@ def run_auto_predictions(hours_ahead: int = 48) -> Dict:
     print(f"  [INFO] {len(upcoming_matches)} match(s) trouvé(s)")
 
     if not upcoming_matches:
+        duration = (datetime.now() - start_time).total_seconds()
         return {
             'timestamp': datetime.now().isoformat(),
+            'duration_seconds': duration,
             'total_matches': 0,
             'predictions_generated': 0,
             'predictions_failed': 0,
