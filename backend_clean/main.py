@@ -101,10 +101,11 @@ def get_fixtures_csv(
     if df is None:
         return {"error": "Fixtures not found. Run download_data.py first."}
 
-    today = datetime.now()
+    # Normaliser les dates pour comparaison (enlever l'heure)
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     date_limit = today + timedelta(days=days)
 
-    # Filtrer par date
+    # Filtrer par date (incluant aujourd'hui)
     mask = (df['Date'] >= today) & (df['Date'] <= date_limit)
     future = df[mask].copy()
 
@@ -142,10 +143,11 @@ def get_fixtures(
     if df is None:
         return {"matches": [], "count": 0, "source": "football-data.co.uk", "error": "Fixtures CSV non disponible"}
 
-    today = datetime.now()
+    # Normaliser les dates pour comparaison (enlever l'heure)
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     date_limit = today + timedelta(days=days)
 
-    # Filtrer par date
+    # Filtrer par date (incluant aujourd'hui)
     mask = (df['Date'] >= today) & (df['Date'] <= date_limit)
     future = df[mask].copy()
 
