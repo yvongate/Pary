@@ -13,6 +13,7 @@ import scrapers.soccerstats_working
 from gnews import GNews
 from core.dynamic_prediction import DynamicPredictor
 from services.supabase_client import SupabaseClient
+from services.sqlite_database_service import get_sqlite_db
 
 app = FastAPI(title="Football Stats API", version="1.2")
 
@@ -1288,16 +1289,15 @@ def get_upcoming_predictions(
      Rcupre les prdictions pr-calcules pour les matchs  venir
 
     Les prdictions sont calcules automatiquement par le cron
-    1h avant chaque match (quand les compositions sont disponibles)
+    chaque jour à 10:00 pour les matchs des prochaines 48h
 
     Exemple:
     /predictions/upcoming?league=E0&limit=10
     """
     try:
-        if not supabase_client.conn:
-            supabase_client.connect()
-
-        predictions = supabase_client.get_upcoming_predictions(
+        # Utiliser SQLite au lieu de Supabase
+        sqlite_db = get_sqlite_db()
+        predictions = sqlite_db.get_upcoming_predictions(
             league_code=league,
             limit=limit
         )
@@ -1352,7 +1352,7 @@ def get_upcoming_predictions(
             'league_name': LEAGUES.get(league, {}).get('name', 'Tous') if league else 'Tous',
             'predictions': formatted_predictions,
             'count': len(formatted_predictions),
-            'source': 'Supabase (pr-calcules par cron)'
+            'source': 'SQLite (pr-calcules par cron)'
         }
 
     except Exception as e:
@@ -1379,10 +1379,9 @@ def get_prediction_detail(match_id: str):
     /predictions/match/E0_20260225_TottenhamArsenal
     """
     try:
-        if not supabase_client.conn:
-            supabase_client.connect()
-
-        prediction = supabase_client.get_prediction_by_match_id(match_id)
+        # Utiliser SQLite au lieu de Supabase
+        sqlite_db = get_sqlite_db()
+        prediction = sqlite_db.get_prediction_by_match_id(match_id)
 
         if not prediction:
             return {

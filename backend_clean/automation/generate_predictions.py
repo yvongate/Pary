@@ -168,21 +168,30 @@ def generate_prediction_for_match(match: Dict, predictor: DynamicPredictor, db: 
         # Sauvegarder dans la base de données
         match_id = f"{league_code}_{match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
 
-        db.save_prediction({
+        # Extraire les données de confiance et contexte
+        confidence = result.get('confidence', {})
+        context = result.get('context', {})
+
+        db.insert_prediction({
             'match_id': match_id,
             'home_team': home_team,
             'away_team': away_team,
             'league_code': league_code,
-            'match_date': match_date.isoformat(),
+            'match_date': match_date,
             'shots_min': int(total_shots * 0.8),
             'shots_max': int(total_shots * 1.2),
-            'shots_prediction': total_shots,
+            'shots_confidence': confidence.get('overall', 0.0),
             'corners_min': int(total_corners * 0.8),
             'corners_max': int(total_corners * 1.2),
-            'corners_prediction': total_corners,
-            'confidence': result.get('confidence', {}).get('overall', 0),
-            'predictions': predictions,
-            'context': result.get('context', {})
+            'corners_confidence': confidence.get('overall', 0.0),
+            'analysis_shots': predictions.get('shots_analysis'),
+            'analysis_corners': predictions.get('corners_analysis'),
+            'ai_reasoning_shots': predictions.get('ai_reasoning_shots'),
+            'ai_reasoning_corners': predictions.get('ai_reasoning_corners'),
+            'home_formation': context.get('home_formation'),
+            'away_formation': context.get('away_formation'),
+            'weather': context.get('weather'),
+            'rankings_used': context.get('rankings')
         })
 
         return {
