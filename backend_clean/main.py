@@ -83,10 +83,10 @@ def root():
     return {
         "message": "Football Stats API",
         "sources": {
-            "fixtures": "football-data.org",
-            "results": "football-data.co.uk",
-            "standings": "football-data.co.uk",
-            "team_stats": "football-data.co.uk"
+            "fixtures": "football-data.co.uk (CSV auto-update)",
+            "results": "football-data.co.uk (CSV)",
+            "standings": "soccerstats.com (scraping)",
+            "team_stats": "football-data.co.uk (CSV)"
         },
         "season": get_current_season()
     }
@@ -135,22 +135,42 @@ def get_leagues():
 @app.get("/fixtures")
 def get_fixtures(
     league: Optional[str] = Query(None, description="Code championnat (E0, E1, D1, SP1, I1, F1, F2, P1)"),
-    days: int = Query(14, description="Jours  venir  afficher"),
+    days: int = Query(14, description="Jours à venir à afficher"),
 ):
-    """Matchs  venir (fixtures) - Source: football-data.org API"""
-    matches = fd_api.get_all_fixtures(days_future=days, league_code=league)
-
-    if not matches:
-        return {"matches": [], "count": 0, "source": "football-data.org", "note": "Aucun match trouv ou erreur API"}
+    """Matchs à venir (fixtures) - Source: football-data.co.uk CSV (mis à jour automatiquement)"""
+    df = load_fixtures()
+    if df is None:
+        return {"matches": [], "count": 0, "source": "football-data.co.uk", "error": "Fixtures CSV non disponible"}
 
     today = datetime.now()
     date_limit = today + timedelta(days=days)
+
+    # Filtrer par date
+    mask = (df['Date'] >= today) & (df['Date'] <= date_limit)
+    future = df[mask].copy()
+
+    # Filtrer par ligue si spécifié
+    if league:
+        future = future[future['Div'] == league]
+
+    matches = []
+    for _, row in future.iterrows():
+        matches.append({
+            "id": f"{row.get('Div')}_{row['Date'].strftime('%Y%m%d')}_{str(row.get('HomeTeam')).replace(' ', '')}",
+            "league_code": row.get('Div'),
+            "league": LEAGUES.get(row.get('Div'), {}).get('name', row.get('Div')),
+            "date": row['Date'].strftime('%Y-%m-%d') if pd.notna(row['Date']) else None,
+            "time": row.get('Time'),
+            "home_team": row.get('HomeTeam'),
+            "away_team": row.get('AwayTeam'),
+            "status": "SCHEDULED",
+        })
 
     return {
         "matches": matches,
         "count": len(matches),
         "period": f"{today.strftime('%Y-%m-%d')} to {date_limit.strftime('%Y-%m-%d')}",
-        "source": "football-data.org"
+        "source": "football-data.co.uk"
     }
 
 @app.get("/results")
