@@ -16,15 +16,22 @@ class SupabaseClient:
         """Initialise la connexion  Supabase"""
         import os
         # Utiliser les variables d'environnement
-        supabase_url = os.getenv("SUPABASE_URL", "").replace("https://", "").replace("http://", "")
-        supabase_password = os.getenv("SUPABASE_PASSWORD", "voicilemotdepassedepary")
+        supabase_url = os.getenv("SUPABASE_URL", "https://qibilvupnrqyxsoxpbze.supabase.co")
+        supabase_key = os.getenv("SUPABASE_KEY", "")
 
-        # Extraire le project ID de l'URL
-        project_id = supabase_url.split(".")[0] if supabase_url else "qibilvupnrqyxsoxpbze"
+        # Extraire le project ref (ex: qibilvupnrqyxsoxpbze)
+        if "supabase.co" in supabase_url:
+            project_ref = supabase_url.replace("https://", "").replace("http://", "").split(".")[0]
+        else:
+            project_ref = "qibilvupnrqyxsoxpbze"
 
+        # Le mot de passe est la clé service_role ou le mot de passe configuré
+        password = os.getenv("SUPABASE_PASSWORD") or supabase_key or "voicilemotdepassedepary"
+
+        # Connection directe (pas pooler pour éviter problèmes)
         self.connection_string = (
-            f"postgresql://postgres.{project_id}:{supabase_password}"
-            f"@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+            f"postgresql://postgres:{password}"
+            f"@db.{project_ref}.supabase.co:5432/postgres"
         )
         self.conn = None
 

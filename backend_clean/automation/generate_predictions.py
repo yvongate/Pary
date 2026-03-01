@@ -41,10 +41,24 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
     future_limit = now + timedelta(hours=hours_ahead)
 
     upcoming = []
-    for fixture in fixtures:
+    for _, fixture in fixtures.iterrows():
         try:
-            # Parser la date du match
-            match_date = pd.to_datetime(fixture.get('DateTime'))
+            # Parser la date du match (format dans fixtures.csv: dd/mm/yyyy)
+            date_str = fixture.get('Date')
+            time_str = fixture.get('Time', '')
+
+            if pd.isna(date_str):
+                continue
+
+            # Combiner date et heure si disponible
+            if time_str and not pd.isna(time_str):
+                datetime_str = f"{date_str} {time_str}"
+                match_date = pd.to_datetime(datetime_str, format='%d/%m/%Y %H:%M', errors='coerce')
+            else:
+                match_date = pd.to_datetime(date_str, format='%d/%m/%Y', errors='coerce')
+
+            if pd.isna(match_date):
+                continue
 
             # Vérifier si c'est dans la fenêtre
             if now <= match_date <= future_limit:
@@ -55,7 +69,7 @@ def get_upcoming_matches(hours_ahead: int = 48) -> List[Dict]:
                     'match_date': match_date,
                     'fixture': fixture
                 })
-        except:
+        except Exception as e:
             continue
 
     return upcoming
