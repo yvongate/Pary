@@ -26,6 +26,7 @@ from core.formation_analyzer import FormationAnalyzer
 from core.ai_deep_reasoning import generate_deep_analysis_prediction
 import scrapers.ruedesjoueurs_finder as rdj_finder
 import scrapers.ruedesjoueurs_scraper as rdj_scraper
+from services.sqlite_database_service import get_sqlite_db
 
 
 class DynamicPredictor:
@@ -907,7 +908,23 @@ class DynamicPredictor:
             }
         }
 
-        # 9. Gnrer le raisonnement IA (Deep Reasoning)
+        # 9. Rcuprer les lineups (si disponibles en DB)
+        lineups = None
+        try:
+            db = get_sqlite_db()
+            effective_match_date = match_date if match_date else datetime.now()
+            match_id = f"{league_code}_{effective_match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
+            lineups = db.get_lineup_by_match_id(match_id)
+
+            if lineups:
+                print(f"[INFO] Lineups trouvées en DB: {lineups.get('home_formation')} vs {lineups.get('away_formation')}")
+            else:
+                print(f"[INFO] Aucune lineup en DB pour ce match")
+        except Exception as e:
+            print(f"[WARNING] Erreur récupération lineups: {e}")
+            lineups = None
+
+        # 10. Gnrer le raisonnement IA (Deep Reasoning)
         print(f"\n tape 8: Gnration du raisonnement IA profond...")
         try:
             ai_result = generate_deep_analysis_prediction(
@@ -924,20 +941,38 @@ class DynamicPredictor:
                 detailed_stats={
                     'home': home_detailed_stats,
                     'away': away_detailed_stats
-                }
+                },
+                lineups=lineups  # Compositions confirmées si disponibles
             )
 
             # Ajouter le raisonnement IA au rsultat
             result['predictions']['ai_reasoning_shots'] = ai_result.get('full_reasoning', '')
             result['predictions']['ai_reasoning_corners'] = ai_result.get('full_reasoning', '')
-            result['predictions']['ai_shots_min'] = ai_result.get('shots_min')
-            result['predictions']['ai_shots_max'] = ai_result.get('shots_max')
-            result['predictions']['ai_corners_min'] = ai_result.get('corners_min')
-            result['predictions']['ai_corners_max'] = ai_result.get('corners_max')
+
+            # Prédictions séparées par équipe
+            result['predictions']['ai_home_shots_min'] = ai_result.get('home_shots_min')
+            result['predictions']['ai_home_shots_max'] = ai_result.get('home_shots_max')
+            result['predictions']['ai_home_corners_min'] = ai_result.get('home_corners_min')
+            result['predictions']['ai_home_corners_max'] = ai_result.get('home_corners_max')
+
+            result['predictions']['ai_away_shots_min'] = ai_result.get('away_shots_min')
+            result['predictions']['ai_away_shots_max'] = ai_result.get('away_shots_max')
+            result['predictions']['ai_away_corners_min'] = ai_result.get('away_corners_min')
+            result['predictions']['ai_away_corners_max'] = ai_result.get('away_corners_max')
+
+            # Total (pour compatibilité)
+            result['predictions']['ai_shots_min'] = ai_result.get('home_shots_min', 0) + ai_result.get('away_shots_min', 0)
+            result['predictions']['ai_shots_max'] = ai_result.get('home_shots_max', 0) + ai_result.get('away_shots_max', 0)
+            result['predictions']['ai_corners_min'] = ai_result.get('home_corners_min', 0) + ai_result.get('away_corners_min', 0)
+            result['predictions']['ai_corners_max'] = ai_result.get('home_corners_max', 0) + ai_result.get('away_corners_max', 0)
+
             result['predictions']['ai_confidence'] = ai_result.get('confidence', 0)
 
             print(f"    [OK] Raisonnement IA gnr ({len(ai_result.get('full_reasoning', ''))//100*100}+ caractres)")
-            print(f"    IA suggre: Tirs {ai_result.get('shots_min')}-{ai_result.get('shots_max')}, Corners {ai_result.get('corners_min')}-{ai_result.get('corners_max')}")
+            print(f"    IA suggre:")
+            print(f"      {home_team}: {ai_result.get('home_shots_min')}-{ai_result.get('home_shots_max')} tirs, {ai_result.get('home_corners_min')}-{ai_result.get('home_corners_max')} corners")
+            print(f"      {away_team}: {ai_result.get('away_shots_min')}-{ai_result.get('away_shots_max')} tirs, {ai_result.get('away_corners_min')}-{ai_result.get('away_corners_max')} corners")
+            print(f"      Total: {result['predictions']['ai_shots_min']}-{result['predictions']['ai_shots_max']} tirs")
 
         except Exception as e:
             print(f"    [WARNING] chec gnration IA: {e}")

@@ -49,6 +49,25 @@ class SQLiteDatabaseService:
             )
         """)
 
+        # Table pour stocker les lineups (compositions) récupérées via SerpAPI
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS match_lineups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                match_id TEXT UNIQUE NOT NULL,
+                home_team TEXT NOT NULL,
+                away_team TEXT NOT NULL,
+                league_code TEXT NOT NULL,
+                match_date TEXT NOT NULL,
+                home_formation TEXT,
+                away_formation TEXT,
+                home_lineup_json TEXT,
+                away_lineup_json TEXT,
+                source TEXT,
+                fetched_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         conn.commit()
         conn.close()
 
@@ -256,6 +275,141 @@ class SQLiteDatabaseService:
 
         except Exception as e:
             print(f"[ERREUR] Récupération prédictions: {e}")
+            return []
+
+    # ====== METHODES POUR LINEUPS ======
+
+    def insert_lineup(self, lineup_data: Dict) -> Optional[int]:
+        """
+        Insère ou met à jour les lineups d'un match (UPSERT)
+
+        Args:
+            lineup_data: {
+                'match_id': str,
+                'home_team': str,
+                'away_team': str,
+                'league_code': str,
+                'match_date': str,
+                'home_formation': str,
+                'away_formation': str,
+                'home_lineup': dict,
+                'away_lineup': dict,
+                'source': str
+            }
+
+        Returns:
+            ID de l'entrée ou None si erreur
+        """
+        if not self.conn:
+            self.connect()
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Convertir les lineups en JSON
+            home_lineup_json = json.dumps(lineup_data.get('home_lineup')) if lineup_data.get('home_lineup') else None
+            away_lineup_json = json.dumps(lineup_data.get('away_lineup')) if lineup_data.get('away_lineup') else None
+
+            cursor.execute("""
+                INSERT INTO match_lineups (
+                    match_id, home_team, away_team, league_code, match_date,
+                    home_formation, away_formation, home_lineup_json, away_lineup_json, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(match_id) DO UPDATE SET
+                    home_formation = excluded.home_formation,
+                    away_formation = excluded.away_formation,
+                    home_lineup_json = excluded.home_lineup_json,
+                    away_lineup_json = excluded.away_lineup_json,
+                    source = excluded.source,
+                    fetched_at = CURRENT_TIMESTAMP
+            """, (
+                lineup_data['match_id'],
+                lineup_data['home_team'],
+                lineup_data['away_team'],
+                lineup_data['league_code'],
+                lineup_data['match_date'].isoformat() if isinstance(lineup_data['match_date'], datetime) else lineup_data['match_date'],
+                lineup_data.get('home_formation'),
+                lineup_data.get('away_formation'),
+                home_lineup_json,
+                away_lineup_json,
+                lineup_data.get('source', 'serpapi')
+            ))
+
+            self.conn.commit()
+            print(f"[DB] Lineup sauvegardée pour {lineup_data['match_id']}")
+            return cursor.lastrowid
+
+        except Exception as e:
+            print(f"[ERREUR] Insertion lineup: {e}")
+            return None
+
+    def get_lineup_by_match_id(self, match_id: str) -> Optional[Dict]:
+        """
+        Récupère les lineups d'un match par son match_id
+
+        Args:
+            match_id: ID du match
+
+        Returns:
+            Lineup data ou None si non trouvé
+        """
+        if not self.conn:
+            self.connect()
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT * FROM match_lineups
+                WHERE match_id = ?
+            """, (match_id,))
+
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                # Parser les JSON strings
+                if result.get('home_lineup_json'):
+                    result['home_lineup'] = json.loads(result['home_lineup_json'])
+                if result.get('away_lineup_json'):
+                    result['away_lineup'] = json.loads(result['away_lineup_json'])
+                return result
+            return None
+
+        except Exception as e:
+            print(f"[ERREUR] Récupération lineup: {e}")
+            return None
+
+    def get_matches_needing_lineups(self, time_before_match_minutes: int = 60) -> List[Dict]:
+        """
+        Récupère les matchs qui ont besoin de lineups
+        (matchs qui commencent dans environ time_before_match_minutes)
+
+        Args:
+            time_before_match_minutes: Temps avant le match en minutes (défaut: 60)
+
+        Returns:
+            Liste de matchs qui ont besoin de lineups
+        """
+        if not self.conn:
+            self.connect()
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Récupérer tous les matchs à venir qui n'ont pas encore de lineup
+            cursor.execute("""
+                SELECT mp.*
+                FROM match_predictions mp
+                LEFT JOIN match_lineups ml ON mp.match_id = ml.match_id
+                WHERE mp.match_date >= datetime('now')
+                AND ml.match_id IS NULL
+                ORDER BY mp.match_date ASC
+            """)
+
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+
+        except Exception as e:
+            print(f"[ERREUR] Récupération matchs sans lineups: {e}")
             return []
 
 

@@ -18,7 +18,8 @@ def generate_deep_analysis_prediction(
     current_rankings: Dict,
     rdj_context: Optional[Dict] = None,
     weather: Optional[Dict] = None,
-    detailed_stats: Optional[Dict] = None
+    detailed_stats: Optional[Dict] = None,
+    lineups: Optional[Dict] = None
 ) -> Dict:
     """
     L'IA recoit TOUTES les donnees et fait un raisonnement ultra-profond
@@ -31,6 +32,7 @@ def generate_deep_analysis_prediction(
         rdj_context: Contexte Rue des Joueurs (blessures, compositions, analyses)
         weather: Meteo (informatif uniquement, n'affecte pas les calculs)
         detailed_stats: Stats détaillées W-D-L, buts, gaps (soccerstats_working)
+        lineups: Compositions confirmées récupérées via SerpAPI
 
     Returns:
         {
@@ -215,14 +217,38 @@ NOTE: Les calculs mathématiques ne sont PAS affectés par la météo. Cette inf
 """
 
     # ================================================================
-    # SECTION 6: STATISTIQUES DETAILLEES (W-D-L, Buts, Gaps)
+    # SECTION 6: COMPOSITIONS CONFIRMEES (LINEUPS)
+    # ================================================================
+
+    if lineups:
+        prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: COMPOSITIONS CONFIRMEES (LINEUPS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚽ COMPOSITIONS OFFICIELLES (récupérées 1h avant le match)
+
+{home_team}: {lineups.get('home_formation', 'Formation non disponible')}
+{away_team}: {lineups.get('away_formation', 'Formation non disponible')}
+
+Source: {lineups.get('source', 'SerpAPI')}
+
+IMPORTANT: Ces compositions sont CONFIRMEES. Utilise-les pour affiner ton analyse:
+- Formations défensives (5-4-1, 4-5-1) = moins de tirs attendus
+- Formations offensives (4-3-3, 3-4-3) = plus de tirs attendus
+- Absence de joueurs clés mentionnés dans RDJ = impact sur les tirs
+"""
+
+    # ================================================================
+    # SECTION 7: STATISTIQUES DETAILLEES (W-D-L, Buts, Gaps)
     # ================================================================
 
     if detailed_stats and (detailed_stats.get('home') or detailed_stats.get('away')):
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SECTION 6: STATISTIQUES DETAILLEES DE LA SAISON
+SECTION 7: STATISTIQUES DETAILLEES DE LA SAISON
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -270,45 +296,72 @@ SECTION 6: STATISTIQUES DETAILLEES DE LA SAISON
 INSTRUCTIONS DE RAISONNEMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert:
+Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert et prédire LES DEUX ÉQUIPES:
 
-ETAPE 1: PROFIL DE L'ADVERSAIRE
-  - Quel est le profil de {away_team}? (top equipe? moyenne? faible?)
-  - Quelle est sa defense exterieur? (solide? moyenne? faible?)
-  - Quelle est sa forme recente?
+PARTIE A: ANALYSE {home_team} (DOMICILE)
+──────────────────────────────────────
 
-ETAPE 2: RECHERCHE DE PATTERNS DANS L'HISTORIQUE
-  - Cherche dans l'historique de {home_team} a domicile:
-    SI adversaire avec defense similaire a {away_team}, combien de tirs?
-  - Exemples de raisonnement:
-    * SI defense adverse TOP 5 (rang 1-5) ALORS {home_team} fait X tirs
-    * SI defense adverse MOYENNE (rang 8-12) ALORS {home_team} fait Y tirs
-    * SI defense adverse FAIBLE (rang 15-20) ALORS {home_team} fait Z tirs
+ETAPE 1: Profil de {home_team}
+  - Position, forme, force offensive et défensive à domicile?
 
-ETAPE 3: FORME RECENTE
-  - SI {home_team} en bonne forme (top 8) ALORS ajuster +X tirs
-  - SI {home_team} en mauvaise forme (15e+) ALORS ajuster -Y tirs
+ETAPE 2: Analyse de la défense adverse ({away_team})
+  - Quelle est la qualité de la défense extérieur de {away_team}?
+  - Cherche dans l'historique de {home_team} à domicile:
+    SI adversaire avec défense similaire à {away_team}, combien de tirs?
 
-ETAPE 4: CONTEXTE SUPPLEMENTAIRE
-  - Joueurs absents impactent-ils?
-  - Meteo impact?
-  - Autres facteurs?
+ETAPE 3: Contexte {home_team}
+  - Blessures/suspensions impactantes?
+  - Forme récente?
 
-ETAPE 5: PREDICTION FINALE
-  - Synthetiser tout le raisonnement
-  - Donner intervalle TIRS et CORNERS
-  - Indiquer niveau de confiance
+ETAPE 4: Prédiction {home_team}
+  - Combien de tirs et corners pour {home_team}?
+
+
+PARTIE B: ANALYSE {away_team} (EXTERIEUR)
+──────────────────────────────────────
+
+ETAPE 5: Profil de {away_team}
+  - Position, forme, force offensive et défensive à l'extérieur?
+
+ETAPE 6: Analyse de la défense adverse ({home_team})
+  - Quelle est la qualité de la défense domicile de {home_team}?
+  - Cherche dans l'historique de {away_team} à l'extérieur:
+    SI adversaire avec défense similaire à {home_team}, combien de tirs?
+
+ETAPE 7: Contexte {away_team}
+  - Blessures/suspensions impactantes?
+  - Forme récente?
+
+ETAPE 8: Prédiction {away_team}
+  - Combien de tirs et corners pour {away_team}?
+
+
+PARTIE C: SYNTHESE FINALE
+──────────────────────────
+
+ETAPE 9: Vérification cohérence
+  - Le total est-il réaliste? (≈28 tirs, ≈11 corners total)
+  - Ajustements nécessaires?
 
 FORMAT DE REPONSE OBLIGATOIRE:
 
 RAISONNEMENT:
-[Ton raisonnement detaille etape par etape avec des SI/ALORS]
+[Ton raisonnement détaillé des 9 étapes ci-dessus]
 
 PREDICTION FINALE:
-TIRS_MIN: [nombre]
-TIRS_MAX: [nombre]
-CORNERS_MIN: [nombre]
-CORNERS_MAX: [nombre]
+
+EQUIPE DOMICILE ({home_team}):
+HOME_TIRS_MIN: [nombre]
+HOME_TIRS_MAX: [nombre]
+HOME_CORNERS_MIN: [nombre]
+HOME_CORNERS_MAX: [nombre]
+
+EQUIPE EXTERIEUR ({away_team}):
+AWAY_TIRS_MIN: [nombre]
+AWAY_TIRS_MAX: [nombre]
+AWAY_CORNERS_MIN: [nombre]
+AWAY_CORNERS_MAX: [nombre]
+
 CONFIANCE: [0-100]%
 """
 
@@ -437,37 +490,61 @@ def _generate_weather_sentence(weather: Dict) -> str:
 
 
 def _parse_ai_prediction(text: str) -> Dict:
-    """Parse la reponse de l'IA pour extraire les predictions"""
+    """Parse la reponse de l'IA pour extraire les predictions des DEUX équipes"""
     import re
 
     result = {
-        'shots_min': 20,
-        'shots_max': 35,
-        'corners_min': 6,
-        'corners_max': 12,
+        'home_shots_min': 10,
+        'home_shots_max': 18,
+        'home_corners_min': 3,
+        'home_corners_max': 7,
+        'away_shots_min': 8,
+        'away_shots_max': 16,
+        'away_corners_min': 2,
+        'away_corners_max': 6,
         'confidence': 50,
         'reasoning': text
     }
 
-    # Extraire TIRS_MIN
-    match = re.search(r'TIRS_MIN:\s*(\d+)', text)
+    # Extraire HOME_TIRS_MIN
+    match = re.search(r'HOME_TIRS_MIN:\s*(\d+)', text)
     if match:
-        result['shots_min'] = int(match.group(1))
+        result['home_shots_min'] = int(match.group(1))
 
-    # Extraire TIRS_MAX
-    match = re.search(r'TIRS_MAX:\s*(\d+)', text)
+    # Extraire HOME_TIRS_MAX
+    match = re.search(r'HOME_TIRS_MAX:\s*(\d+)', text)
     if match:
-        result['shots_max'] = int(match.group(1))
+        result['home_shots_max'] = int(match.group(1))
 
-    # Extraire CORNERS_MIN
-    match = re.search(r'CORNERS_MIN:\s*(\d+)', text)
+    # Extraire HOME_CORNERS_MIN
+    match = re.search(r'HOME_CORNERS_MIN:\s*(\d+)', text)
     if match:
-        result['corners_min'] = int(match.group(1))
+        result['home_corners_min'] = int(match.group(1))
 
-    # Extraire CORNERS_MAX
-    match = re.search(r'CORNERS_MAX:\s*(\d+)', text)
+    # Extraire HOME_CORNERS_MAX
+    match = re.search(r'HOME_CORNERS_MAX:\s*(\d+)', text)
     if match:
-        result['corners_max'] = int(match.group(1))
+        result['home_corners_max'] = int(match.group(1))
+
+    # Extraire AWAY_TIRS_MIN
+    match = re.search(r'AWAY_TIRS_MIN:\s*(\d+)', text)
+    if match:
+        result['away_shots_min'] = int(match.group(1))
+
+    # Extraire AWAY_TIRS_MAX
+    match = re.search(r'AWAY_TIRS_MAX:\s*(\d+)', text)
+    if match:
+        result['away_shots_max'] = int(match.group(1))
+
+    # Extraire AWAY_CORNERS_MIN
+    match = re.search(r'AWAY_CORNERS_MIN:\s*(\d+)', text)
+    if match:
+        result['away_corners_min'] = int(match.group(1))
+
+    # Extraire AWAY_CORNERS_MAX
+    match = re.search(r'AWAY_CORNERS_MAX:\s*(\d+)', text)
+    if match:
+        result['away_corners_max'] = int(match.group(1))
 
     # Extraire CONFIANCE
     match = re.search(r'CONFIANCE:\s*(\d+)', text)

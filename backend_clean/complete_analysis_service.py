@@ -16,6 +16,7 @@ from core.data_collector import DataCollector
 import scrapers.soccerstats_overview
 import scrapers.ruedesjoueurs_finder
 import core.ai_deep_reasoning
+from services.sqlite_database_service import get_sqlite_db
 
 
 class CompleteAnalysisService:
@@ -105,6 +106,18 @@ class CompleteAnalysisService:
         away_history = self.predictor.load_team_history(away_team, league_csv)
         current_rankings = self.predictor.get_current_rankings(league_code)
 
+        # Récupérer les lineups si disponibles en DB
+        lineups = None
+        try:
+            db = get_sqlite_db()
+            effective_match_date = match_date if match_date else datetime.now()
+            match_id = f"{league_code}_{effective_match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
+            lineups = db.get_lineup_by_match_id(match_id)
+            if lineups:
+                print(f"[INFO] Lineups trouvées: {lineups.get('home_formation')} vs {lineups.get('away_formation')}")
+        except Exception as e:
+            print(f"[WARNING] Erreur récupération lineups: {e}")
+
         ai_verification = ai_deep_reasoning.generate_deep_analysis_prediction(
             match={
                 'home_team': home_team,
@@ -116,10 +129,7 @@ class CompleteAnalysisService:
             current_rankings=current_rankings,
             rdj_context=rdj_data,
             weather=prediction_result.get('context', {}).get('weather'),
-            formations={
-                'home_formation': prediction_result.get('context', {}).get('formations', {}).get('home'),
-                'away_formation': prediction_result.get('context', {}).get('formations', {}).get('away')
-            }
+            lineups=lineups
         )
 
         # Comparaison des predictions
