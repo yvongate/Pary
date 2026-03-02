@@ -220,24 +220,29 @@ NOTE: Les calculs mathématiques ne sont PAS affectés par la météo. Cette inf
     # SECTION 6: COMPOSITIONS CONFIRMEES (LINEUPS)
     # ================================================================
 
-    if lineups:
+    if lineups and lineups.get('lineup_raw_text'):
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 6: COMPOSITIONS CONFIRMEES (LINEUPS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚽ COMPOSITIONS OFFICIELLES (récupérées 1h avant le match)
+⚽ COMPOSITIONS OFFICIELLES (récupérées 1h avant le match via SerpAPI)
 
-{home_team}: {lineups.get('home_formation', 'Formation non disponible')}
-{away_team}: {lineups.get('away_formation', 'Formation non disponible')}
+TEXTE BRUT DES RESULTATS DE RECHERCHE:
+{lineups.get('lineup_raw_text')[:2000]}
 
-Source: {lineups.get('source', 'SerpAPI')}
+INSTRUCTIONS IMPORTANTES:
+1. Parse ce texte pour identifier les formations exactes des deux équipes
+2. Identifie les joueurs clés titulaires et remplaçants
+3. Analyse l'impact tactique:
+   - Formations défensives (5-4-1, 4-5-1, 4-4-2) = moins de tirs attendus
+   - Formations offensives (4-3-3, 3-4-3, 4-2-4) = plus de tirs attendus
+   - Formations équilibrées (4-2-3-1, 3-5-2) = tirs modérés
+4. Croiser avec les absences mentionnées dans RDJ pour valider cohérence
+5. Utilise ces infos CONFIRMEES pour affiner tes prédictions de tirs/corners
 
-IMPORTANT: Ces compositions sont CONFIRMEES. Utilise-les pour affiner ton analyse:
-- Formations défensives (5-4-1, 4-5-1) = moins de tirs attendus
-- Formations offensives (4-3-3, 3-4-3) = plus de tirs attendus
-- Absence de joueurs clés mentionnés dans RDJ = impact sur les tirs
+Note: Si le texte ne contient pas d'infos claires, utilise ton analyse des autres sections.
 """
 
     # ================================================================

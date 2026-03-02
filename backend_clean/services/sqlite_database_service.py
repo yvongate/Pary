@@ -58,10 +58,9 @@ class SQLiteDatabaseService:
                 away_team TEXT NOT NULL,
                 league_code TEXT NOT NULL,
                 match_date TEXT NOT NULL,
+                lineup_raw_text TEXT,
                 home_formation TEXT,
                 away_formation TEXT,
-                home_lineup_json TEXT,
-                away_lineup_json TEXT,
                 source TEXT,
                 fetched_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -290,10 +289,9 @@ class SQLiteDatabaseService:
                 'away_team': str,
                 'league_code': str,
                 'match_date': str,
-                'home_formation': str,
-                'away_formation': str,
-                'home_lineup': dict,
-                'away_lineup': dict,
+                'lineup_raw_text': str,  # Texte brut SerpAPI
+                'home_formation': str (optionnel),
+                'away_formation': str (optionnel),
                 'source': str
             }
 
@@ -306,20 +304,15 @@ class SQLiteDatabaseService:
         try:
             cursor = self.conn.cursor()
 
-            # Convertir les lineups en JSON
-            home_lineup_json = json.dumps(lineup_data.get('home_lineup')) if lineup_data.get('home_lineup') else None
-            away_lineup_json = json.dumps(lineup_data.get('away_lineup')) if lineup_data.get('away_lineup') else None
-
             cursor.execute("""
                 INSERT INTO match_lineups (
                     match_id, home_team, away_team, league_code, match_date,
-                    home_formation, away_formation, home_lineup_json, away_lineup_json, source
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    lineup_raw_text, home_formation, away_formation, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(match_id) DO UPDATE SET
+                    lineup_raw_text = excluded.lineup_raw_text,
                     home_formation = excluded.home_formation,
                     away_formation = excluded.away_formation,
-                    home_lineup_json = excluded.home_lineup_json,
-                    away_lineup_json = excluded.away_lineup_json,
                     source = excluded.source,
                     fetched_at = CURRENT_TIMESTAMP
             """, (
@@ -328,10 +321,9 @@ class SQLiteDatabaseService:
                 lineup_data['away_team'],
                 lineup_data['league_code'],
                 lineup_data['match_date'].isoformat() if isinstance(lineup_data['match_date'], datetime) else lineup_data['match_date'],
+                lineup_data.get('lineup_raw_text'),
                 lineup_data.get('home_formation'),
                 lineup_data.get('away_formation'),
-                home_lineup_json,
-                away_lineup_json,
                 lineup_data.get('source', 'serpapi')
             ))
 
@@ -366,11 +358,6 @@ class SQLiteDatabaseService:
             row = cursor.fetchone()
             if row:
                 result = dict(row)
-                # Parser les JSON strings
-                if result.get('home_lineup_json'):
-                    result['home_lineup'] = json.loads(result['home_lineup_json'])
-                if result.get('away_lineup_json'):
-                    result['away_lineup'] = json.loads(result['away_lineup_json'])
                 return result
             return None
 

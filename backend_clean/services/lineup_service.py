@@ -20,7 +20,7 @@ class LineupService:
 
     def get_lineups(self, home_team: str, away_team: str, date: Optional[str] = None) -> Optional[Dict]:
         """
-        Récupère les compositions via SerpAPI
+        Récupère les compositions via SerpAPI et retourne le TEXTE BRUT
 
         Args:
             home_team: Équipe domicile
@@ -29,17 +29,10 @@ class LineupService:
 
         Returns:
             {
+                'raw_text': str,  # Texte brut des résultats SerpAPI
                 'home_team': str,
                 'away_team': str,
-                'home_formation': str,
-                'away_formation': str,
-                'home_lineup': {
-                    'formation': str,
-                    'players': [
-                        {'name': str, 'position': str, 'shirt_number': int, 'substitute': bool}
-                    ]
-                },
-                'away_lineup': {...}
+                'source': 'serpapi'
             }
         """
         if not self.api_key:
@@ -67,126 +60,82 @@ class LineupService:
             response.raise_for_status()
             data = response.json()
 
-            # Parser les résultats
-            lineup_data = self._parse_search_results(data, home_team, away_team)
+            # Extraire le TEXTE BRUT de tous les résultats pertinents
+            raw_text = self._extract_raw_text(data)
 
-            if lineup_data:
-                print(f"[OK] Compositions trouvées")
-                return lineup_data
+            if raw_text:
+                print(f"[OK] Texte lineup récupéré ({len(raw_text)} caractères)")
+                return {
+                    'raw_text': raw_text,
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'source': 'serpapi'
+                }
             else:
-                print(f"[ATTENTION] Compositions non trouvées dans les résultats")
+                print(f"[ATTENTION] Aucun texte lineup trouvé")
                 return None
 
         except Exception as e:
             print(f"[ERREUR] SerpAPI lineup: {e}")
             return None
 
-    def _parse_search_results(self, data: Dict, home_team: str, away_team: str) -> Optional[Dict]:
+    def _extract_raw_text(self, data: Dict) -> Optional[str]:
         """
-        Parse les résultats de recherche pour extraire les compositions
+        Extrait le TEXTE BRUT de tous les résultats SerpAPI pertinents
 
         Args:
-            data: Réponse SerpAPI
-            home_team: Équipe domicile
-            away_team: Équipe extérieur
+            data: Réponse SerpAPI complète
 
         Returns:
-            Données des compositions ou None
+            Texte brut concaténé ou None
         """
-        # Chercher dans les sports_results (Google affiche souvent les compositions là)
+        raw_text_parts = []
+
+        # 1. Answer box (souvent les meilleures infos)
+        answer_box = data.get('answer_box')
+        if answer_box:
+            if answer_box.get('title'):
+                raw_text_parts.append(f"TITLE: {answer_box['title']}")
+            if answer_box.get('answer'):
+                raw_text_parts.append(f"ANSWER: {answer_box['answer']}")
+            if answer_box.get('snippet'):
+                raw_text_parts.append(f"SNIPPET: {answer_box['snippet']}")
+
+        # 2. Sports results (Google affiche souvent les lineups ici)
         sports_results = data.get('sports_results')
         if sports_results:
             game_spotlight = sports_results.get('game_spotlight')
             if game_spotlight:
-                return self._parse_game_spotlight(game_spotlight, home_team, away_team)
+                raw_text_parts.append(f"GAME SPOTLIGHT: {str(game_spotlight)[:1000]}")
 
-        # Chercher dans les organic_results
+        # 3. Organic results (premiers résultats Google)
         organic_results = data.get('organic_results', [])
-        for result in organic_results[:3]:  # Checker les 3 premiers résultats
-            snippet = result.get('snippet', '')
-            title = result.get('title', '')
+        for i, result in enumerate(organic_results[:3], 1):  # Top 3 résultats
+            if result.get('title'):
+                raw_text_parts.append(f"RESULT {i} TITLE: {result['title']}")
+            if result.get('snippet'):
+                raw_text_parts.append(f"RESULT {i} SNIPPET: {result['snippet']}")
 
-            # Chercher des formations dans le snippet
-            formations = self._extract_formations(snippet + " " + title)
-            if formations:
-                return {
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'home_formation': formations.get('home'),
-                    'away_formation': formations.get('away'),
-                    'source': result.get('link', 'serpapi')
-                }
+        # 4. Knowledge graph (si présent)
+        knowledge_graph = data.get('knowledge_graph')
+        if knowledge_graph and knowledge_graph.get('description'):
+            raw_text_parts.append(f"KNOWLEDGE: {knowledge_graph['description']}")
 
-        return None
-
-    def _parse_game_spotlight(self, game_spotlight: Dict, home_team: str, away_team: str) -> Optional[Dict]:
-        """Parse le bloc game_spotlight de Google"""
-        try:
-            # Extraire les formations si disponibles
-            home_formation = None
-            away_formation = None
-
-            # Google peut afficher les formations dans différents champs
-            teams = game_spotlight.get('teams', [])
-            if len(teams) >= 2:
-                # Chercher les formations dans les données des équipes
-                for team in teams:
-                    formation = team.get('formation')
-                    if formation:
-                        if not home_formation:
-                            home_formation = formation
-                        elif not away_formation:
-                            away_formation = formation
-
-            return {
-                'home_team': home_team,
-                'away_team': away_team,
-                'home_formation': home_formation,
-                'away_formation': away_formation,
-                'source': 'google_sports'
-            }
-
-        except Exception as e:
-            print(f"[ERREUR] Parse game_spotlight: {e}")
-            return None
-
-    def _extract_formations(self, text: str) -> Optional[Dict]:
-        """
-        Extrait les formations d'un texte (ex: "4-3-3", "5-4-1")
-
-        Args:
-            text: Texte à analyser
-
-        Returns:
-            {'home': '4-3-3', 'away': '5-4-1'} ou None
-        """
-        # Pattern pour détecter les formations (ex: 4-3-3, 4-4-2, etc.)
-        formation_pattern = r'\b(\d-\d-\d|\d-\d-\d-\d)\b'
-        formations = re.findall(formation_pattern, text)
-
-        if len(formations) >= 2:
-            return {
-                'home': formations[0],
-                'away': formations[1]
-            }
-        elif len(formations) == 1:
-            return {
-                'home': formations[0],
-                'away': None
-            }
+        if raw_text_parts:
+            return "\n\n".join(raw_text_parts)
 
         return None
 
     def get_lineups_simple(self, home_team: str, away_team: str) -> Dict:
         """
-        Version simplifiée qui retourne au moins les formations même si les compositions complètes ne sont pas dispo
+        Version simplifiée avec fallback
 
         Args:
             home_team: Équipe domicile
             away_team: Équipe extérieur
 
         Returns:
-            Dictionnaire avec au minimum home_team et away_team
+            Dictionnaire avec texte brut ou structure minimale
         """
         lineups = self.get_lineups(home_team, away_team)
 
@@ -195,10 +144,9 @@ class LineupService:
 
         # Fallback: retourner structure minimale
         return {
+            'raw_text': None,
             'home_team': home_team,
             'away_team': away_team,
-            'home_formation': None,
-            'away_formation': None,
             'source': 'unavailable'
         }
 

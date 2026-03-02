@@ -53,7 +53,10 @@
       "Bash(git init:*)",
       "Bash(git remote add:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: ParY - Football Prediction System\n\n- Backend FastAPI with dynamic predictions\n- AI deep reasoning verification\n- Free data sources \\(football-data.co.uk CSV + scraping\\)\n- Automation system with cron jobs\n- Frontend Next.js with match calendar\n- Supabase integration\n- Deployment configs for Render + Vercel\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
