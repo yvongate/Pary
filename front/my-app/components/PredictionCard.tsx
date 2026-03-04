@@ -64,15 +64,31 @@ export default function PredictionCard({ prediction, onClick }: PredictionCardPr
           <h3 className="font-bold text-blue-900">TIRS</h3>
         </div>
 
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-700">{prediction.shots.message_min}</span>
-            <span className="font-semibold text-green-600">{prediction.shots.min}</span>
+        <div className="space-y-2 text-sm">
+          {/* Par équipe */}
+          {prediction.shots.home_team_message && (
+            <div className="text-gray-700 font-medium">
+              {prediction.shots.home_team_message}
+            </div>
+          )}
+          {prediction.shots.away_team_message && (
+            <div className="text-gray-700 font-medium">
+              {prediction.shots.away_team_message}
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="pt-2 border-t border-blue-200 space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-700">{prediction.shots.message_min}</span>
+              <span className="font-semibold text-green-600">{prediction.shots.min}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-700">{prediction.shots.message_max}</span>
+              <span className="font-semibold text-red-600">{prediction.shots.max}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">{prediction.shots.message_max}</span>
-            <span className="font-semibold text-red-600">{prediction.shots.max}</span>
-          </div>
+
           <div className="mt-2 pt-2 border-t border-blue-200">
             <span className="text-xs text-gray-600">
               Confiance: <span className="font-semibold text-blue-700">
@@ -96,15 +112,31 @@ export default function PredictionCard({ prediction, onClick }: PredictionCardPr
           <h3 className="font-bold text-green-900">CORNERS</h3>
         </div>
 
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-700">{prediction.corners.message_min}</span>
-            <span className="font-semibold text-green-600">{prediction.corners.min}</span>
+        <div className="space-y-2 text-sm">
+          {/* Par équipe */}
+          {prediction.corners.home_team_message && (
+            <div className="text-gray-700 font-medium">
+              {prediction.corners.home_team_message}
+            </div>
+          )}
+          {prediction.corners.away_team_message && (
+            <div className="text-gray-700 font-medium">
+              {prediction.corners.away_team_message}
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="pt-2 border-t border-green-200 space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-700">{prediction.corners.message_min}</span>
+              <span className="font-semibold text-green-600">{prediction.corners.min}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-700">{prediction.corners.message_max}</span>
+              <span className="font-semibold text-red-600">{prediction.corners.max}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">{prediction.corners.message_max}</span>
-            <span className="font-semibold text-red-600">{prediction.corners.max}</span>
-          </div>
+
           <div className="mt-2 pt-2 border-t border-green-200">
             <span className="text-xs text-gray-600">
               Confiance: <span className="font-semibold text-green-700">

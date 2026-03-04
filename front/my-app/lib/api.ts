@@ -15,6 +15,8 @@ export interface Prediction {
     min: number;
     max: number;
     confidence: number;
+    home_team_message?: string;
+    away_team_message?: string;
     message_min: string;
     message_max: string;
   };
@@ -22,6 +24,8 @@ export interface Prediction {
     min: number;
     max: number;
     confidence: number;
+    home_team_message?: string;
+    away_team_message?: string;
     message_min: string;
     message_max: string;
   };

@@ -186,16 +186,20 @@ class PredictionService:
                     'min': pred['shots_min'],
                     'max': pred['shots_max'],
                     'confidence': float(pred['shots_confidence']),
-                    'message_min': f"Il y aura PLUS de {pred['shots_min']} tirs",
-                    'message_max': f"Il y aura MOINS de {pred['shots_max']} tirs"
+                    'home_team_message': f"{pred['home_team']} fera PLUS de {pred.get('home_shots_min', 'N/A')} et MOINS de {pred.get('home_shots_max', 'N/A')} tirs",
+                    'away_team_message': f"{pred['away_team']} fera PLUS de {pred.get('away_shots_min', 'N/A')} et MOINS de {pred.get('away_shots_max', 'N/A')} tirs",
+                    'message_min': f"Total: Il y aura PLUS de {pred['shots_min']} tirs",
+                    'message_max': f"Total: Il y aura MOINS de {pred['shots_max']} tirs"
                 },
 
                 'corners': {
                     'min': pred['corners_min'],
                     'max': pred['corners_max'],
                     'confidence': float(pred['corners_confidence']),
-                    'message_min': f"Il y aura PLUS de {pred['corners_min']} corners",
-                    'message_max': f"Il y aura MOINS de {pred['corners_max']} corners"
+                    'home_team_message': f"{pred['home_team']} fera PLUS de {pred.get('home_corners_min', 'N/A')} et MOINS de {pred.get('home_corners_max', 'N/A')} corners",
+                    'away_team_message': f"{pred['away_team']} fera PLUS de {pred.get('away_corners_min', 'N/A')} et MOINS de {pred.get('away_corners_max', 'N/A')} corners",
+                    'message_min': f"Total: Il y aura PLUS de {pred['corners_min']} corners",
+                    'message_max': f"Total: Il y aura MOINS de {pred['corners_max']} corners"
                 },
 
                 'ai_reasoning_shots': pred.get('ai_reasoning_shots'),
@@ -237,8 +241,10 @@ class PredictionService:
                 'min': pred['shots_min'],
                 'max': pred['shots_max'],
                 'confidence': float(pred['shots_confidence']),
-                'message_min': f"Il y aura PLUS de {pred['shots_min']} tirs",
-                'message_max': f"Il y aura MOINS de {pred['shots_max']} tirs",
+                'home_team_message': f"{pred['home_team']} fera PLUS de {pred.get('home_shots_min', 'N/A')} et MOINS de {pred.get('home_shots_max', 'N/A')} tirs",
+                'away_team_message': f"{pred['away_team']} fera PLUS de {pred.get('away_shots_min', 'N/A')} et MOINS de {pred.get('away_shots_max', 'N/A')} tirs",
+                'message_min': f"Total: Il y aura PLUS de {pred['shots_min']} tirs",
+                'message_max': f"Total: Il y aura MOINS de {pred['shots_max']} tirs",
                 'analysis': pred.get('analysis_shots'),
                 'ai_reasoning': pred.get('ai_reasoning_shots')
             },
@@ -247,8 +253,10 @@ class PredictionService:
                 'min': pred['corners_min'],
                 'max': pred['corners_max'],
                 'confidence': float(pred['corners_confidence']),
-                'message_min': f"Il y aura PLUS de {pred['corners_min']} corners",
-                'message_max': f"Il y aura MOINS de {pred['corners_max']} corners",
+                'home_team_message': f"{pred['home_team']} fera PLUS de {pred.get('home_corners_min', 'N/A')} et MOINS de {pred.get('home_corners_max', 'N/A')} corners",
+                'away_team_message': f"{pred['away_team']} fera PLUS de {pred.get('away_corners_min', 'N/A')} et MOINS de {pred.get('away_corners_max', 'N/A')} corners",
+                'message_min': f"Total: Il y aura PLUS de {pred['corners_min']} corners",
+                'message_max': f"Total: Il y aura MOINS de {pred['corners_max']} corners",
                 'analysis': pred.get('analysis_corners'),
                 'ai_reasoning': pred.get('ai_reasoning_corners')
             },

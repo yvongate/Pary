@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { getUpcomingPredictions, getLeagues, Prediction, League } from '../../lib/api';
 import PredictionCard from '../../components/PredictionCard';
+import PredictionModal from '../../components/PredictionModal';
 
 export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -13,6 +14,10 @@ export default function PredictionsPage() {
   const [selectedLeague, setSelectedLeague] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // État du modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
 
   // Charger les championnats
   useEffect(() => {
@@ -124,8 +129,8 @@ export default function PredictionsPage() {
                   key={prediction.match_id}
                   prediction={prediction}
                   onClick={() => {
-                    // TODO: Ouvrir modal ou page détail
-                    console.log('Détail prédiction:', prediction.match_id);
+                    setSelectedMatchId(prediction.match_id);
+                    setModalOpen(true);
                   }}
                 />
               ))}
@@ -133,6 +138,13 @@ export default function PredictionsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de détail */}
+      <PredictionModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        matchId={selectedMatchId}
+      />
     </div>
   );
 }

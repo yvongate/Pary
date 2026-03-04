@@ -19,7 +19,9 @@ def generate_deep_analysis_prediction(
     rdj_context: Optional[Dict] = None,
     weather: Optional[Dict] = None,
     detailed_stats: Optional[Dict] = None,
-    lineups: Optional[Dict] = None
+    lineups: Optional[Dict] = None,
+    home_formation_stats: Optional[Dict] = None,
+    away_formation_stats: Optional[Dict] = None
 ) -> Dict:
     """
     L'IA recoit TOUTES les donnees et fait un raisonnement ultra-profond
@@ -33,6 +35,8 @@ def generate_deep_analysis_prediction(
         weather: Meteo (informatif uniquement, n'affecte pas les calculs)
         detailed_stats: Stats détaillées W-D-L, buts, gaps (soccerstats_working)
         lineups: Compositions confirmées récupérées via SerpAPI
+        home_formation_stats: Stats Understat formation équipe domicile
+        away_formation_stats: Stats Understat formation équipe extérieur
 
     Returns:
         {
@@ -246,6 +250,89 @@ Note: Si le texte ne contient pas d'infos claires, utilise ton analyse des autre
 """
 
     # ================================================================
+    # SECTION 6B: STATISTIQUES HISTORIQUES DES FORMATIONS (UNDERSTAT)
+    # ================================================================
+
+    if home_formation_stats and away_formation_stats:
+        prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6B: PERFORMANCES HISTORIQUES DES FORMATIONS (Understat)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚽ {home_team} avec formation confirmée {home_formation_stats['formation']}:
+
+  STATISTIQUES OFFENSIVES (quand {home_team} attaque):
+    - Tirs/90: {home_formation_stats['shots_per_90']}
+    - Buts/90: {home_formation_stats['goals_per_90']}
+    - xG/90: {home_formation_stats['xg_per_90']}
+    - Minutes jouées: {home_formation_stats['minutes']} ({home_formation_stats['percentage_used']}% du temps)
+    - Caractère: {"OFFENSIVE" if home_formation_stats['xg_per_90'] > 1.5 else "ÉQUILIBRÉE" if home_formation_stats['xg_per_90'] > 1.2 else "DÉFENSIVE"}
+
+  STATISTIQUES DÉFENSIVES (quand {home_team} défend):
+    - Tirs concédés/90: {home_formation_stats['shots_against_per_90']}
+    - Buts concédés/90: {home_formation_stats['goals_against_per_90']}
+    - xGA/90: {home_formation_stats['xga_per_90']}
+    - Solidité: {"FORTE" if home_formation_stats['xga_per_90'] < 1.2 else "MOYENNE" if home_formation_stats['xga_per_90'] < 1.5 else "FAIBLE"}
+
+⚽ {away_team} avec formation confirmée {away_formation_stats['formation']}:
+
+  STATISTIQUES OFFENSIVES (quand {away_team} attaque):
+    - Tirs/90: {away_formation_stats['shots_per_90']}
+    - Buts/90: {away_formation_stats['goals_per_90']}
+    - xG/90: {away_formation_stats['xg_per_90']}
+    - Minutes jouées: {away_formation_stats['minutes']} ({away_formation_stats['percentage_used']}% du temps)
+    - Caractère: {"OFFENSIVE" if away_formation_stats['xg_per_90'] > 1.5 else "ÉQUILIBRÉE" if away_formation_stats['xg_per_90'] > 1.2 else "DÉFENSIVE"}
+
+  STATISTIQUES DÉFENSIVES (quand {away_team} défend):
+    - Tirs concédés/90: {away_formation_stats['shots_against_per_90']}
+    - Buts concédés/90: {away_formation_stats['goals_against_per_90']}
+    - xGA/90: {away_formation_stats['xga_per_90']}
+    - Solidité: {"FORTE" if away_formation_stats['xga_per_90'] < 1.2 else "MOYENNE" if away_formation_stats['xga_per_90'] < 1.5 else "FAIBLE"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSE TACTIQUE (APPROCHE SYMÉTRIQUE):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+POUR {home_team}:
+  - Offensive {home_team} en {home_formation_stats['formation']}: {home_formation_stats['shots_per_90']} tirs/90
+  - Défensive {away_team} en {away_formation_stats['formation']}: concède {away_formation_stats['shots_against_per_90']} tirs/90
+  - Moyenne baseline: ({home_formation_stats['shots_per_90']} + {away_formation_stats['shots_against_per_90']}) / 2 = {(home_formation_stats['shots_per_90'] + away_formation_stats['shots_against_per_90']) / 2:.1f} tirs
+  - Ratio xG/xGA: {home_formation_stats['xg_per_90']} / {away_formation_stats['xga_per_90']} = {home_formation_stats['xg_per_90'] / away_formation_stats['xga_per_90'] if away_formation_stats['xga_per_90'] > 0 else 'N/A':.2f} {"→ Dominance nette" if away_formation_stats['xga_per_90'] > 0 and home_formation_stats['xg_per_90'] / away_formation_stats['xga_per_90'] > 1.3 else "→ Match équilibré"}
+
+POUR {away_team}:
+  - Offensive {away_team} en {away_formation_stats['formation']}: {away_formation_stats['shots_per_90']} tirs/90
+  - Défensive {home_team} en {home_formation_stats['formation']}: concède {home_formation_stats['shots_against_per_90']} tirs/90
+  - Moyenne baseline: ({away_formation_stats['shots_per_90']} + {home_formation_stats['shots_against_per_90']}) / 2 = {(away_formation_stats['shots_per_90'] + home_formation_stats['shots_against_per_90']) / 2:.1f} tirs
+  - Ratio xG/xGA: {away_formation_stats['xg_per_90']} / {home_formation_stats['xga_per_90']} = {away_formation_stats['xg_per_90'] / home_formation_stats['xga_per_90'] if home_formation_stats['xga_per_90'] > 0 else 'N/A':.2f} {"→ Dominance nette" if home_formation_stats['xga_per_90'] > 0 and away_formation_stats['xg_per_90'] / home_formation_stats['xga_per_90'] > 1.3 else "→ Match équilibré"}
+
+PONDÉRATION FIABILITÉ:
+  - {home_team} {home_formation_stats['formation']}: {home_formation_stats['minutes']} min = {"échantillon FORT" if home_formation_stats['minutes'] > 900 else "échantillon MOYEN" if home_formation_stats['minutes'] > 450 else "échantillon FAIBLE"}
+  - {away_team} {away_formation_stats['formation']}: {away_formation_stats['minutes']} min = {"échantillon FORT" if away_formation_stats['minutes'] > 900 else "échantillon MOYEN" if away_formation_stats['minutes'] > 450 else "échantillon FAIBLE"}
+"""
+    else:
+        prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6B: FORMATIONS (NON DISPONIBLES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ FORMATIONS NON DISPONIBLES
+
+Raisons possibles:
+  - Compositions non encore publiées (match dans > 1h)
+  - Erreur service SerpAPI ou Understat
+  - Formations jamais utilisées cette saison
+  - Équipes non suivies par Understat
+
+STRATÉGIE FALLBACK:
+  - Utiliser l'historique général de {home_team} à domicile (Section 1)
+  - Utiliser l'historique général de {away_team} à l'extérieur (Section 1)
+  - Ajuster avec contexte (blessures, classements, météo)
+  - Prioriser les classements et forme récente
+"""
+
+    # ================================================================
     # SECTION 7: STATISTIQUES DETAILLEES (W-D-L, Buts, Gaps)
     # ================================================================
 
@@ -309,16 +396,20 @@ PARTIE A: ANALYSE {home_team} (DOMICILE)
 ETAPE 1: Profil de {home_team}
   - Position, forme, force offensive et défensive à domicile?
 
-ETAPE 2: Analyse de la défense adverse ({away_team})
-  - Quelle est la qualité de la défense extérieur de {away_team}?
-  - Cherche dans l'historique de {home_team} à domicile:
-    SI adversaire avec défense similaire à {away_team}, combien de tirs?
+ETAPE 2: Utiliser les formations confirmées (SYMÉTRIQUE)
+  - {home_team} en {home_formation_stats['formation'] if home_formation_stats else 'N/A'} fait historiquement {home_formation_stats['shots_per_90'] if home_formation_stats else 'N/A'} tirs/90
+  - {away_team} en {away_formation_stats['formation'] if away_formation_stats else 'N/A'} concède {away_formation_stats['shots_against_per_90'] if away_formation_stats else 'N/A'} tirs/90
+  - Moyenne baseline formations: ({home_formation_stats['shots_per_90'] if home_formation_stats else 0} + {away_formation_stats['shots_against_per_90'] if away_formation_stats else 0}) / 2 tirs
+  - Valider avec ratio xG/xGA (dominance si > 1.3)
+  - Si pas de formations, utilise l'historique général de {home_team} à domicile
 
 ETAPE 3: Contexte {home_team}
   - Blessures/suspensions impactantes?
   - Forme récente?
+  - Cohérence avec classements?
 
 ETAPE 4: Prédiction {home_team}
+  - Baseline formations (étape 2) ajusté avec contexte (étape 3)
   - Combien de tirs et corners pour {home_team}?
 
 
@@ -328,16 +419,20 @@ PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 ETAPE 5: Profil de {away_team}
   - Position, forme, force offensive et défensive à l'extérieur?
 
-ETAPE 6: Analyse de la défense adverse ({home_team})
-  - Quelle est la qualité de la défense domicile de {home_team}?
-  - Cherche dans l'historique de {away_team} à l'extérieur:
-    SI adversaire avec défense similaire à {home_team}, combien de tirs?
+ETAPE 6: Utiliser les formations confirmées (SYMÉTRIQUE)
+  - {away_team} en {away_formation_stats['formation'] if away_formation_stats else 'N/A'} fait historiquement {away_formation_stats['shots_per_90'] if away_formation_stats else 'N/A'} tirs/90
+  - {home_team} en {home_formation_stats['formation'] if home_formation_stats else 'N/A'} concède {home_formation_stats['shots_against_per_90'] if home_formation_stats else 'N/A'} tirs/90
+  - Moyenne baseline formations: ({away_formation_stats['shots_per_90'] if away_formation_stats else 0} + {home_formation_stats['shots_against_per_90'] if home_formation_stats else 0}) / 2 tirs
+  - Valider avec ratio xG/xGA (dominance si > 1.3)
+  - Si pas de formations, utilise l'historique général de {away_team} à l'extérieur
 
 ETAPE 7: Contexte {away_team}
   - Blessures/suspensions impactantes?
   - Forme récente?
+  - Cohérence avec classements?
 
 ETAPE 8: Prédiction {away_team}
+  - Baseline formations (étape 6) ajusté avec contexte (étape 7)
   - Combien de tirs et corners pour {away_team}?
 
 

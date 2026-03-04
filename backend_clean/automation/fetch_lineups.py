@@ -155,103 +155,117 @@ def fetch_lineups_for_upcoming_matches(time_window_minutes: int = 60, buffer_min
         print(f"{'='*70}")
 
         try:
-            # Vérifier si lineup déjà en DB
+            # VÉRIFIER SI LINEUP DÉJÀ EN DB (éviter doublons SerpAPI)
             existing_lineup = db.get_lineup_by_match_id(match_id)
-            if existing_lineup:
-                print(f"[SKIP] Lineup déjà en DB pour ce match")
-                results.append({
-                    'match_id': match_id,
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'status': 'skipped',
-                    'reason': 'lineup_already_exists'
-                })
-                continue
-
-            # Appeler SerpAPI pour récupérer lineup
-            print(f"\n[SERPAPI] Récupération lineup...")
-            lineup_data = lineup_service.get_lineups(home_team, away_team, match_date.strftime('%Y-%m-%d'))
 
             lineup_raw_text = None
-            if lineup_data and lineup_data.get('raw_text'):
-                lineup_raw_text = lineup_data['raw_text']
-                print(f"[OK] Lineup récupérée ({len(lineup_raw_text)} caractères)")
 
-                # Sauvegarder en DB
-                db.insert_lineup({
-                    'match_id': match_id,
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'league_code': league_code,
-                    'match_date': match_date,
-                    'lineup_raw_text': lineup_raw_text,
-                    'source': 'serpapi'
-                })
-
-                lineups_fetched += 1
+            if existing_lineup and existing_lineup.get('lineup_raw_text'):
+                # Lineup déjà récupéré précédemment
+                print(f"[SKIP] Lineup déjà en DB pour ce match (économie 1 crédit SerpAPI)")
+                lineup_raw_text = existing_lineup['lineup_raw_text']
             else:
-                print(f"[WARNING] Lineup non trouvée via SerpAPI")
+                # Pas encore en DB → Appeler SerpAPI
+                print(f"\n[SERPAPI] Récupération lineup...")
+                lineup_data = lineup_service.get_lineups(home_team, away_team, match_date.strftime('%Y-%m-%d'))
 
-            # GENERER LA PREDICTION IMMEDIATEMENT (avec ou sans lineup)
-            print(f"\n[PREDICTION] Génération immédiate...")
-            soccerstats_code = soccerstats_codes.get(league_code, 'england')
+                if lineup_data and lineup_data.get('raw_text'):
+                    lineup_raw_text = lineup_data['raw_text']
+                    print(f"[OK] Lineup récupérée ({len(lineup_raw_text)} caractères)")
 
-            prediction_result = predictor.predict_match(
-                home_team=home_team,
-                away_team=away_team,
-                league_code=soccerstats_code,
-                match_date=match_date
-            )
+                    # Sauvegarder en DB
+                    db.insert_lineup({
+                        'match_id': match_id,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'league_code': league_code,
+                        'match_date': match_date,
+                        'lineup_raw_text': lineup_raw_text,
+                        'source': 'serpapi'
+                    })
 
-            if 'error' not in prediction_result:
-                # Sauvegarder la prédiction en DB
-                predictions = prediction_result.get('predictions', {})
-                confidence = prediction_result.get('confidence', {})
-                context = prediction_result.get('context', {})
+                    lineups_fetched += 1
+                else:
+                    print(f"[WARNING] Lineup non trouvée via SerpAPI")
 
-                db.insert_prediction({
-                    'match_id': match_id,
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'league_code': league_code,
-                    'match_date': match_date,
-                    'shots_min': int(predictions.get('total_shots', 20) * 0.8),
-                    'shots_max': int(predictions.get('total_shots', 20) * 1.2),
-                    'shots_confidence': confidence.get('overall', 0.0),
-                    'corners_min': int(predictions.get('total_corners', 8) * 0.8),
-                    'corners_max': int(predictions.get('total_corners', 8) * 1.2),
-                    'corners_confidence': confidence.get('overall', 0.0),
-                    'analysis_shots': predictions.get('shots_analysis'),
-                    'analysis_corners': predictions.get('corners_analysis'),
-                    'ai_reasoning_shots': predictions.get('ai_reasoning_shots'),
-                    'ai_reasoning_corners': predictions.get('ai_reasoning_corners'),
-                    'weather': context.get('weather'),
-                    'rankings_used': context.get('rankings')
-                })
+            # VÉRIFIER SI PREDICTION DÉJÀ GÉNÉRÉE (éviter regénérations inutiles)
+            existing_prediction = db.get_prediction_by_match_id(match_id)
 
-                predictions_generated += 1
-                print(f"[OK] Prédiction générée et sauvegardée")
+            if existing_prediction:
+                # Prédiction déjà générée précédemment
+                print(f"[SKIP] Prédiction déjà générée pour ce match (économie 2 appels IA)")
 
+                predictions_generated += 1  # Compter comme "traitée"
                 results.append({
                     'match_id': match_id,
                     'home_team': home_team,
                     'away_team': away_team,
-                    'status': 'success',
+                    'status': 'already_exists',
                     'lineup_fetched': lineup_raw_text is not None,
                     'prediction_generated': True,
-                    'total_shots': predictions.get('total_shots'),
-                    'total_corners': predictions.get('total_corners')
+                    'from_cache': True
                 })
             else:
-                print(f"[ERROR] Prédiction échouée: {prediction_result['error']}")
-                results.append({
-                    'match_id': match_id,
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'status': 'prediction_failed',
-                    'lineup_fetched': lineup_raw_text is not None,
-                    'error': prediction_result['error']
-                })
+                # Pas encore générée → Générer maintenant
+                print(f"\n[PREDICTION] Génération immédiate...")
+                soccerstats_code = soccerstats_codes.get(league_code, 'england')
+
+                prediction_result = predictor.predict_match(
+                    home_team=home_team,
+                    away_team=away_team,
+                    league_code=soccerstats_code,
+                    match_date=match_date
+                )
+
+                if 'error' not in prediction_result:
+                    # Sauvegarder la prédiction en DB
+                    predictions = prediction_result.get('predictions', {})
+                    confidence = prediction_result.get('confidence', {})
+                    context = prediction_result.get('context', {})
+
+                    db.insert_prediction({
+                        'match_id': match_id,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'league_code': league_code,
+                        'match_date': match_date,
+                        'shots_min': int(predictions.get('total_shots', 20) * 0.8),
+                        'shots_max': int(predictions.get('total_shots', 20) * 1.2),
+                        'shots_confidence': confidence.get('overall', 0.0),
+                        'corners_min': int(predictions.get('total_corners', 8) * 0.8),
+                        'corners_max': int(predictions.get('total_corners', 8) * 1.2),
+                        'corners_confidence': confidence.get('overall', 0.0),
+                        'analysis_shots': predictions.get('shots_analysis'),
+                        'analysis_corners': predictions.get('corners_analysis'),
+                        'ai_reasoning_shots': predictions.get('ai_reasoning_shots'),
+                        'ai_reasoning_corners': predictions.get('ai_reasoning_corners'),
+                        'weather': context.get('weather'),
+                        'rankings_used': context.get('rankings')
+                    })
+
+                    predictions_generated += 1
+                    print(f"[OK] Prédiction générée et sauvegardée")
+
+                    results.append({
+                        'match_id': match_id,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'status': 'success',
+                        'lineup_fetched': lineup_raw_text is not None,
+                        'prediction_generated': True,
+                        'total_shots': predictions.get('total_shots'),
+                        'total_corners': predictions.get('total_corners')
+                    })
+                else:
+                    print(f"[ERROR] Prédiction échouée: {prediction_result['error']}")
+                    results.append({
+                        'match_id': match_id,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'status': 'prediction_failed',
+                        'lineup_fetched': lineup_raw_text is not None,
+                        'error': prediction_result['error']
+                    })
 
         except Exception as e:
             print(f"[ERROR] {e}")

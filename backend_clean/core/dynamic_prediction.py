@@ -360,88 +360,305 @@ class DynamicPredictor:
 
         return 10  # Pas trouv = rang moyen
 
-    def _analyze_contextual_adjustments(self, home_team: str, away_team: str,
-                                       rdj_context: Optional[Dict]) -> Dict:
+    def get_ai_tactical_adjustment(self,
+                                   lambda_home_base: float,
+                                   lambda_away_base: float,
+                                   lambda_home_base_corners: float,
+                                   lambda_away_base_corners: float,
+                                   home_team: str,
+                                   away_team: str,
+                                   rdj_context: Optional[Dict],
+                                   lineups: Optional[Dict],
+                                   weather: Optional[Dict],
+                                   is_derby: bool,
+                                   current_rankings: Optional[Dict] = None,
+                                   home_formation_stats: Optional[Dict] = None,
+                                   away_formation_stats: Optional[Dict] = None) -> Dict:
         """
-        Analyse les contextes CRITIQUES pour calculer des facteurs d'ajustement
+        IA qui RAISONNE sur tous les contextes et ajuste intelligemment TIRS ET CORNERS
 
-        Prend en compte :
-        - Blessures/suspensions des joueurs clés (Rue des Joueurs)
-        - Derbies/matchs à enjeu (jeu plus tendu)
+        Args:
+            lambda_home_base: Résultat Poisson brut tirs home
+            lambda_away_base: Résultat Poisson brut tirs away
+            lambda_home_base_corners: Résultat Poisson brut corners home
+            lambda_away_base_corners: Résultat Poisson brut corners away
+            home_team: Équipe domicile
+            away_team: Équipe extérieur
+            rdj_context: Contexte RDJ (blessures, analyses)
+            lineups: Compositions confirmées (texte brut)
+            weather: Météo
+            is_derby: Si c'est un derby
+            current_rankings: Classements actuels (12 tableaux soccerstats)
+            home_formation_stats: Stats Understat formation équipe domicile
+            away_formation_stats: Stats Understat formation équipe extérieur
 
         Returns:
             {
-                'home_shots_factor': 0.85,  # Multiplicateur pour λ_home
-                'away_shots_factor': 1.0,
-                'home_corners_factor': 0.90,
-                'away_corners_factor': 1.0,
-                'adjustments_applied': ['Haaland blessé (-15%)', ...],
-                'confidence_impact': -0.1  # Impact sur confiance
+                'lambda_home_adjusted': 13.0,
+                'lambda_away_adjusted': 9.0,
+                'reasoning': "Explication du raisonnement"
             }
         """
-        home_shots_factor = 1.0
-        away_shots_factor = 1.0
-        home_corners_factor = 1.0
-        away_corners_factor = 1.0
-        adjustments = []
-        confidence_impact = 0.0
+        from openai import OpenAI
+        import os
 
-        # 1. BLESSURES / SUSPENSIONS (Rue des Joueurs)
+        client = OpenAI(
+            api_key=os.getenv('DEEPINFRA_API_KEY'),
+            base_url="https://api.deepinfra.com/v1/openai"
+        )
+
+        # Préparer le contexte
+        injuries_text = ""
         if rdj_context and rdj_context.get('injuries_text'):
-            injuries_text = rdj_context['injuries_text'].lower()
+            injuries_text = rdj_context['injuries_text'][:500]
 
-            # Liste de joueurs clés par équipe (à enrichir)
-            key_attackers = {
-                'man city': ['haaland', 'de bruyne', 'foden'],
-                'arsenal': ['saka', 'jesus', 'odegaard'],
-                'liverpool': ['salah', 'nunez', 'jota'],
-                'real madrid': ['vinicius', 'benzema', 'rodrygo'],
-                'barcelona': ['lewandowski', 'raphinha', 'pedri'],
-                'psg': ['mbappe', 'neymar', 'messi'],
-                'bayern': ['kane', 'sane', 'musiala']
+        lineup_text = ""
+        if lineups and lineups.get('lineup_raw_text'):
+            lineup_text = lineups['lineup_raw_text'][:1000]
+
+        weather_text = ""
+        if weather:
+            temp = weather.get('temperature', 15)
+            conditions = weather.get('conditions', 'Temps clair')
+            weather_text = f"{conditions}, {temp}°C"
+
+        derby_text = "OUI - Derby local" if is_derby else "NON"
+
+        # Construire le prompt enrichi
+        prompt = f"""Tu es un analyste tactique football expert. Tu dois AJUSTER intelligemment un résultat de calcul mathématique en fonction du CONTEXTE RÉEL du match.
+
+MATCH: {home_team} (DOMICILE) vs {away_team} (EXTÉRIEUR)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RÉSULTAT CALCULS POISSON (baseline mathématique):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{home_team}: {lambda_home_base:.1f} tirs attendus
+{away_team}: {lambda_away_base:.1f} tirs attendus
+Total: {lambda_home_base + lambda_away_base:.1f} tirs
+
+Ce calcul est basé sur l'historique récent et les statistiques des équipes.
+"""
+
+        # SECTION 1: CLASSEMENTS (si disponibles)
+        if current_rankings:
+            prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: CLASSEMENTS ACTUELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{home_team}:
+  - Classement général: {self._get_team_rank(home_team, current_rankings.get('standings', []))}e
+  - Forme récente: {self._get_team_rank(home_team, current_rankings.get('form_last_8', []))}e
+  - Attaque domicile: {self._get_team_rank(home_team, current_rankings.get('offence_home', []))}e
+  - Défense domicile: {self._get_team_rank(home_team, current_rankings.get('defence_home', []))}e
+
+{away_team}:
+  - Classement général: {self._get_team_rank(away_team, current_rankings.get('standings', []))}e
+  - Forme récente: {self._get_team_rank(away_team, current_rankings.get('form_last_8', []))}e
+  - Attaque extérieur: {self._get_team_rank(away_team, current_rankings.get('offence_away', []))}e
+  - Défense extérieur: {self._get_team_rank(away_team, current_rankings.get('defence_away', []))}e
+"""
+
+        # SECTION 2: FORMATIONS CONFIRMÉES (si disponibles)
+        if home_formation_stats and away_formation_stats:
+            prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: FORMATIONS CONFIRMÉES (Statistiques Historiques)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚽ {home_team} joue en {home_formation_stats['formation']}:
+  OFFENSIVE (quand ils attaquent):
+    - Tirs/90: {home_formation_stats['shots_per_90']}
+    - xG/90: {home_formation_stats['xg_per_90']}
+    - Minutes jouées: {home_formation_stats['minutes']} ({home_formation_stats['percentage_used']}% du temps)
+
+  DÉFENSIVE (quand ils défendent):
+    - Tirs concédés/90: {home_formation_stats['shots_against_per_90']}
+    - xGA/90: {home_formation_stats['xga_per_90']}
+
+⚽ {away_team} joue en {away_formation_stats['formation']}:
+  OFFENSIVE (quand ils attaquent):
+    - Tirs/90: {away_formation_stats['shots_per_90']}
+    - xG/90: {away_formation_stats['xg_per_90']}
+    - Minutes jouées: {away_formation_stats['minutes']} ({away_formation_stats['percentage_used']}% du temps)
+
+  DÉFENSIVE (quand ils défendent):
+    - Tirs concédés/90: {away_formation_stats['shots_against_per_90']}
+    - xGA/90: {away_formation_stats['xga_per_90']}
+
+CALCUL BASELINE FORMATIONS (approche symétrique):
+
+POUR {home_team}:
+  - Offensive {home_team}: {home_formation_stats['shots_per_90']} tirs/90
+  - Défensive {away_team}: concède {away_formation_stats['shots_against_per_90']} tirs/90
+  - Moyenne: ({home_formation_stats['shots_per_90']} + {away_formation_stats['shots_against_per_90']}) / 2 = {(home_formation_stats['shots_per_90'] + away_formation_stats['shots_against_per_90']) / 2:.1f} tirs
+  - Ratio xG: {home_formation_stats['xg_per_90']} / {away_formation_stats['xga_per_90']} = {home_formation_stats['xg_per_90'] / away_formation_stats['xga_per_90'] if away_formation_stats['xga_per_90'] > 0 else 'N/A':.2f} {"→ Dominance" if away_formation_stats['xga_per_90'] > 0 and home_formation_stats['xg_per_90'] / away_formation_stats['xga_per_90'] > 1.3 else ""}
+
+POUR {away_team}:
+  - Offensive {away_team}: {away_formation_stats['shots_per_90']} tirs/90
+  - Défensive {home_team}: concède {home_formation_stats['shots_against_per_90']} tirs/90
+  - Moyenne: ({away_formation_stats['shots_per_90']} + {home_formation_stats['shots_against_per_90']}) / 2 = {(away_formation_stats['shots_per_90'] + home_formation_stats['shots_against_per_90']) / 2:.1f} tirs
+  - Ratio xG: {away_formation_stats['xg_per_90']} / {home_formation_stats['xga_per_90']} = {away_formation_stats['xg_per_90'] / home_formation_stats['xga_per_90'] if home_formation_stats['xga_per_90'] > 0 else 'N/A':.2f} {"→ Dominance" if home_formation_stats['xga_per_90'] > 0 and away_formation_stats['xg_per_90'] / home_formation_stats['xga_per_90'] > 1.3 else ""}
+"""
+
+        # SECTION 3: CONTEXTE ADDITIONNEL
+        prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: CONTEXTE ADDITIONNEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+JOUEURS ABSENTS / BLESSURES:
+{injuries_text if injuries_text else "Aucune information disponible"}
+
+COMPOSITIONS CONFIRMÉES (texte brut):
+{lineup_text if lineup_text else "Lineups non disponibles"}
+
+DERBY:
+{derby_text}
+
+MÉTÉO:
+{weather_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TON TRAVAIL:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RAISONNE SYMÉTRIQUEMENT comme un expert et ajuste les résultats Poisson:
+
+POUR {home_team}:
+  ETAPE 1: Déterminer baseline
+    - SI formations disponibles: utiliser baseline formations
+      * Moyenne (offensive + défensive adverse) / 2
+      * Valider avec ratio xG/xGA (dominance si > 1.3)
+    - SINON: utiliser baseline Poisson historique (lambda_home_base = {lambda_home_base:.1f})
+
+  ETAPE 2: Pondérer selon fiabilité des données
+    - Formations avec >900 min: HAUTE fiabilité
+    - Formations 450-900 min: MOYENNE fiabilité
+    - Formations <450 min ou absentes: utiliser Poisson historique
+
+  ETAPE 3: Ajuster avec contexte
+    - Blessures: joueur clé absent → impact négatif
+    - Classements: cohérence avec position
+    - Derby: match tendu → légère réduction
+    - Météo: conditions difficiles → légère réduction
+
+POUR {away_team}:
+  [MÊME PROCESSUS SYMÉTRIQUE]
+  ETAPE 1: Baseline (formations si disponibles, sinon Poisson historique = {lambda_away_base:.1f})
+  ETAPE 2: Pondérer selon fiabilité
+  ETAPE 3: Ajuster avec contexte
+
+BASELINE CORNERS POISSON:
+  {home_team}: {lambda_home_base_corners:.1f} corners
+  {away_team}: {lambda_away_base_corners:.1f} corners
+  Total: {lambda_home_base_corners + lambda_away_base_corners:.1f} corners (~11 corners attendus)
+
+CONTRAINTES IMPORTANTES:
+TIRS:
+- Le total des tirs doit rester entre 24 et 32 tirs
+- Ne pas s'écarter de plus de ±4 tirs du baseline Poisson
+CORNERS:
+- Le total des corners doit rester entre 9 et 13 corners
+- Ne pas s'écarter de plus de ±2 corners du baseline Poisson
+GÉNÉRAL:
+- Aucune équipe priorisée, raisonnement OBJECTIF
+- Si formations disponibles, les prioriser (données réelles > historique général)
+- Si formations manquantes, utiliser baseline Poisson avec ajustements contextuels uniquement
+
+FORMAT DE RÉPONSE (JSON uniquement):
+{{
+  "lambda_home_adjusted": 15.5,
+  "lambda_away_adjusted": 11.2,
+  "lambda_home_adjusted_corners": 6.2,
+  "lambda_away_adjusted_corners": 4.8,
+  "reasoning": "Symétrique: {home_team} offensive+défensive {away_team} = X tirs, Y corners. {away_team} offensive+défensive {home_team} = Z tirs, W corners. Ajusté avec contexte."
+}}
+
+IMPORTANT: Retourne UNIQUEMENT le JSON, sans texte additionnel.
+
+Analyse et ajuste maintenant:"""
+
+        try:
+            response = client.chat.completions.create(
+                model="meta-llama/Llama-3.3-70B-Instruct",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200,
+                temperature=0.4
+            )
+
+            result_text = response.choices[0].message.content.strip()
+
+            # Parser le JSON
+            import json
+            import re
+
+            # Extraire JSON
+            json_match = re.search(r'\{[\s\S]*\}', result_text)
+            if json_match:
+                result_text = json_match.group(0)
+
+            result = json.loads(result_text)
+
+            # Validation TIRS
+            home_adj = result.get('lambda_home_adjusted', lambda_home_base)
+            away_adj = result.get('lambda_away_adjusted', lambda_away_base)
+
+            # Limites de sécurité TIRS
+            home_adj = max(lambda_home_base - 4, min(lambda_home_base + 4, home_adj))
+            away_adj = max(lambda_away_base - 4, min(lambda_away_base + 4, away_adj))
+
+            # Vérifier contrainte totale TIRS (24-32 tirs)
+            total = home_adj + away_adj
+            if total < 24 or total > 32:
+                # Réajuster proportionnellement
+                target = 28
+                ratio = target / total
+                home_adj *= ratio
+                away_adj *= ratio
+
+            # Validation CORNERS
+            home_adj_corners = result.get('lambda_home_adjusted_corners', lambda_home_base_corners)
+            away_adj_corners = result.get('lambda_away_adjusted_corners', lambda_away_base_corners)
+
+            # Limites de sécurité CORNERS
+            home_adj_corners = max(lambda_home_base_corners - 2, min(lambda_home_base_corners + 2, home_adj_corners))
+            away_adj_corners = max(lambda_away_base_corners - 2, min(lambda_away_base_corners + 2, away_adj_corners))
+
+            # Vérifier contrainte totale CORNERS (9-13 corners)
+            total_corners = home_adj_corners + away_adj_corners
+            if total_corners < 9 or total_corners > 13:
+                # Réajuster proportionnellement
+                target_corners = 11
+                ratio_corners = target_corners / total_corners
+                home_adj_corners *= ratio_corners
+                away_adj_corners *= ratio_corners
+
+            reasoning = result.get('reasoning', '')
+
+            print(f"\n[IA TACTIQUE] Ajustement intelligent:")
+            print(f"  {home_team}: {lambda_home_base:.1f} → {home_adj:.1f} tirs, {lambda_home_base_corners:.1f} → {home_adj_corners:.1f} corners")
+            print(f"  {away_team}: {lambda_away_base:.1f} → {away_adj:.1f} tirs, {lambda_away_base_corners:.1f} → {away_adj_corners:.1f} corners")
+            print(f"  Raisonnement: {reasoning[:200]}...")
+
+            return {
+                'lambda_home_adjusted': home_adj,
+                'lambda_away_adjusted': away_adj,
+                'lambda_home_adjusted_corners': home_adj_corners,
+                'lambda_away_adjusted_corners': away_adj_corners,
+                'reasoning': reasoning
             }
 
-            # Détecter blessures HOME
-            home_key_players = key_attackers.get(home_team.lower(), [])
-            for player in home_key_players:
-                if player in injuries_text and any(word in injuries_text for word in ['blessé', 'absent', 'suspendu', 'forfait']):
-                    home_shots_factor *= 0.85  # -15% si joueur clé absent
-                    home_corners_factor *= 0.90  # -10% corners
-                    adjustments.append(f"{player.title()} ({home_team}) blessé/absent (-15% tirs)")
-                    confidence_impact -= 0.05
-                    break  # Un seul ajustement par équipe
-
-            # Détecter blessures AWAY
-            away_key_players = key_attackers.get(away_team.lower(), [])
-            for player in away_key_players:
-                if player in injuries_text and any(word in injuries_text for word in ['blessé', 'absent', 'suspendu', 'forfait']):
-                    away_shots_factor *= 0.85
-                    away_corners_factor *= 0.90
-                    adjustments.append(f"{player.title()} ({away_team}) blessé/absent (-15% tirs)")
-                    confidence_impact -= 0.05
-                    break
-
-        # 2. DERBIES / MATCHS À ENJEU (via RDJ)
-        if rdj_context and rdj_context.get('full_text'):
-            full_text = rdj_context['full_text'].lower()
-            if any(word in full_text for word in ['derby', 'classique', 'choc', 'affiche']):
-                # Derbies = plus de tension, jeu haché, moins de fluidité
-                home_shots_factor *= 0.93
-                away_shots_factor *= 0.93
-                adjustments.append("Match à enjeu/Derby : -7% tirs (jeu plus tendu)")
-                confidence_impact -= 0.05
-
-        if not adjustments:
-            adjustments.append("Aucun ajustement contextuel nécessaire")
-
-        return {
-            'home_shots_factor': home_shots_factor,
-            'away_shots_factor': away_shots_factor,
-            'home_corners_factor': home_corners_factor,
-            'away_corners_factor': away_corners_factor,
-            'adjustments_applied': adjustments,
-            'confidence_impact': confidence_impact
-        }
+        except Exception as e:
+            print(f"[WARNING] IA tactique échouée: {e}")
+            # Fallback: garder baseline
+            return {
+                'lambda_home_adjusted': lambda_home_base,
+                'lambda_away_adjusted': lambda_away_base,
+                'lambda_home_adjusted_corners': lambda_home_base_corners,
+                'lambda_away_adjusted_corners': lambda_away_base_corners,
+                'reasoning': 'Ajustement IA non disponible, baseline Poisson conservé'
+            }
 
     def analyze_poisson_bidirectional(self, home_history: List[Dict], away_history: List[Dict],
                                      current_rankings: Dict, home_team: str, away_team: str) -> Dict:
@@ -788,29 +1005,143 @@ class DynamicPredictor:
         weather = self.collector.get_weather(city, match_date)
         print(f"    Mto  {city}: {weather['temperature']}C, vent {weather['wind_speed']} km/h, {weather['condition']}")
 
-        # 5c. NOUVEAU - Appliquer les ajustements contextuels CRITIQUES (blessures, derbies)
-        print(f"\n tape 5c: Application des ajustements contextuels (blessures, derbies)...")
-        contextual_adjustments = self._analyze_contextual_adjustments(
-            home_team, away_team,
-            rdj_context
-        )
+        # Sauvegarder les valeurs baseline Poisson (avant ajustement IA)
+        baseline_home_shots = home_shots_raw
+        baseline_away_shots = away_shots_raw
 
-        print(f"    Ajustements dtects:")
-        for adj in contextual_adjustments['adjustments_applied']:
-            print(f"      - {adj}")
+        # 5c. NOUVEAU - IA de raisonnement tactique global
+        print(f"\n tape 5c: Raisonnement IA tactique sur le contexte global...")
 
-        # Appliquer les facteurs contextuels aux λ
-        home_shots_adjusted = home_shots_raw * contextual_adjustments['home_shots_factor']
-        away_shots_adjusted = away_shots_raw * contextual_adjustments['away_shots_factor']
-        home_corners_adjusted = home_corners_raw * contextual_adjustments['home_corners_factor']
-        away_corners_adjusted = away_corners_raw * contextual_adjustments['away_corners_factor']
+        # Détecter si c'est un derby via RDJ
+        is_derby = False
+        if rdj_context and rdj_context.get('full_text'):
+            full_text = rdj_context['full_text'].lower()
+            is_derby = any(word in full_text for word in ['derby', 'classique', 'choc', 'affiche'])
 
-        print(f"\n    Aprs ajustements contextuels:")
-        print(f"      {home_team}: {home_shots_raw:.1f} → {home_shots_adjusted:.1f} tirs (×{contextual_adjustments['home_shots_factor']:.2f})")
-        print(f"      {away_team}: {away_shots_raw:.1f} → {away_shots_adjusted:.1f} tirs (×{contextual_adjustments['away_shots_factor']:.2f})")
-        print(f"      Total ajust: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
+        # 5d. NOUVEAU - Récupérer stats formations Understat (si lineups disponibles)
+        home_formation_stats = None
+        away_formation_stats = None
 
-        # Utiliser les valeurs ajustes comme nouvelles valeurs raw
+        if lineups and lineups.get('lineup_raw_text'):
+            try:
+                print(f"\n    Extraction formations des lineups...")
+                lineup_text = lineups['lineup_raw_text']
+
+                # Validation du texte lineup
+                if not lineup_text or len(lineup_text.strip()) == 0:
+                    print(f"      [WARNING] Lineup vide ou invalide")
+                else:
+                    # Parser les formations (regex simple)
+                    import re
+                    formation_pattern = r'\b(\d+-\d+-\d+(?:-\d+)?)\b'
+                    formations_found = re.findall(formation_pattern, lineup_text)
+
+                    if len(formations_found) == 0:
+                        print(f"      [INFO] Aucune formation trouvée dans le texte lineup")
+                        print(f"      [INFO] L'IA utilisera l'historique général comme baseline")
+                    elif len(formations_found) == 1:
+                        print(f"      [WARNING] Une seule formation trouvée: {formations_found[0]}")
+                        print(f"      [INFO] Impossible de récupérer stats Understat (besoin de 2 formations)")
+                    elif len(formations_found) >= 2:
+                        home_formation = formations_found[0]
+                        away_formation = formations_found[1]
+                        print(f"      Formations détectées:")
+                        print(f"        {home_team}: {home_formation}")
+                        print(f"        {away_team}: {away_formation}")
+
+                        # Récupérer stats Understat pour ces formations
+                        try:
+                            from services.understat_service import get_understat_service
+                            understat = get_understat_service()
+
+                            # Déterminer la saison (année en cours ou précédente selon la date)
+                            import datetime
+                            current_year = datetime.datetime.now().year
+                            if isinstance(match_date, str):
+                                match_year = int(match_date.split('-')[0]) if '-' in match_date else current_year
+                            else:
+                                match_year = match_date.year if hasattr(match_date, 'year') else current_year
+
+                            # Understat utilise l'année de début de saison (ex: 2024 pour 2024/2025)
+                            season = match_year if match_date.month >= 8 else match_year - 1
+
+                            print(f"      Requête Understat saison {season}...")
+                            home_formation_stats = understat.get_formation_stats(home_team, home_formation, season)
+                            away_formation_stats = understat.get_formation_stats(away_team, away_formation, season)
+
+                            # Gérer les cas partiels
+                            if home_formation_stats and away_formation_stats:
+                                print(f"\n      [OK] Stats Understat récupérées pour les 2 équipes:")
+                                print(f"        {home_team} {home_formation}: {home_formation_stats['shots_per_90']} tirs/90, xG/90={home_formation_stats['xg_per_90']}")
+                                print(f"        {away_team} {away_formation}: {away_formation_stats['shots_per_90']} tirs/90, xG/90={away_formation_stats['xg_per_90']}")
+                            elif home_formation_stats and not away_formation_stats:
+                                print(f"      [WARNING] Stats disponibles uniquement pour {home_team}")
+                                print(f"        L'IA utilisera les stats partielles avec prudence")
+                            elif away_formation_stats and not home_formation_stats:
+                                print(f"      [WARNING] Stats disponibles uniquement pour {away_team}")
+                                print(f"        L'IA utilisera les stats partielles avec prudence")
+                            else:
+                                print(f"      [INFO] Stats Understat non disponibles pour ces formations")
+                                print(f"      [INFO] Possible: formations jamais utilisées cette saison ou équipe non suivie")
+
+                        except ImportError as e:
+                            print(f"      [ERROR] Service Understat non disponible: {e}")
+                            home_formation_stats = None
+                            away_formation_stats = None
+                        except Exception as e:
+                            print(f"      [WARNING] Erreur lors de la récupération Understat: {e}")
+                            logger.error(f"[Formations] Erreur Understat pour {home_team} vs {away_team}: {e}")
+                            home_formation_stats = None
+                            away_formation_stats = None
+
+            except Exception as e:
+                print(f"      [ERROR] Erreur extraction formations: {e}")
+                logger.error(f"[Formations] Erreur parsing lineup pour {home_team} vs {away_team}: {e}")
+                home_formation_stats = None
+                away_formation_stats = None
+
+        # L'IA raisonne sur tous les contextes et ajuste intelligemment TIRS ET CORNERS
+        if lineups or rdj_context or weather:
+            tactical_result = self.get_ai_tactical_adjustment(
+                lambda_home_base=home_shots_raw,
+                lambda_away_base=away_shots_raw,
+                lambda_home_base_corners=home_corners_raw,
+                lambda_away_base_corners=away_corners_raw,
+                home_team=home_team,
+                away_team=away_team,
+                rdj_context=rdj_context,
+                lineups=lineups,
+                weather=weather,
+                is_derby=is_derby,
+                current_rankings=current_rankings,
+                home_formation_stats=home_formation_stats,
+                away_formation_stats=away_formation_stats
+            )
+
+            home_shots_adjusted = tactical_result['lambda_home_adjusted']
+            away_shots_adjusted = tactical_result['lambda_away_adjusted']
+            home_corners_adjusted = tactical_result.get('lambda_home_adjusted_corners', home_corners_raw)
+            away_corners_adjusted = tactical_result.get('lambda_away_adjusted_corners', away_corners_raw)
+            tactical_reasoning = tactical_result['reasoning']
+
+            print(f"\n    Baseline Poisson:")
+            print(f"      {home_team}: {home_shots_raw:.1f} tirs, {home_corners_raw:.1f} corners")
+            print(f"      {away_team}: {away_shots_raw:.1f} tirs, {away_corners_raw:.1f} corners")
+            print(f"\n    Aprs raisonnement IA:")
+            print(f"      {home_team}: {home_shots_raw:.1f} → {home_shots_adjusted:.1f} tirs, {home_corners_raw:.1f} → {home_corners_adjusted:.1f} corners")
+            print(f"      {away_team}: {away_shots_raw:.1f} → {away_shots_adjusted:.1f} tirs, {away_corners_raw:.1f} → {away_corners_adjusted:.1f} corners")
+            print(f"      Total: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
+            print(f"\n    Raisonnement: {tactical_reasoning[:150]}...")
+        else:
+            # Pas de contexte disponible, garder baseline
+            home_shots_adjusted = home_shots_raw
+            away_shots_adjusted = away_shots_raw
+            home_corners_adjusted = home_corners_raw
+            away_corners_adjusted = away_corners_raw
+            tactical_reasoning = "Baseline Poisson conservé (aucun contexte disponible)"
+            print(f"    Aucun contexte disponible, baseline Poisson conserv")
+
+        # Utiliser les valeurs ajustées
         home_shots_raw = home_shots_adjusted
         away_shots_raw = away_shots_adjusted
         home_corners_raw = home_corners_adjusted
@@ -838,6 +1169,20 @@ class DynamicPredictor:
         away_shots = max(0, away_shots_raw)
         away_corners = max(0, away_corners_raw)
 
+        # Calculer fourchettes par équipe (±15% pour créer une plage réaliste)
+        variance_shots = 0.15  # 15% de variance
+        variance_corners = 0.15
+
+        home_shots_min = int(max(0, home_shots * (1 - variance_shots)))
+        home_shots_max = int(home_shots * (1 + variance_shots))
+        away_shots_min = int(max(0, away_shots * (1 - variance_shots)))
+        away_shots_max = int(away_shots * (1 + variance_shots))
+
+        home_corners_min = int(max(0, home_corners * (1 - variance_corners)))
+        home_corners_max = int(home_corners * (1 + variance_corners))
+        away_corners_min = int(max(0, away_corners * (1 - variance_corners)))
+        away_corners_max = int(away_corners * (1 + variance_corners))
+
         # 8. Construire le rsultat
         result = {
             'match': {
@@ -851,8 +1196,18 @@ class DynamicPredictor:
                 'home_corners': round(home_corners, 1),
                 'away_shots': round(away_shots, 1),
                 'away_corners': round(away_corners, 1),
+                'home_shots_min': home_shots_min,
+                'home_shots_max': home_shots_max,
+                'away_shots_min': away_shots_min,
+                'away_shots_max': away_shots_max,
+                'home_corners_min': home_corners_min,
+                'home_corners_max': home_corners_max,
+                'away_corners_min': away_corners_min,
+                'away_corners_max': away_corners_max,
                 'total_shots': round(home_shots + away_shots, 1),
-                'total_corners': round(home_corners + away_corners, 1)
+                'total_corners': round(home_corners + away_corners, 1),
+                'baseline_home_shots': round(baseline_home_shots, 1),
+                'baseline_away_shots': round(baseline_away_shots, 1)
             },
             'confidence': {
                 'model_type': 'Poisson bidirectionnel',
@@ -890,13 +1245,13 @@ class DynamicPredictor:
                     'away': away_detailed_stats
                 },
                 'adjustments': {
-                    'model_type': 'Poisson bidirectionnel',
+                    'model_type': 'Poisson bidirectionnel + IA tactique',
                     'possession_home': round(home_possession * 100, 1),
                     'possession_away': round(away_possession * 100, 1),
                     'total_shots_constraint': 28.0,
                     'total_corners_constraint': 11.0,
-                    'contextual_adjustments': contextual_adjustments['adjustments_applied'],
-                    'note': 'Modèle de Poisson bidirectionnel avec contrainte sur le total (~28 tirs, ~11 corners). Ajustements uniquement pour blessures joueurs clés et derbies. Météo affichée à titre informatif uniquement.'
+                    'tactical_reasoning': tactical_reasoning,
+                    'note': 'Modèle de Poisson bidirectionnel avec contrainte sur le total (~28 tirs, ~11 corners). IA analyse blessures, lineups, derbies et météo pour ajuster intelligemment le résultat.'
                 }
             },
             'rankings_used': {
@@ -942,7 +1297,9 @@ class DynamicPredictor:
                     'home': home_detailed_stats,
                     'away': away_detailed_stats
                 },
-                lineups=lineups  # Compositions confirmées si disponibles
+                lineups=lineups,  # Compositions confirmées si disponibles
+                home_formation_stats=home_formation_stats,  # Stats Understat formation domicile
+                away_formation_stats=away_formation_stats  # Stats Understat formation extérieur
             )
 
             # Ajouter le raisonnement IA au rsultat

@@ -49,6 +49,68 @@ class SQLiteDatabaseService:
             )
         """)
 
+        # Ajouter les colonnes home_shots, away_shots, home_corners, away_corners si elles n'existent pas
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_shots REAL")
+        except sqlite3.OperationalError:
+            pass  # Colonne existe déjà
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_shots REAL")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_corners REAL")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_corners REAL")
+        except sqlite3.OperationalError:
+            pass
+
+        # Ajouter les fourchettes par équipe
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_shots_min INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_shots_max INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_shots_min INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_shots_max INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_corners_min INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_corners_max INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_corners_min INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_corners_max INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
         # Table pour stocker les lineups (compositions) récupérées via SerpAPI
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS match_lineups (
@@ -113,10 +175,13 @@ class SQLiteDatabaseService:
                     match_id, home_team, away_team, league_code, match_date,
                     shots_min, shots_max, shots_confidence,
                     corners_min, corners_max, corners_confidence,
+                    home_shots, away_shots, home_corners, away_corners,
+                    home_shots_min, home_shots_max, away_shots_min, away_shots_max,
+                    home_corners_min, home_corners_max, away_corners_min, away_corners_max,
                     analysis_shots, analysis_corners,
                     ai_reasoning_shots, ai_reasoning_corners,
                     home_formation, away_formation, weather, rankings_used
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(match_id) DO UPDATE SET
                     home_team = excluded.home_team,
                     away_team = excluded.away_team,
@@ -128,6 +193,18 @@ class SQLiteDatabaseService:
                     corners_min = excluded.corners_min,
                     corners_max = excluded.corners_max,
                     corners_confidence = excluded.corners_confidence,
+                    home_shots = excluded.home_shots,
+                    away_shots = excluded.away_shots,
+                    home_corners = excluded.home_corners,
+                    away_corners = excluded.away_corners,
+                    home_shots_min = excluded.home_shots_min,
+                    home_shots_max = excluded.home_shots_max,
+                    away_shots_min = excluded.away_shots_min,
+                    away_shots_max = excluded.away_shots_max,
+                    home_corners_min = excluded.home_corners_min,
+                    home_corners_max = excluded.home_corners_max,
+                    away_corners_min = excluded.away_corners_min,
+                    away_corners_max = excluded.away_corners_max,
                     analysis_shots = excluded.analysis_shots,
                     analysis_corners = excluded.analysis_corners,
                     ai_reasoning_shots = excluded.ai_reasoning_shots,
@@ -149,6 +226,18 @@ class SQLiteDatabaseService:
                 prediction['corners_min'],
                 prediction['corners_max'],
                 prediction['corners_confidence'],
+                prediction.get('home_shots'),
+                prediction.get('away_shots'),
+                prediction.get('home_corners'),
+                prediction.get('away_corners'),
+                prediction.get('home_shots_min'),
+                prediction.get('home_shots_max'),
+                prediction.get('away_shots_min'),
+                prediction.get('away_shots_max'),
+                prediction.get('home_corners_min'),
+                prediction.get('home_corners_max'),
+                prediction.get('away_corners_min'),
+                prediction.get('away_corners_max'),
                 analysis_shots_str,
                 analysis_corners_str,
                 prediction.get('ai_reasoning_shots'),
