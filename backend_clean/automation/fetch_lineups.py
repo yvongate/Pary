@@ -17,13 +17,13 @@ from core.dynamic_prediction import DynamicPredictor
 from services.data_service import get_data_service
 
 
-def get_upcoming_matches_from_fixtures(time_window_minutes: int = 60, buffer_minutes: int = 45) -> List[Dict]:
+def get_upcoming_matches_from_fixtures(time_window_minutes: int = 60, buffer_minutes: int = 55) -> List[Dict]:
     """
     Lit fixtures.csv et récupère les matchs qui commencent dans ~1h
 
     Args:
         time_window_minutes: Temps avant le match (défaut: 60 min)
-        buffer_minutes: Marge de tolérance (défaut: 45 min = fenêtre 15-105 min)
+        buffer_minutes: Marge de tolérance (défaut: 55 min = fenêtre 5-115 min)
 
     Returns:
         Liste de matchs dans la fenêtre de temps
