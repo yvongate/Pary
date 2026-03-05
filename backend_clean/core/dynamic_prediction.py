@@ -447,16 +447,16 @@ SECTION 1: CLASSEMENTS ACTUELS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {home_team}:
-  - Classement général: {self._get_team_rank(home_team, current_rankings.get('standings', []))}e
-  - Forme récente: {self._get_team_rank(home_team, current_rankings.get('form_last_8', []))}e
-  - Attaque domicile: {self._get_team_rank(home_team, current_rankings.get('offence_home', []))}e
-  - Défense domicile: {self._get_team_rank(home_team, current_rankings.get('defence_home', []))}e
+  - Classement général: {self._get_team_rank(home_team, 'standings', current_rankings)}e
+  - Forme récente: {self._get_team_rank(home_team, 'form_last_8', current_rankings)}e
+  - Attaque domicile: {self._get_team_rank(home_team, 'offence_home', current_rankings)}e
+  - Défense domicile: {self._get_team_rank(home_team, 'defence_home', current_rankings)}e
 
 {away_team}:
-  - Classement général: {self._get_team_rank(away_team, current_rankings.get('standings', []))}e
-  - Forme récente: {self._get_team_rank(away_team, current_rankings.get('form_last_8', []))}e
-  - Attaque extérieur: {self._get_team_rank(away_team, current_rankings.get('offence_away', []))}e
-  - Défense extérieur: {self._get_team_rank(away_team, current_rankings.get('defence_away', []))}e
+  - Classement général: {self._get_team_rank(away_team, 'standings', current_rankings)}e
+  - Forme récente: {self._get_team_rank(away_team, 'form_last_8', current_rankings)}e
+  - Attaque extérieur: {self._get_team_rank(away_team, 'offence_away', current_rankings)}e
+  - Défense extérieur: {self._get_team_rank(away_team, 'defence_away', current_rankings)}e
 """
 
         # SECTION 2: FORMATIONS CONFIRMÉES (si disponibles)
@@ -637,8 +637,8 @@ Analyse et ajuste maintenant:"""
             reasoning = result.get('reasoning', '')
 
             print(f"\n[IA TACTIQUE] Ajustement intelligent:")
-            print(f"  {home_team}: {lambda_home_base:.1f} → {home_adj:.1f} tirs, {lambda_home_base_corners:.1f} → {home_adj_corners:.1f} corners")
-            print(f"  {away_team}: {lambda_away_base:.1f} → {away_adj:.1f} tirs, {lambda_away_base_corners:.1f} → {away_adj_corners:.1f} corners")
+            print(f"  {home_team}: {lambda_home_base:.1f} -> {home_adj:.1f} tirs, {lambda_home_base_corners:.1f} -> {home_adj_corners:.1f} corners")
+            print(f"  {away_team}: {lambda_away_base:.1f} -> {away_adj:.1f} tirs, {lambda_away_base_corners:.1f} -> {away_adj_corners:.1f} corners")
             print(f"  Raisonnement: {reasoning[:200]}...")
 
             return {
@@ -994,8 +994,8 @@ Analyse et ajuste maintenant:"""
         home_corners_raw = float(lambda_corners_home)
         away_corners_raw = float(lambda_corners_away)
 
-        print(f"    {home_team}: λ_tirs={home_shots_raw:.1f}, λ_corners={home_corners_raw:.1f}")
-        print(f"    {away_team}: λ_tirs={away_shots_raw:.1f}, λ_corners={away_corners_raw:.1f}")
+        print(f"    {home_team}: lambda_tirs={home_shots_raw:.1f}, lambda_corners={home_corners_raw:.1f}")
+        print(f"    {away_team}: lambda_tirs={away_shots_raw:.1f}, lambda_corners={away_corners_raw:.1f}")
         print(f"    Total prdictions (base): {home_shots_raw + away_shots_raw:.1f} tirs, {home_corners_raw + away_corners_raw:.1f} corners")
         print(f"    NOTE: Le total est contraint  ~28 tirs et ~11 corners via le modle de Poisson")
 
@@ -1071,8 +1071,7 @@ Analyse et ajuste maintenant:"""
                             understat = get_understat_service()
 
                             # Déterminer la saison (année en cours ou précédente selon la date)
-                            import datetime
-                            current_year = datetime.datetime.now().year
+                            current_year = datetime.now().year
                             if isinstance(match_date, str):
                                 match_year = int(match_date.split('-')[0]) if '-' in match_date else current_year
                             else:
@@ -1144,8 +1143,8 @@ Analyse et ajuste maintenant:"""
             print(f"      {home_team}: {home_shots_raw:.1f} tirs, {home_corners_raw:.1f} corners")
             print(f"      {away_team}: {away_shots_raw:.1f} tirs, {away_corners_raw:.1f} corners")
             print(f"\n    Aprs raisonnement IA:")
-            print(f"      {home_team}: {home_shots_raw:.1f} → {home_shots_adjusted:.1f} tirs, {home_corners_raw:.1f} → {home_corners_adjusted:.1f} corners")
-            print(f"      {away_team}: {away_shots_raw:.1f} → {away_shots_adjusted:.1f} tirs, {away_corners_raw:.1f} → {away_corners_adjusted:.1f} corners")
+            print(f"      {home_team}: {home_shots_raw:.1f} -> {home_shots_adjusted:.1f} tirs, {home_corners_raw:.1f} -> {home_corners_adjusted:.1f} corners")
+            print(f"      {away_team}: {away_shots_raw:.1f} -> {away_shots_adjusted:.1f} tirs, {away_corners_raw:.1f} -> {away_corners_adjusted:.1f} corners")
             print(f"      Total: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
             print(f"\n    Raisonnement: {tactical_reasoning[:150]}...")
         else:
