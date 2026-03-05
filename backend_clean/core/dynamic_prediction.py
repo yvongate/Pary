@@ -1009,8 +1009,24 @@ Analyse et ajuste maintenant:"""
         baseline_home_shots = home_shots_raw
         baseline_away_shots = away_shots_raw
 
-        # 5c. NOUVEAU - IA de raisonnement tactique global
-        print(f"\n tape 5c: Raisonnement IA tactique sur le contexte global...")
+        # 5c. NOUVEAU - Récupérer les lineups (si disponibles en DB)
+        lineups = None
+        try:
+            db = get_sqlite_db()
+            effective_match_date = match_date if match_date else datetime.now()
+            match_id = f"{self._get_league_csv_code(league_code)}_{effective_match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
+            lineups = db.get_lineup_by_match_id(match_id)
+
+            if lineups:
+                print(f"[INFO] Lineups trouvées en DB: {lineups.get('home_formation', 'N/A')} vs {lineups.get('away_formation', 'N/A')}")
+            else:
+                print(f"[INFO] Aucune lineup en DB pour ce match")
+        except Exception as e:
+            print(f"[WARNING] Erreur récupération lineups: {e}")
+            lineups = None
+
+        # 5d. NOUVEAU - IA de raisonnement tactique global
+        print(f"\n tape 5d: Raisonnement IA tactique sur le contexte global...")
 
         # Détecter si c'est un derby via RDJ
         is_derby = False
@@ -1018,7 +1034,7 @@ Analyse et ajuste maintenant:"""
             full_text = rdj_context['full_text'].lower()
             is_derby = any(word in full_text for word in ['derby', 'classique', 'choc', 'affiche'])
 
-        # 5d. NOUVEAU - Récupérer stats formations Understat (si lineups disponibles)
+        # 5e. NOUVEAU - Récupérer stats formations Understat (si lineups disponibles)
         home_formation_stats = None
         away_formation_stats = None
 
@@ -1263,23 +1279,7 @@ Analyse et ajuste maintenant:"""
             }
         }
 
-        # 9. Rcuprer les lineups (si disponibles en DB)
-        lineups = None
-        try:
-            db = get_sqlite_db()
-            effective_match_date = match_date if match_date else datetime.now()
-            match_id = f"{league_code}_{effective_match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
-            lineups = db.get_lineup_by_match_id(match_id)
-
-            if lineups:
-                print(f"[INFO] Lineups trouvées en DB: {lineups.get('home_formation')} vs {lineups.get('away_formation')}")
-            else:
-                print(f"[INFO] Aucune lineup en DB pour ce match")
-        except Exception as e:
-            print(f"[WARNING] Erreur récupération lineups: {e}")
-            lineups = None
-
-        # 10. Gnrer le raisonnement IA (Deep Reasoning)
+        # 9. Gnrer le raisonnement IA (Deep Reasoning)
         print(f"\n tape 8: Gnration du raisonnement IA profond...")
         try:
             ai_result = generate_deep_analysis_prediction(

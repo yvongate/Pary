@@ -7,7 +7,7 @@ Economie : ~0.005$ par recherche = 100% gratuit !
 
 from typing import Optional
 import os
-import scrapers.ruedesjoueurs_direct
+from scrapers import ruedesjoueurs_direct
 
 
 def find_match_url(home_team: str, away_team: str, serpapi_key: Optional[str] = None,

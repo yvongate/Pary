@@ -135,7 +135,7 @@ class SQLiteDatabaseService:
     def connect(self) -> bool:
         """Établit la connexion à la base de données"""
         try:
-            self.conn = sqlite3.connect(self.db_path)
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row  # Pour avoir des résultats en dict
             return True
         except Exception as e:
