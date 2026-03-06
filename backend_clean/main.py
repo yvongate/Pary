@@ -133,49 +133,76 @@ def get_leagues():
 
 @app.get("/fixtures")
 def get_fixtures(
-    league: Optional[str] = Query(None, description="Code championnat (E0, E1, D1, SP1, I1, F1, F2, P1)"),
+    league: Optional[str] = Query(None, description="Code championnat (E0, D1, SP1, I1, F1)"),
     days: int = Query(14, description="Jours à venir à afficher"),
 ):
-    """Matchs à venir (fixtures) - Source: football-data.co.uk CSV (mis à jour automatiquement)"""
-    df = load_fixtures()
-    if df is None:
-        return {"matches": [], "count": 0, "source": "football-data.co.uk", "error": "Fixtures CSV non disponible"}
+    """Matchs à venir (fixtures) - Source: FlashScore scraping (temps réel)"""
+    try:
+        from scrapers.flashscore_fixtures_scraper import get_flashscore_fixtures_scraper
 
-    # Filtrer uniquement les championnats supportés
-    SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1']
-    df = df[df['Div'].isin(SUPPORTED_LEAGUES)]
+        # Utiliser le scraper FlashScore
+        scraper = get_flashscore_fixtures_scraper()
 
-    # Normaliser les dates pour comparaison (enlever l'heure)
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    date_limit = today + timedelta(days=days)
+        if league:
+            # Scraper un seul championnat
+            matches = scraper.scrape_fixtures(league, days_ahead=days)
+        else:
+            # Scraper tous les championnats supportés
+            matches = scraper.scrape_all_leagues(days_ahead=days)
 
-    # Filtrer par date (incluant aujourd'hui)
-    mask = (df['Date'] >= today) & (df['Date'] <= date_limit)
-    future = df[mask].copy()
+        today = datetime.now()
+        date_limit = today + timedelta(days=days)
 
-    # Filtrer par ligue si spécifié
-    if league:
-        future = future[future['Div'] == league]
+        return {
+            "matches": matches,
+            "count": len(matches),
+            "period": f"{today.strftime('%Y-%m-%d')} to {date_limit.strftime('%Y-%m-%d')}",
+            "source": "FlashScore scraping"
+        }
 
-    matches = []
-    for _, row in future.iterrows():
-        matches.append({
-            "id": f"{row.get('Div')}_{row['Date'].strftime('%Y%m%d')}_{str(row.get('HomeTeam')).replace(' ', '')}",
-            "league_code": row.get('Div'),
-            "league": LEAGUES.get(row.get('Div'), {}).get('name', row.get('Div')),
-            "date": row['Date'].strftime('%Y-%m-%d') if pd.notna(row['Date']) else None,
-            "time": row.get('Time'),
-            "home_team": row.get('HomeTeam'),
-            "away_team": row.get('AwayTeam'),
-            "status": "SCHEDULED",
-        })
+    except Exception as e:
+        print(f"[ERROR] Récupération fixtures FlashScore: {e}")
+        import traceback
+        traceback.print_exc()
 
-    return {
-        "matches": matches,
-        "count": len(matches),
-        "period": f"{today.strftime('%Y-%m-%d')} to {date_limit.strftime('%Y-%m-%d')}",
-        "source": "football-data.co.uk"
-    }
+        # Fallback sur CSV si le scraping échoue
+        df = load_fixtures()
+        if df is None:
+            return {"matches": [], "count": 0, "source": "FlashScore", "error": str(e)}
+
+        # Logique CSV originale comme fallback
+        SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1']
+        df = df[df['Div'].isin(SUPPORTED_LEAGUES)]
+
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        date_limit = today + timedelta(days=days)
+
+        mask = (df['Date'] >= today) & (df['Date'] <= date_limit)
+        future = df[mask].copy()
+
+        if league:
+            future = future[future['Div'] == league]
+
+        matches = []
+        for _, row in future.iterrows():
+            matches.append({
+                "id": f"{row.get('Div')}_{row['Date'].strftime('%Y%m%d')}_{str(row.get('HomeTeam')).replace(' ', '')}",
+                "league_code": row.get('Div'),
+                "league": LEAGUES.get(row.get('Div'), {}).get('name', row.get('Div')),
+                "date": row['Date'].strftime('%Y-%m-%d') if pd.notna(row['Date']) else None,
+                "time": row.get('Time'),
+                "home_team": row.get('HomeTeam'),
+                "away_team": row.get('AwayTeam'),
+                "status": "SCHEDULED",
+            })
+
+        return {
+            "matches": matches,
+            "count": len(matches),
+            "period": f"{today.strftime('%Y-%m-%d')} to {date_limit.strftime('%Y-%m-%d')}",
+            "source": "football-data.co.uk CSV (fallback)",
+            "warning": "FlashScore scraping failed, using CSV fallback"
+        }
 
 @app.get("/results")
 def get_results(
