@@ -123,12 +123,16 @@ def update_all_historical_data(data_dir: str = './data') -> Dict:
     return results
 
 
-def get_flashscore_daily_fixtures() -> List[Dict]:
+def get_flashscore_daily_fixtures(days_limit: int = 3) -> List[Dict]:
     """
     Récupère les matchs du jour/lendemain depuis FlashScore
+    Filtre pour garder seulement les N prochains jours
+
+    Args:
+        days_limit: Nombre de jours à garder (défaut: 3)
 
     Returns:
-        Liste de matchs FlashScore (3 prochains jours)
+        Liste de matchs FlashScore (filtrés par date)
     """
     try:
         import sys
@@ -141,14 +145,41 @@ def get_flashscore_daily_fixtures() -> List[Dict]:
         scraper = get_flashscore_fixtures_scraper()
         all_matches = []
 
-        # Scraper les 5 ligues pour les 3 prochains jours
+        # Scraper les 5 ligues
         for league_code in ['E0', 'SP1', 'I1', 'F1', 'D1']:
-            matches = scraper.scrape_fixtures(league_code, days_ahead=3)
+            matches = scraper.scrape_fixtures(league_code, days_ahead=days_limit)
             all_matches.extend(matches)
-            print(f"  [FlashScore] {league_code}: {len(matches)} matchs")
+            print(f"  [FlashScore] {league_code}: {len(matches)} matchs (toute saison)")
 
         scraper.close()
-        return all_matches
+
+        # FILTRER par date pour ne garder que les N prochains jours
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        date_limit = today + timedelta(days=days_limit)
+
+        filtered_matches = []
+        for match in all_matches:
+            # Parser la date FlashScore "14/03"
+            date_str = match.get('date', '')
+            if date_str and '/' in date_str:
+                try:
+                    # Format: "14/03" -> "14/03/2026"
+                    day_month = date_str
+                    current_year = datetime.now().year
+                    match_date = datetime.strptime(f"{day_month}/{current_year}", "%d/%m/%Y")
+
+                    # Vérifier si dans la fenêtre
+                    if today <= match_date <= date_limit:
+                        filtered_matches.append(match)
+                except:
+                    # En cas d'erreur de parsing, garder le match
+                    filtered_matches.append(match)
+            else:
+                # Pas de date, garder le match
+                filtered_matches.append(match)
+
+        print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs dans les {days_limit} prochains jours")
+        return filtered_matches
 
     except Exception as e:
         print(f"  [WARNING] FlashScore scraping échoué: {e}")
