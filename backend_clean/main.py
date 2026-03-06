@@ -1460,10 +1460,10 @@ def automation_generate_predictions(hours_ahead: int = Query(48, description="No
 @app.post("/automation/fetch-lineups")
 def automation_fetch_lineups(
     time_window_minutes: int = Query(60, description="Temps avant le match (défaut: 60 min)"),
-    buffer_minutes: int = Query(55, description="Marge de tolérance (défaut: 55 min = fenêtre 5-115 min)")
+    buffer_minutes: int = Query(30, description="Marge de tolérance (défaut: 30 min = fenêtre 30-90 min)")
 ):
     """
-    🤖 AUTOMATISATION - Récupération des lineups via SerpAPI
+    🤖 AUTOMATISATION - Récupération des lineups via SerpAPI + FlashScore
 
     Appelé par cron job toutes les 15 minutes
 
