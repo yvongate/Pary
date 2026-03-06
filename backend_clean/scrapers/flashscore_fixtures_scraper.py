@@ -7,7 +7,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 from typing import List, Dict, Optional
 import time
 from datetime import datetime
@@ -50,8 +49,16 @@ class FlashScoreFixturesScraper:
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
 
-        service = Service(ChromeDriverManager().install())
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        try:
+            # Essayer d'utiliser chromedriver système (Railway/Aptfile)
+            self.driver = webdriver.Chrome(options=chrome_options)
+            print(f"[INFO] Utilisation de chromedriver système")
+        except Exception as e1:
+            # Fallback: webdriver-manager (local)
+            print(f"[INFO] Fallback webdriver-manager: {e1}")
+            from webdriver_manager.chrome import ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
     def scrape_fixtures(self, league_code: str, days_ahead: int = 14) -> List[Dict]:
         """

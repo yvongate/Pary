@@ -8,7 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from typing import Optional, Dict
 import re
 import time
@@ -35,10 +34,20 @@ class FlashScoreScraper:
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
         try:
-            # Utiliser webdriver-manager pour télécharger ChromeDriver automatiquement
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            return True
+            # Essayer d'utiliser chromedriver système (Railway/Aptfile)
+            # Sur Railway, chromium-chromedriver est installé via Aptfile
+            try:
+                self.driver = webdriver.Chrome(options=chrome_options)
+                print("[INFO] Utilisation de chromedriver système (Railway/Aptfile)")
+                return True
+            except Exception as e1:
+                # Fallback: Utiliser webdriver-manager (local)
+                print(f"[INFO] Chromedriver système non trouvé, utilisation webdriver-manager")
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                print("[INFO] Utilisation de webdriver-manager (local)")
+                return True
         except Exception as e:
             print(f"[ERREUR] Impossible d'initialiser Chrome: {e}")
             print("[INFO] Vérifiez que Chrome/Chromium est installé sur le système")
