@@ -123,16 +123,16 @@ def update_all_historical_data(data_dir: str = './data') -> Dict:
     return results
 
 
-def get_flashscore_daily_fixtures(days_limit: int = 3) -> List[Dict]:
+def get_flashscore_daily_fixtures(days_limit: int = 1) -> List[Dict]:
     """
-    Récupère les matchs du jour/lendemain depuis FlashScore
-    Filtre pour garder seulement les N prochains jours
+    Récupère les matchs d'AUJOURD'HUI SEULEMENT depuis FlashScore
+    Filtre pour garder seulement les matchs de la journée
 
     Args:
-        days_limit: Nombre de jours à garder (défaut: 3)
+        days_limit: Nombre de jours à garder (défaut: 1 = aujourd'hui seulement)
 
     Returns:
-        Liste de matchs FlashScore (filtrés par date)
+        Liste de matchs FlashScore d'aujourd'hui
     """
     try:
         import sys
@@ -168,8 +168,9 @@ def get_flashscore_daily_fixtures(days_limit: int = 3) -> List[Dict]:
                     current_year = datetime.now().year
                     match_date = datetime.strptime(f"{day_month}/{current_year}", "%d/%m/%Y")
 
-                    # Vérifier si dans la fenêtre
-                    if today <= match_date <= date_limit:
+                    # Vérifier si dans la fenêtre (aujourd'hui seulement si days_limit=1)
+                    # Pour days_limit=1: garde seulement 06/03, pas 07/03
+                    if today <= match_date < date_limit:
                         filtered_matches.append(match)
                 except:
                     # En cas d'erreur de parsing, garder le match
@@ -178,7 +179,10 @@ def get_flashscore_daily_fixtures(days_limit: int = 3) -> List[Dict]:
                 # Pas de date, garder le match
                 filtered_matches.append(match)
 
-        print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs dans les {days_limit} prochains jours")
+        if days_limit == 1:
+            print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs AUJOURD'HUI seulement")
+        else:
+            print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs dans les {days_limit} prochains jours")
         return filtered_matches
 
     except Exception as e:
@@ -288,9 +292,9 @@ def update_fixtures(data_dir: str = './data') -> Dict:
     if not result['success']:
         return result
 
-    # ÉTAPE 2: Scraper FlashScore pour les matchs du jour/lendemain
-    print("\n[ÉTAPE 2] Scraping FlashScore (3 prochains jours)...")
-    flashscore_matches = get_flashscore_daily_fixtures()
+    # ÉTAPE 2: Scraper FlashScore pour les matchs D'AUJOURD'HUI SEULEMENT
+    print("\n[ÉTAPE 2] Scraping FlashScore (matchs d'AUJOURD'HUI)...")
+    flashscore_matches = get_flashscore_daily_fixtures(days_limit=1)
 
     # ÉTAPE 3: Fusionner les deux sources
     if flashscore_matches:
