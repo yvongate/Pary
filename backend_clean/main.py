@@ -1537,8 +1537,8 @@ def automation_generate_predictions(hours_ahead: int = Query(48, description="No
 
 @app.post("/automation/fetch-lineups")
 def automation_fetch_lineups(
-    time_window_minutes: int = Query(60, description="Temps avant le match (défaut: 60 min)"),
-    buffer_minutes: int = Query(15, description="Marge de tolérance (défaut: 15 min = fenêtre 45-75 min)")
+    time_window_minutes: int = Query(30, description="Temps avant le match (défaut: 30 min)"),
+    buffer_minutes: int = Query(5, description="Marge de tolérance (défaut: 5 min = fenêtre 25-35 min)")
 ):
     """
     🤖 AUTOMATISATION - Récupération des lineups via SerpAPI + FlashScore
@@ -1547,13 +1547,13 @@ def automation_fetch_lineups(
 
     Actions:
     - Récupère tous les matchs à venir sans lineup
-    - Filtre ceux qui commencent dans 60 min (± 15 min = fenêtre 45-75 min)
+    - Filtre ceux qui commencent dans 30 min (± 5 min = fenêtre 25-35 min)
     - Appelle SerpAPI pour récupérer les lineups
     - Sauvegarde en DB pour ne JAMAIS re-fetcher
 
     Args:
-        time_window_minutes: Temps avant le match (défaut: 60 min)
-        buffer_minutes: Marge de tolérance (défaut: 15 min)
+        time_window_minutes: Temps avant le match (défaut: 30 min)
+        buffer_minutes: Marge de tolérance (défaut: 5 min)
 
     Returns:
         Rapport de récupération
