@@ -132,53 +132,42 @@ class LineupService:
 
     def _scrape_flashscore(self, url: str) -> Optional[str]:
         """
-        Scrape une page FlashScore pour récupérer les formations
+        Scrape une page FlashScore avec Selenium pour récupérer les formations
 
         Args:
             url: URL FlashScore du match
 
         Returns:
-            Contenu texte de la page ou None
+            Contenu texte formaté ou None
         """
         try:
+            # Essayer d'abord avec Selenium (méthode fiable)
+            try:
+                from scrapers.flashscore_selenium import get_flashscore_scraper
+
+                scraper = get_flashscore_scraper()
+                result = scraper.scrape_lineups(url)
+
+                if result and result.get('raw_text'):
+                    return result['raw_text']
+                else:
+                    print(f"[WARNING] Selenium n'a pas réussi, fallback sur scraping simple")
+
+            except ImportError:
+                print(f"[WARNING] Selenium non installé, fallback sur scraping simple")
+            except Exception as e:
+                print(f"[WARNING] Erreur Selenium: {e}, fallback sur scraping simple")
+
+            # FALLBACK: Scraping simple (sans JavaScript)
+            print(f"[INFO] Utilisation du scraping simple (sans formations)")
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
             }
 
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
 
-            html_content = response.text
-
-            # FlashScore utilise du JavaScript, mais on peut quand même extraire du texte
-            # Chercher les formations dans le HTML (elles sont souvent dans des divs spécifiques)
-
-            # Pattern pour trouver les formations (ex: "4-3-3", "4-2-3-1")
-            import re
-            formation_pattern = r'\b(\d+-\d+-\d+(?:-\d+)?)\b'
-            formations = re.findall(formation_pattern, html_content)
-
-            if formations:
-                # Construire un texte structuré
-                text_parts = [
-                    f"FlashScore URL: {url}",
-                    f"Formations detectees: {', '.join(set(formations))}"
-                ]
-
-                # Extraire aussi les noms de joueurs si possible
-                # (simplifié: on retourne le HTML complet pour que l'IA puisse tout analyser)
-                text_parts.append(f"\nContenu HTML (extrait):")
-                text_parts.append(html_content[:5000])  # Premier 5000 caractères
-
-                return "\n".join(text_parts)
-            else:
-                # Pas de formations détectées, retourner quand même le contenu
-                return f"FlashScore URL: {url}\n\nContenu HTML:\n{html_content[:3000]}"
+            return f"FlashScore URL: {url}\n\nContenu HTML (sans JavaScript):\n{response.text[:3000]}"
 
         except Exception as e:
             print(f"[ERREUR] Scraping FlashScore: {e}")
