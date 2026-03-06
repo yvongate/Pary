@@ -51,7 +51,8 @@ def generate_deep_analysis_prediction(
 
     client = OpenAI(
         api_key=os.getenv('DEEPINFRA_API_KEY'),
-        base_url="https://api.deepinfra.com/v1/openai"
+        base_url="https://api.deepinfra.com/v1/openai",
+        timeout=120.0  # 2 minutes timeout (au lieu du défaut)
     )
 
     home_team = match['home_team']
