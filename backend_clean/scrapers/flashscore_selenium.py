@@ -26,6 +26,7 @@ class FlashScoreScraper:
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-software-rasterizer')
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
@@ -33,12 +34,18 @@ class FlashScoreScraper:
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
+        # Sur Railway/Linux, spécifier le binary chromium
+        import os
+        if os.path.exists('/usr/bin/chromium-browser'):
+            chrome_options.binary_location = '/usr/bin/chromium-browser'
+            print("[INFO] Utilisation de chromium-browser système (/usr/bin/chromium-browser)")
+
         try:
             # Essayer d'utiliser chromedriver système (Railway/Aptfile)
             # Sur Railway, chromium-chromedriver est installé via Aptfile
             try:
                 self.driver = webdriver.Chrome(options=chrome_options)
-                print("[INFO] Utilisation de chromedriver système (Railway/Aptfile)")
+                print("[INFO] Chromedriver initialisé avec succès (système)")
                 return True
             except Exception as e1:
                 # Fallback: Utiliser webdriver-manager (local)
@@ -46,7 +53,7 @@ class FlashScoreScraper:
                 from webdriver_manager.chrome import ChromeDriverManager
                 service = Service(ChromeDriverManager().install())
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                print("[INFO] Utilisation de webdriver-manager (local)")
+                print("[INFO] Chromedriver initialisé avec succès (webdriver-manager)")
                 return True
         except Exception as e:
             print(f"[ERREUR] Impossible d'initialiser Chrome: {e}")

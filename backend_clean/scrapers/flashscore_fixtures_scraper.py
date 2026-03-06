@@ -47,12 +47,20 @@ class FlashScoreFixturesScraper:
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-software-rasterizer')
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+
+        # Sur Railway/Linux, spécifier le binary chromium
+        import os
+        if os.path.exists('/usr/bin/chromium-browser'):
+            chrome_options.binary_location = '/usr/bin/chromium-browser'
+            print(f"[INFO] Utilisation de chromium-browser système (/usr/bin/chromium-browser)")
 
         try:
             # Essayer d'utiliser chromedriver système (Railway/Aptfile)
             self.driver = webdriver.Chrome(options=chrome_options)
-            print(f"[INFO] Utilisation de chromedriver système")
+            print(f"[INFO] Chromedriver initialisé avec succès")
         except Exception as e1:
             # Fallback: webdriver-manager (local)
             print(f"[INFO] Fallback webdriver-manager: {e1}")
