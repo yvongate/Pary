@@ -12,7 +12,8 @@ class Settings:
     """Configuration de l'application"""
     
     # API Keys
-    DEEPINFRA_API_KEY: str = os.getenv("DEEPINFRA_API_KEY", "")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    DEEPINFRA_API_KEY: str = os.getenv("DEEPINFRA_API_KEY", "")  # Gardé en backup
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENWEATHER_API_KEY: str = os.getenv("OPENWEATHER_API_KEY", "")
     SERPAPI_KEY: str = os.getenv("SERPAPI_KEY", "")
@@ -34,9 +35,8 @@ class Settings:
     # URLs externes
     FOOTBALL_DATA_CSV_URL: str = "https://www.football-data.co.uk/fixtures.csv"
     
-    # AI Configuration
-    AI_MODEL: str = "meta-llama/Meta-Llama-3-70B-Instruct"
-    AI_BASE_URL: str = "https://api.deepinfra.com/v1/openai/chat/completions"
+    # AI Configuration (Anthropic Claude)
+    AI_MODEL: str = "claude-3-5-sonnet-20241022"
     AI_MAX_TOKENS: int = 300
     AI_TEMPERATURE: float = 0.7
     

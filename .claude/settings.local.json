@@ -56,7 +56,29 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: ParY - Football Prediction System\n\n- Backend FastAPI with dynamic predictions\n- AI deep reasoning verification\n- Free data sources \\(football-data.co.uk CSV + scraping\\)\n- Automation system with cron jobs\n- Frontend Next.js with match calendar\n- Supabase integration\n- Deployment configs for Render + Vercel\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(python test_understat_scraper.py:*)",
+      "Bash(python debug_understat.py:*)",
+      "Bash(python understat_api_finder.py:*)",
+      "Bash(python understat_raw_html_analysis.py:*)",
+      "Bash(python understat_formations_scraper.py:*)",
+      "Bash(Get-Content \"C:\\\\Users\\\\Yvon\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Yvon-Desktop-parY\\\\tasks\\\\b16b1f6.output\" -Tail 30)",
+      "Bash(timeout 180 python:*)",
+      "Bash(timeout 120 python:*)",
+      "Bash(pip show:*)",
+      "Bash(chromedriver:*)",
+      "Bash(pip freeze:*)",
+      "Bash(python automation/update_csv.py:*)",
+      "Bash(python test_google_dom.py:*)",
+      "Bash(python test_playwright_stealth.py:*)",
+      "Bash(C:/Users/Yvon/AppData/Local/Programs/Python/Python312/python.exe -m pip install:*)",
+      "Bash(C:/Users/Yvon/AppData/Local/Programs/Python/Python312/python.exe -m playwright:*)",
+      "Bash(C:/Users/Yvon/AppData/Local/Programs/Python/Python312/python.exe:*)",
+      "Bash(dir /b brightdata*.png)",
+      "Bash(dir:*)",
+      "Bash(C:UsersYvonAppDataLocalProgramsPythonPython312python.exe test_integration_brightdata.py)",
+      "Bash(\"C:\\\\Users\\\\Yvon\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python312\\\\python.exe\" test_integration_brightdata.py)",
+      "Bash(git rm:*)"
     ]
   }
 }

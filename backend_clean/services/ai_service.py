@@ -1,8 +1,8 @@
 """
-Service IA - Génération de texte avec DeepInfra
+Service IA - Génération de texte avec Anthropic Claude
 Génère les analyses textuelles pour tirs et corners
 """
-import requests
+import anthropic
 from typing import Dict
 import sys
 import os
@@ -11,14 +11,20 @@ from config.settings import settings
 
 
 class AIService:
-    """Service de génération de texte IA"""
+    """Service de génération de texte IA avec Anthropic Claude"""
 
     def __init__(self):
-        self.api_key = settings.DEEPINFRA_API_KEY or settings.OPENAI_API_KEY
-        self.base_url = settings.AI_BASE_URL
+        self.api_key = settings.ANTHROPIC_API_KEY
         self.model = settings.AI_MODEL
         self.max_tokens = settings.AI_MAX_TOKENS
         self.temperature = settings.AI_TEMPERATURE
+
+        # Initialiser le client Anthropic
+        if self.api_key:
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        else:
+            self.client = None
+            print("[WARNING] Clé API Anthropic non configurée")
 
     def generate_shots_reasoning(self, analysis_data: Dict) -> str:
         """
@@ -104,7 +110,7 @@ ANALYSE:"""
 
     def _call_ai(self, prompt: str) -> str:
         """
-        Appelle l'API DeepInfra
+        Appelle l'API Anthropic Claude
 
         Args:
             prompt: Prompt à envoyer
@@ -112,42 +118,42 @@ ANALYSE:"""
         Returns:
             Réponse générée
         """
-        if not self.api_key:
-            return "API key non configurée. Veuillez définir DEEPINFRA_API_KEY dans .env"
+        if not self.client:
+            return "API key Anthropic non configurée. Veuillez définir ANTHROPIC_API_KEY dans .env"
 
         try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-
-            data = {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "Tu es un analyste football expert. Tes analyses sont concises, précises et professionnelles."
-                    },
+            # Appel API Anthropic avec SDK officiel
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                system="Tu es un analyste football expert. Tes analyses sont concises, précises et professionnelles.",
+                messages=[
                     {
                         "role": "user",
                         "content": prompt
                     }
-                ],
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature
-            }
+                ]
+            )
 
-            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
+            # Extraire le texte de la réponse
+            return message.content[0].text.strip()
 
-            if response.status_code == 200:
-                result = response.json()
-                return result['choices'][0]['message']['content'].strip()
-            else:
-                print(f"[ERREUR IA] {response.status_code}")
-                return f"Erreur génération IA: {response.status_code}"
+        except anthropic.APIConnectionError as e:
+            print(f"[ERREUR IA] Connexion échouée: {e}")
+            return "Erreur de connexion à l'API Anthropic. Vérifiez votre connexion internet."
+
+        except anthropic.RateLimitError as e:
+            print(f"[ERREUR IA] Limite de débit atteinte: {e}")
+            return "Limite de débit API atteinte. Veuillez réessayer dans quelques instants."
+
+        except anthropic.APIStatusError as e:
+            print(f"[ERREUR IA] Erreur API ({e.status_code})")
+            print(f"[DEBUG] Response: {e.response.text if hasattr(e.response, 'text') else e.response}")
+            return f"Erreur API Anthropic: {e.status_code}"
 
         except Exception as e:
-            print(f"[ERREUR IA] {e}")
+            print(f"[ERREUR IA] Erreur inattendue: {e}")
             return f"Erreur génération IA: {str(e)}"
 
 
