@@ -1,0 +1,33 @@
+# Configuration Nixpacks pour Railway
+# Installe les dépendances système pour Playwright + Selenium
+
+[phases.setup]
+# Installer Chromium et ses dépendances pour Selenium et Playwright
+aptPkgs = [
+  "chromium",
+  "chromium-driver",
+  "chromium-l10n",
+  "fonts-liberation",
+  "libnss3",
+  "libatk-bridge2.0-0",
+  "libatk1.0-0",
+  "libcups2",
+  "libdrm2",
+  "libxkbcommon0",
+  "libxcomposite1",
+  "libxdamage1",
+  "libxfixes3",
+  "libxrandr2",
+  "libgbm1",
+  "libasound2"
+]
+
+[phases.install]
+# Installer les dépendances Python puis les browsers Playwright
+cmds = [
+  "pip install -r requirements.txt",
+  "playwright install chromium"
+]
+
+[start]
+cmd = "bash start.sh"

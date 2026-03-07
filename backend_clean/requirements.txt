@@ -19,6 +19,6 @@ playwright>=1.40.0
 # Anthropic Claude API
 anthropic>=0.39.0
 
-# Selenium (DÉSACTIVÉ - remplacé par Playwright + Bright Data)
-# selenium>=4.36.0
-# webdriver-manager>=4.0.2
+# Selenium (pour FlashScore scraper)
+selenium>=4.36.0
+webdriver-manager>=4.0.2
