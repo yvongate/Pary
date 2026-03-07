@@ -58,9 +58,14 @@ class FlashScoreFixturesScraper:
             print(f"[INFO] Utilisation de chromium-browser système (/usr/bin/chromium-browser)")
 
         try:
-            # Essayer d'utiliser chromedriver système (Railway/Aptfile)
-            self.driver = webdriver.Chrome(options=chrome_options)
-            print(f"[INFO] Chromedriver initialisé avec succès")
+            # Essayer d'utiliser chromedriver système (Railway/nixpacks.toml)
+            if os.path.exists('/usr/bin/chromedriver'):
+                service = Service('/usr/bin/chromedriver')
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"[INFO] Chromedriver système initialisé (/usr/bin/chromedriver)")
+            else:
+                self.driver = webdriver.Chrome(options=chrome_options)
+                print(f"[INFO] Chromedriver initialisé avec succès")
         except Exception as e1:
             # Fallback: webdriver-manager (local)
             print(f"[INFO] Fallback webdriver-manager: {e1}")

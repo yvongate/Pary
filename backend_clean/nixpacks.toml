@@ -3,10 +3,10 @@
 
 [phases.setup]
 # Installer Chromium et ses dépendances pour Selenium et Playwright
+# Compatible Ubuntu 24.04 (Noble)
 aptPkgs = [
-  "chromium",
-  "chromium-driver",
-  "chromium-l10n",
+  "chromium-browser",
+  "chromium-chromedriver",
   "fonts-liberation",
   "libnss3",
   "libatk-bridge2.0-0",
@@ -19,7 +19,7 @@ aptPkgs = [
   "libxfixes3",
   "libxrandr2",
   "libgbm1",
-  "libasound2"
+  "libasound2t64"
 ]
 
 [phases.install]
