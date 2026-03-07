@@ -1,12 +1,10 @@
 # Configuration Nixpacks pour Railway
-# Installe les dépendances système pour Playwright + Selenium
+# Installe les dépendances système pour Playwright seulement
 
 [phases.setup]
-# Installer Chromium et ses dépendances pour Selenium et Playwright
-# Compatible Ubuntu 24.04 (Noble)
+# Dépendances système pour Playwright (Bright Data scraper)
+# Selenium/FlashScore désactivé pour économiser ressources
 aptPkgs = [
-  "chromium-browser",
-  "chromium-chromedriver",
   "fonts-liberation",
   "libnss3",
   "libatk-bridge2.0-0",
@@ -23,4 +21,4 @@ aptPkgs = [
 ]
 
 # Laisser nixpacks gérer l'installation Python
-# start.sh s'occupe de Playwright
+# start.sh s'occupe de Playwright (pour Bright Data uniquement)

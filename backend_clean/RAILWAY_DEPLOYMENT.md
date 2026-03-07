@@ -88,14 +88,17 @@ Start Command: bash start.sh
 
 ---
 
-## Dépendances système Chrome (Playwright + Selenium)
+## Dépendances système (Playwright uniquement)
 
 ✅ **Configuration automatique via `nixpacks.toml`**
 
 Le fichier `nixpacks.toml` à la racine installe automatiquement:
-- **Chromium** + driver (pour Selenium/FlashScore)
-- **Playwright browsers** (pour Bright Data/Google)
+- **Playwright browsers** (pour Bright Data/Google formations)
 - **Dépendances système** (fonts, libs, etc.)
+
+⚠️ **FlashScore/Selenium DÉSACTIVÉ** pour économiser ressources Railway.
+- L'app utilise uniquement `football-data.co.uk` CSV pour les fixtures
+- Bright Data scrape toujours les formations Google
 
 **Pas d'action nécessaire** - Railway utilise automatiquement ce fichier.
 
@@ -103,23 +106,17 @@ Le fichier `nixpacks.toml` à la racine installe automatiquement:
 
 Dans les logs Railway, vérifier:
 ```
-✓ Chromium installé (Selenium)
 ✓ Playwright Chromium installé
 ✓ Application démarrée
+✓ [WARNING] FlashScore scraping échoué (NORMAL - désactivé)
 ```
 
 ---
 
 ## Troubleshooting
 
-### Erreur: "No module named 'selenium'"
-**Solution**: Selenium activé dans requirements.txt. Redéployer l'app sur Railway.
-
 ### Erreur: "Executable doesn't exist at ..." (Playwright)
 **Solution**: Playwright n'a pas installé les browsers. Vérifier le start command.
-
-### Erreur: "ChromeDriver not found" (Selenium)
-**Solution**: Le fichier `nixpacks.toml` installe chromium-driver automatiquement. Vérifier que le fichier existe à la racine.
 
 ### Erreur: "Browser closed unexpectedly"
 **Solution**: Manque de mémoire. Augmenter le plan Railway ou optimiser le code.
@@ -130,11 +127,11 @@ Dans les logs Railway, vérifier:
 ### Matchs sans formations (normal)
 **Solution normale**: Google n'affiche pas toujours les compositions (matchs trop tôt, équipes non reconnues).
 
-### FlashScore scraping échoue
-**Solution**:
-1. Vérifier que Selenium est installé (`pip freeze | grep selenium`)
-2. Vérifier que chromium est installé (`which chromium-browser`)
-3. L'app continue de fonctionner avec football-data.co.uk en fallback
+### FlashScore scraping échoue (NORMAL)
+**Comportement attendu**: FlashScore/Selenium est désactivé pour économiser ressources.
+- L'app utilise uniquement `fixtures.csv` depuis football-data.co.uk
+- Message dans les logs: `[WARNING] FlashScore scraping échoué: No module named 'selenium'`
+- **Aucune action nécessaire** - c'est le comportement normal
 
 ---
 
