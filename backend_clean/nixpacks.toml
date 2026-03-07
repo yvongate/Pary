@@ -22,12 +22,5 @@ aptPkgs = [
   "libasound2t64"
 ]
 
-[phases.install]
-# Installer les dépendances Python puis les browsers Playwright
-cmds = [
-  "pip install -r requirements.txt",
-  "playwright install chromium"
-]
-
-[start]
-cmd = "bash start.sh"
+# Laisser nixpacks gérer l'installation Python
+# start.sh s'occupe de Playwright
