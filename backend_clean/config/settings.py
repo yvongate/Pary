@@ -36,9 +36,9 @@ class Settings:
     FOOTBALL_DATA_CSV_URL: str = "https://www.football-data.co.uk/fixtures.csv"
     
     # AI Configuration (Anthropic Claude)
-    # Note: Clé API gratuite = accès uniquement à Haiku
-    AI_MODEL: str = "claude-3-haiku-20240307"
-    AI_MAX_TOKENS: int = 300
+    # Claude Sonnet 4 - Utilisé pour TOUTES les IA (textes + raisonnement profond)
+    AI_MODEL: str = "claude-sonnet-4-6"
+    AI_MAX_TOKENS: int = 1024  # Augmenté pour le raisonnement profond
     AI_TEMPERATURE: float = 0.7
     
     # Cron Configuration

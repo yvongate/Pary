@@ -4,7 +4,7 @@ L'IA recoit TOUTES les donnees et raisonne comme un analyste expert
 """
 import os
 from typing import Dict, List, Optional
-from openai import OpenAI
+import anthropic
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -49,9 +49,8 @@ def generate_deep_analysis_prediction(
         }
     """
 
-    client = OpenAI(
-        api_key=os.getenv('DEEPINFRA_API_KEY'),
-        base_url="https://api.deepinfra.com/v1/openai",
+    client = anthropic.Anthropic(
+        api_key=os.getenv('ANTHROPIC_API_KEY'),
         timeout=120.0  # 2 minutes timeout (au lieu du défaut)
     )
 
@@ -471,23 +470,20 @@ CONFIANCE: [0-100]%
     # ================================================================
 
     try:
-        response = client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-70B-Instruct",
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            temperature=0.3,
+            system="Tu es un analyste football expert qui raisonne de maniere structuree avec des SI/ALORS pour trouver des patterns.",
             messages=[
-                {
-                    "role": "system",
-                    "content": "Tu es un analyste football expert qui raisonne de maniere structuree avec des SI/ALORS pour trouver des patterns."
-                },
                 {
                     "role": "user",
                     "content": prompt
                 }
-            ],
-            temperature=0.3,
-            max_tokens=2000
+            ]
         )
 
-        reasoning_text = response.choices[0].message.content
+        reasoning_text = message.content[0].text
 
         # Parser la reponse
         result = _parse_ai_prediction(reasoning_text)

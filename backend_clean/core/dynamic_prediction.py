@@ -399,12 +399,11 @@ class DynamicPredictor:
                 'reasoning': "Explication du raisonnement"
             }
         """
-        from openai import OpenAI
+        import anthropic
         import os
 
-        client = OpenAI(
-            api_key=os.getenv('DEEPINFRA_API_KEY'),
-            base_url="https://api.deepinfra.com/v1/openai"
+        client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
         )
 
         # Préparer le contexte
@@ -580,23 +579,29 @@ IMPORTANT: Retourne UNIQUEMENT le JSON, sans texte additionnel.
 Analyse et ajuste maintenant:"""
 
         try:
-            response = client.chat.completions.create(
-                model="meta-llama/Llama-3.3-70B-Instruct",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=200,
-                temperature=0.4
+            message = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=500,
+                temperature=0.4,
+                messages=[{"role": "user", "content": prompt}]
             )
 
-            result_text = response.choices[0].message.content.strip()
+            result_text = message.content[0].text.strip()
 
             # Parser le JSON
             import json
             import re
 
-            # Extraire JSON
-            json_match = re.search(r'\{[\s\S]*\}', result_text)
+            # Extraire JSON (supporter les code blocks markdown)
+            # Essayer d'abord avec ```json ... ```
+            json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', result_text)
             if json_match:
-                result_text = json_match.group(0)
+                result_text = json_match.group(1)
+            else:
+                # Sinon chercher le JSON brut
+                json_match = re.search(r'\{[\s\S]*\}', result_text)
+                if json_match:
+                    result_text = json_match.group(0)
 
             result = json.loads(result_text)
 
@@ -639,7 +644,11 @@ Analyse et ajuste maintenant:"""
             print(f"\n[IA TACTIQUE] Ajustement intelligent:")
             print(f"  {home_team}: {lambda_home_base:.1f} -> {home_adj:.1f} tirs, {lambda_home_base_corners:.1f} -> {home_adj_corners:.1f} corners")
             print(f"  {away_team}: {lambda_away_base:.1f} -> {away_adj:.1f} tirs, {lambda_away_base_corners:.1f} -> {away_adj_corners:.1f} corners")
-            print(f"  Raisonnement: {reasoning[:200]}...")
+            # Encoder pour éviter erreurs Unicode sur Windows
+            try:
+                print(f"  Raisonnement: {reasoning[:200]}...")
+            except UnicodeEncodeError:
+                print(f"  Raisonnement: {reasoning.encode('ascii', errors='ignore').decode()[:200]}...")
 
             return {
                 'lambda_home_adjusted': home_adj,
@@ -650,7 +659,7 @@ Analyse et ajuste maintenant:"""
             }
 
         except Exception as e:
-            print(f"[WARNING] IA tactique échouée: {e}")
+            print(f"[WARNING] IA tactique echouee: {repr(e)}")
             # Fallback: garder baseline
             return {
                 'lambda_home_adjusted': lambda_home_base,
@@ -1146,7 +1155,11 @@ Analyse et ajuste maintenant:"""
             print(f"      {home_team}: {home_shots_raw:.1f} -> {home_shots_adjusted:.1f} tirs, {home_corners_raw:.1f} -> {home_corners_adjusted:.1f} corners")
             print(f"      {away_team}: {away_shots_raw:.1f} -> {away_shots_adjusted:.1f} tirs, {away_corners_raw:.1f} -> {away_corners_adjusted:.1f} corners")
             print(f"      Total: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
-            print(f"\n    Raisonnement: {tactical_reasoning[:150]}...")
+            # Encoder pour éviter erreurs Unicode sur Windows
+            try:
+                print(f"\n    Raisonnement: {tactical_reasoning[:150]}...")
+            except UnicodeEncodeError:
+                print(f"\n    Raisonnement: {tactical_reasoning.encode('ascii', errors='ignore').decode()[:150]}...")
         else:
             # Pas de contexte disponible, garder baseline
             home_shots_adjusted = home_shots_raw
