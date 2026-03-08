@@ -1,6 +1,6 @@
 """
 Script d'automatisation - Mise à jour des CSV historiques
-Source: football-data.co.uk + FlashScore (fixtures du jour)
+Source: football-data.co.uk uniquement
 """
 
 import requests
@@ -123,155 +123,9 @@ def update_all_historical_data(data_dir: str = './data') -> Dict:
     return results
 
 
-def get_flashscore_daily_fixtures(days_limit: int = 1) -> List[Dict]:
-    """
-    Récupère les matchs d'AUJOURD'HUI SEULEMENT depuis FlashScore
-    Filtre pour garder seulement les matchs de la journée
-
-    Args:
-        days_limit: Nombre de jours à garder (défaut: 1 = aujourd'hui seulement)
-
-    Returns:
-        Liste de matchs FlashScore d'aujourd'hui
-    """
-    try:
-        import sys
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(script_dir)
-        sys.path.insert(0, parent_dir)
-
-        from scrapers.flashscore_fixtures_scraper import get_flashscore_fixtures_scraper
-
-        scraper = get_flashscore_fixtures_scraper()
-        all_matches = []
-
-        # Scraper les 5 ligues
-        for league_code in ['E0', 'SP1', 'I1', 'F1', 'D1']:
-            matches = scraper.scrape_fixtures(league_code, days_ahead=days_limit)
-            all_matches.extend(matches)
-            print(f"  [FlashScore] {league_code}: {len(matches)} matchs (toute saison)")
-
-        scraper.close()
-
-        # FILTRER par date pour ne garder que les N prochains jours
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        date_limit = today + timedelta(days=days_limit)
-
-        filtered_matches = []
-        for match in all_matches:
-            # Parser la date FlashScore "14/03"
-            date_str = match.get('date', '')
-            if date_str and '/' in date_str:
-                try:
-                    # Format: "14/03" -> "14/03/2026"
-                    day_month = date_str
-                    current_year = datetime.now().year
-                    match_date = datetime.strptime(f"{day_month}/{current_year}", "%d/%m/%Y")
-
-                    # Vérifier si dans la fenêtre (aujourd'hui seulement si days_limit=1)
-                    # Pour days_limit=1: garde seulement 06/03, pas 07/03
-                    if today <= match_date < date_limit:
-                        filtered_matches.append(match)
-                except:
-                    # En cas d'erreur de parsing, garder le match
-                    filtered_matches.append(match)
-            else:
-                # Pas de date, garder le match
-                filtered_matches.append(match)
-
-        if days_limit == 1:
-            print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs AUJOURD'HUI seulement")
-        else:
-            print(f"  [FILTRE] {len(filtered_matches)}/{len(all_matches)} matchs dans les {days_limit} prochains jours")
-        return filtered_matches
-
-    except Exception as e:
-        print(f"  [WARNING] FlashScore scraping échoué: {e}")
-        return []
-
-
-def merge_fixtures_with_flashscore(csv_path: str, flashscore_matches: List[Dict]) -> int:
-    """
-    Fusionne les fixtures CSV avec FlashScore et sauvegarde
-
-    Args:
-        csv_path: Chemin du fichier CSV
-        flashscore_matches: Matchs depuis FlashScore
-
-    Returns:
-        Nombre de matchs ajoutés depuis FlashScore
-    """
-    try:
-        # Lire le CSV existant
-        df_csv = pd.read_csv(csv_path)
-        print(f"  [CSV] {len(df_csv)} matchs dans le fichier")
-
-        # Convertir FlashScore en format CSV
-        new_rows = []
-        added_count = 0
-
-        for match in flashscore_matches:
-            # Vérifier si le match existe déjà dans le CSV
-            home_team = match['home_team']
-            away_team = match['away_team']
-            league_code = match['league_code']
-
-            # Chercher match identique dans CSV
-            existing = df_csv[
-                (df_csv['Div'] == league_code) &
-                (df_csv['HomeTeam'].str.lower() == home_team.lower()) &
-                (df_csv['AwayTeam'].str.lower() == away_team.lower())
-            ]
-
-            if existing.empty:
-                # Convertir date FlashScore "14/03" en "14/03/2026"
-                date_str = match.get('date', '')
-                if date_str and '/' in date_str:
-                    day_month = date_str  # "14/03"
-                    current_year = datetime.now().year
-                    date_str = f"{day_month}/{current_year}"  # "14/03/2026"
-                else:
-                    date_str = ''
-
-                # Créer nouvelle ligne CSV
-                new_row = {
-                    'Div': league_code,
-                    'Date': date_str,
-                    'Time': match.get('time', ''),
-                    'HomeTeam': home_team,
-                    'AwayTeam': away_team,
-                    'Referee': '',
-                    # Toutes les autres colonnes vides
-                }
-
-                new_rows.append(new_row)
-                added_count += 1
-                print(f"  [+] Ajouté: {home_team} vs {away_team} ({league_code})")
-
-        if new_rows:
-            # Ajouter les nouvelles lignes au DataFrame
-            df_new = pd.DataFrame(new_rows)
-
-            # Combiner avec le CSV existant
-            df_merged = pd.concat([df_csv, df_new], ignore_index=True)
-
-            # Sauvegarder
-            df_merged.to_csv(csv_path, index=False)
-            print(f"  [OK] {added_count} matchs FlashScore ajoutés au CSV")
-        else:
-            print(f"  [OK] Tous les matchs FlashScore déjà présents dans le CSV")
-
-        return added_count
-
-    except Exception as e:
-        print(f"  [ERROR] Fusion FlashScore/CSV échouée: {e}")
-        return 0
-
-
 def update_fixtures(data_dir: str = './data') -> Dict:
     """
-    Met à jour le fichier fixtures.csv
-    Fusionne football-data.co.uk + FlashScore (matchs du jour)
+    Met à jour le fichier fixtures.csv depuis football-data.co.uk
 
     Args:
         data_dir: Dossier de destination
@@ -280,30 +134,14 @@ def update_fixtures(data_dir: str = './data') -> Dict:
         Résultat de la mise à jour
     """
     print("\n" + "=" * 70)
-    print("MISE A JOUR DES FIXTURES (CSV + FlashScore)")
+    print("MISE A JOUR DES FIXTURES (CSV uniquement)")
     print("=" * 70)
 
     output_path = os.path.join(data_dir, 'fixtures.csv')
 
-    # ÉTAPE 1: Télécharger CSV football-data.co.uk
-    print("\n[ÉTAPE 1] Téléchargement CSV football-data.co.uk...")
+    # Télécharger CSV football-data.co.uk
+    print("\nTéléchargement CSV football-data.co.uk...")
     result = download_csv(FIXTURES_URL, output_path)
-
-    if not result['success']:
-        return result
-
-    # ÉTAPE 2: Scraper FlashScore pour les matchs D'AUJOURD'HUI SEULEMENT
-    print("\n[ÉTAPE 2] Scraping FlashScore (matchs d'AUJOURD'HUI)...")
-    flashscore_matches = get_flashscore_daily_fixtures(days_limit=1)
-
-    # ÉTAPE 3: Fusionner les deux sources
-    if flashscore_matches:
-        print(f"\n[ÉTAPE 3] Fusion: {len(flashscore_matches)} matchs FlashScore...")
-        added = merge_fixtures_with_flashscore(output_path, flashscore_matches)
-        result['flashscore_added'] = added
-    else:
-        print("\n[ÉTAPE 3] Aucun match FlashScore à ajouter")
-        result['flashscore_added'] = 0
 
     return result
 

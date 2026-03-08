@@ -136,24 +136,9 @@ def get_fixtures(
     league: Optional[str] = Query(None, description="Code championnat (E0, D1, SP1, I1, F1)"),
     days: int = Query(14, description="Jours à venir à afficher"),
 ):
-    """Matchs à venir (fixtures) - Source: FlashScore + football-data.co.uk (combinés)"""
+    """Matchs à venir (fixtures) - Source: football-data.co.uk CSV"""
 
-    # ÉTAPE 1: Récupérer fixtures FlashScore (beaucoup de matchs)
-    flashscore_matches = []
-    try:
-        from scrapers.flashscore_fixtures_scraper import get_flashscore_fixtures_scraper
-        scraper = get_flashscore_fixtures_scraper()
-
-        if league:
-            flashscore_matches = scraper.scrape_fixtures(league, days_ahead=days)
-        else:
-            flashscore_matches = scraper.scrape_all_leagues(days_ahead=days)
-
-        print(f"[FIXTURES] FlashScore: {len(flashscore_matches)} matchs récupérés")
-    except Exception as e:
-        print(f"[WARNING] FlashScore scraping échoué: {e}")
-
-    # ÉTAPE 2: Récupérer fixtures CSV (données enrichies)
+    # Récupérer fixtures CSV
     csv_matches = []
     df = load_fixtures()
     if df is not None:
@@ -188,71 +173,16 @@ def get_fixtures(
 
         print(f"[FIXTURES] CSV: {len(csv_matches)} matchs récupérés")
 
-    # ÉTAPE 3: Fusionner les deux sources
-    merged_matches = []
-    used_csv_indices = set()
-
-    # Pour chaque match FlashScore, chercher correspondance dans CSV
-    for fs_match in flashscore_matches:
-        fs_home = fs_match['home_team'].lower().strip()
-        fs_away = fs_match['away_team'].lower().strip()
-
-        # Chercher match correspondant dans CSV
-        csv_match_found = None
-        for csv_idx, csv_match in enumerate(csv_matches):
-            if csv_idx in used_csv_indices:
-                continue
-
-            csv_home = csv_match['home_team'].lower().strip()
-            csv_away = csv_match['away_team'].lower().strip()
-
-            # Vérifier si c'est le même match (équipes identiques ou très similaires)
-            if (fs_home == csv_home or fs_home in csv_home or csv_home in fs_home) and \
-               (fs_away == csv_away or fs_away in csv_away or csv_away in fs_away):
-                csv_match_found = csv_match
-                used_csv_indices.add(csv_idx)
-                break
-
-        # Enrichir le match FlashScore avec données CSV si trouvé
-        if csv_match_found:
-            merged_match = {
-                **fs_match,
-                "date": csv_match_found['date'],  # Date précise du CSV
-                "time": csv_match_found['time'],  # Heure précise du CSV
-                "referee": csv_match_found.get('referee'),
-                "odds_home": csv_match_found.get('odds_home'),
-                "odds_draw": csv_match_found.get('odds_draw'),
-                "odds_away": csv_match_found.get('odds_away'),
-                "source": "FlashScore + CSV"
-            }
-            merged_matches.append(merged_match)
-            print(f"[MERGE] {fs_match['home_team']} vs {fs_match['away_team']} - Enrichi avec CSV")
-        else:
-            # Aucune correspondance CSV, garder FlashScore seul
-            fs_match["source"] = "FlashScore"
-            merged_matches.append(fs_match)
-
-    # ÉTAPE 4: Ajouter les matchs CSV non trouvés dans FlashScore
-    for csv_idx, csv_match in enumerate(csv_matches):
-        if csv_idx not in used_csv_indices:
-            merged_matches.append(csv_match)
-            print(f"[CSV ONLY] {csv_match['home_team']} vs {csv_match['away_team']}")
-
     today = datetime.now()
     date_limit = today + timedelta(days=days)
 
-    print(f"[FIXTURES] TOTAL: {len(merged_matches)} matchs (FlashScore: {len(flashscore_matches)}, CSV: {len(csv_matches)})")
+    print(f"[FIXTURES] TOTAL: {len(csv_matches)} matchs")
 
     return {
-        "matches": merged_matches,
-        "count": len(merged_matches),
+        "matches": csv_matches,
+        "count": len(csv_matches),
         "period": f"{today.strftime('%Y-%m-%d')} to {date_limit.strftime('%Y-%m-%d')}",
-        "sources": {
-            "flashscore": len(flashscore_matches),
-            "csv": len(csv_matches),
-            "merged": len(merged_matches)
-        },
-        "source": "FlashScore + football-data.co.uk (combined)"
+        "source": "football-data.co.uk (CSV)"
     }
 
 @app.get("/results")
