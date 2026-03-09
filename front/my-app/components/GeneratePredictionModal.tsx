@@ -33,8 +33,16 @@ export default function GeneratePredictionModal({
   // Pré-remplir les équipes quand le modal s'ouvre avec des valeurs initiales
   useEffect(() => {
     if (isOpen) {
-      if (initialHomeTeam) setHomeTeam(initialHomeTeam);
-      if (initialAwayTeam) setAwayTeam(initialAwayTeam);
+      // Pré-remplir avec les valeurs initiales (ou vide si pas de valeurs)
+      setHomeTeam(initialHomeTeam || '');
+      setAwayTeam(initialAwayTeam || '');
+      // Réinitialiser les autres champs
+      setHomeFormation('');
+      setAwayFormation('');
+      setHomePlayers('');
+      setAwayPlayers('');
+      setBookmakerProps('');
+      setError(null);
     }
   }, [isOpen, initialHomeTeam, initialAwayTeam]);
 
