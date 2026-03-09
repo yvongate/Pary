@@ -38,20 +38,22 @@ def get_tables_overview(league_code: str = "england") -> Optional[Dict]:
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Trouver le mega tableau (TABLE 62 - 275 lignes)
-        overview_table = None
-        for table in soup.find_all('table'):
+        # Trouver TOUS les tableaux importants (pas juste un méga tableau)
+        all_tables = soup.find_all('table')
+        print(f"[FOUND] {len(all_tables)} tableaux sur la page")
+
+        # Fusionner tous les rows de tous les tableaux
+        all_rows = []
+        for table_idx, table in enumerate(all_tables):
             rows = table.find_all('tr')
-            if len(rows) > 250:  # Le mega tableau a 275 lignes
-                overview_table = table
-                break
+            # Garder les tableaux avec au moins 15 lignes (ignorer petits tableaux)
+            if len(rows) >= 15:
+                print(f"  [Table {table_idx}] {len(rows)} lignes - GARDE")
+                all_rows.extend(rows)
+            else:
+                print(f"  [Table {table_idx}] {len(rows)} lignes - IGNORE (trop petit)")
 
-        if not overview_table:
-            print("[ERREUR] Tables overview non trouvé")
-            return None
-
-        rows = overview_table.find_all('tr')
-        print(f"[FOUND] Tables overview: {len(rows)} lignes")
+        print(f"\n[TOTAL] {len(all_rows)} lignes combinées de tous les tableaux")
 
         # Parser ligne par ligne pour identifier les sections
         result = {
@@ -71,7 +73,7 @@ def get_tables_overview(league_code: str = "england") -> Optional[Dict]:
 
         current_section = None
 
-        for i, row in enumerate(rows):
+        for i, row in enumerate(all_rows):
             cells = [td.get_text(strip=True) for td in row.find_all(['td', 'th'])]
 
             if len(cells) == 0:
