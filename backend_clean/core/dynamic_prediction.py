@@ -350,33 +350,82 @@ class DynamicPredictor:
     
 
     def _get_team_rank(self, team_name: str, ranking_type: str, rankings: Dict) -> int:
-        """Rcupre le rang d'une quipe dans un classement"""
-        if not rankings or ranking_type not in rankings:
-            return 10  # Rang moyen par dfaut
+        """
+        Récupère le rang d'une équipe dans un classement (avec fallback intelligent)
 
-        # Convertir le nom CSV vers le format SoccerStats
+        Stratégie:
+        1. Essayer le classement demandé
+        2. Si vide ou non trouvé, fallback vers classement général
+        3. Recherche flexible (ignore "Real", "FC", etc.)
+        """
+        if not rankings:
+            return 10  # Rang moyen par défaut
+
+        # STRATEGIE 1: Fallback intelligent si classement vide
+        target_rankings = []
+
+        if ranking_type in rankings and len(rankings[ranking_type]) > 0:
+            target_rankings.append((ranking_type, rankings[ranking_type]))
+
+        # Fallback mappings
+        fallback_map = {
+            'defence_away': ['defence', 'away'],
+            'offence_away': ['offence', 'away'],
+            'defence_home': ['defence', 'home'],
+            'offence_home': ['offence', 'home'],
+        }
+
+        if ranking_type in fallback_map:
+            for fallback_type in fallback_map[ranking_type]:
+                if fallback_type in rankings and len(rankings[fallback_type]) > 0:
+                    target_rankings.append((fallback_type, rankings[fallback_type]))
+
+        if not target_rankings:
+            return 10  # Aucun classement disponible
+
+        # STRATEGIE 2: Recherche flexible
         from main import csv_to_soccerstats_name
         soccerstats_name = csv_to_soccerstats_name(team_name)
 
-        # Chercher avec le nom SoccerStats
-        for team in rankings[ranking_type]:
-            team_name_lower = team['team'].lower()
-            soccerstats_lower = soccerstats_name.lower()
+        # Fonction helper pour normaliser les noms (enlever préfixes)
+        def normalize_for_search(name: str) -> str:
+            name_lower = name.lower()
+            # Enlever préfixes communs
+            prefixes = ['real ', 'fc ', 'cf ', 'ac ', 'as ', 'rc ']
+            for prefix in prefixes:
+                if name_lower.startswith(prefix):
+                    name_lower = name_lower[len(prefix):]
+            return name_lower.strip()
 
-            # Essayer correspondance exacte
-            if team_name_lower == soccerstats_lower:
-                return team['position']
+        normalized_search = normalize_for_search(soccerstats_name)
+        csv_normalized = normalize_for_search(team_name)
 
-            # Essayer correspondance partielle (avec nom converti)
-            if soccerstats_lower in team_name_lower or team_name_lower in soccerstats_lower:
-                return team['position']
+        # Chercher dans les classements (avec priorité)
+        for ranking_name, ranking_list in target_rankings:
+            for team in ranking_list:
+                team_name_lower = team['team'].lower()
+                team_normalized = normalize_for_search(team['team'])
 
-            # Dernier fallback: essayer avec le nom CSV original
-            if team_name.lower() in team_name_lower or team_name_lower in team_name.lower():
-                return team['position']
+                # 1. Correspondance exacte
+                if team_name_lower == soccerstats_name.lower():
+                    return team['position']
 
-        print(f"[WARNING] Équipe '{team_name}' (SoccerStats: '{soccerstats_name}') non trouvée dans {ranking_type}")
-        return 10  # Pas trouv = rang moyen
+                # 2. Correspondance normalisée (sans "Real", "FC", etc.)
+                if team_normalized == normalized_search or team_normalized == csv_normalized:
+                    return team['position']
+
+                # 3. Correspondance partielle
+                if normalized_search in team_normalized or team_normalized in normalized_search:
+                    return team['position']
+
+                # 4. Fallback avec nom CSV original
+                if csv_normalized in team_normalized or team_normalized in csv_normalized:
+                    return team['position']
+
+        # Si toujours pas trouvé, log avec info sur fallback utilisé
+        fallback_info = f" (fallback: {target_rankings[0][0]})" if len(target_rankings) > 0 and target_rankings[0][0] != ranking_type else ""
+        print(f"[WARNING] Équipe '{team_name}' (SoccerStats: '{soccerstats_name}') non trouvée dans {ranking_type}{fallback_info}")
+        return 10  # Pas trouvé = rang moyen
 
     def get_ai_tactical_adjustment(self,
                                    lambda_home_base: float,
@@ -609,7 +658,7 @@ Analyse et ajuste maintenant:"""
 
             result_text = message.content[0].text.strip()
 
-            # Parser le JSON
+            # Parser le JSON (avec gestion intelligente des erreurs)
             import json
             import re
 
@@ -627,7 +676,32 @@ Analyse et ajuste maintenant:"""
             # Nettoyer les retours à la ligne et espaces
             result_text = result_text.strip()
 
-            result = json.loads(result_text)
+            # Parser avec gestion d'erreurs
+            result = None
+            try:
+                result = json.loads(result_text)
+            except json.JSONDecodeError as json_err:
+                # Si JSON invalide, essayer de le réparer intelligemment
+                print(f"[INFO] JSON invalide, tentative de réparation... ({json_err})")
+
+                # Tentative 1: Extraire les valeurs numériques directement avec regex
+                lambda_home_match = re.search(r'"lambda_home_adjusted":\s*([\d.]+)', result_text)
+                lambda_away_match = re.search(r'"lambda_away_adjusted":\s*([\d.]+)', result_text)
+                lambda_home_corners_match = re.search(r'"lambda_home_adjusted_corners":\s*([\d.]+)', result_text)
+                lambda_away_corners_match = re.search(r'"lambda_away_adjusted_corners":\s*([\d.]+)', result_text)
+                reasoning_match = re.search(r'"reasoning":\s*"([^"]*)"', result_text)
+
+                if lambda_home_match and lambda_away_match:
+                    result = {
+                        'lambda_home_adjusted': float(lambda_home_match.group(1)),
+                        'lambda_away_adjusted': float(lambda_away_match.group(1)),
+                        'lambda_home_adjusted_corners': float(lambda_home_corners_match.group(1)) if lambda_home_corners_match else lambda_home_base_corners,
+                        'lambda_away_adjusted_corners': float(lambda_away_corners_match.group(1)) if lambda_away_corners_match else lambda_away_base_corners,
+                        'reasoning': reasoning_match.group(1) if reasoning_match else 'JSON parsé partiellement'
+                    }
+                    print(f"[INFO] JSON réparé avec succès via regex")
+                else:
+                    raise json_err  # Re-raise si impossible à réparer
 
             # Validation TIRS
             home_adj = result.get('lambda_home_adjusted', lambda_home_base)
