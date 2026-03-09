@@ -1548,6 +1548,15 @@ async def process_full_prediction(
 
         sqlite_db = get_sqlite_db()
 
+        # ÉTAPE 0: Mise à jour des données (comme le CRON job)
+        print(f"[PREDICTION {prediction_id}] Mise à jour des données CSV...")
+        try:
+            from automation.update_csv import run_full_update
+            update_report = run_full_update('./data')
+            print(f"[PREDICTION {prediction_id}] CSV mis à jour : {update_report['historical']['success']}/{update_report['historical']['total']} ligues")
+        except Exception as e:
+            print(f"[PREDICTION {prediction_id}] Erreur mise à jour CSV (utilisation des données existantes): {e}")
+
         # ÉTAPE 1: Déterminer la ligue (essayer de deviner depuis les noms)
         print(f"[PREDICTION {prediction_id}] Détection de la ligue...")
         league_code = "MANUAL"  # Par défaut
