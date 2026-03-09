@@ -33,6 +33,9 @@ export default function GeneratePredictionModal({
   // Pré-remplir les équipes quand le modal s'ouvre avec des valeurs initiales
   useEffect(() => {
     if (isOpen) {
+      // Debug : vérifier les valeurs reçues
+      console.log('Modal ouvert avec:', { initialHomeTeam, initialAwayTeam });
+
       // Pré-remplir avec les valeurs initiales (ou vide si pas de valeurs)
       setHomeTeam(initialHomeTeam || '');
       setAwayTeam(initialAwayTeam || '');
@@ -162,7 +165,7 @@ export default function GeneratePredictionModal({
                   placeholder="Ex: Villarreal"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 />
               </div>
 
@@ -180,7 +183,7 @@ export default function GeneratePredictionModal({
                   title="Format: 4-3-3 ou 4-2-3-1"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 />
               </div>
 
@@ -195,7 +198,7 @@ export default function GeneratePredictionModal({
                   onChange={(e) => setHomePlayers(e.target.value)}
                   placeholder="Ex: Navas, Foyth, Albiol, Pedraza, Parejo, Capoue..."
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -219,7 +222,7 @@ export default function GeneratePredictionModal({
                   placeholder="Ex: Elche"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
                 />
               </div>
 
@@ -237,7 +240,7 @@ export default function GeneratePredictionModal({
                   title="Format: 4-3-3 ou 4-2-3-1"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
                 />
               </div>
 
@@ -252,7 +255,7 @@ export default function GeneratePredictionModal({
                   onChange={(e) => setAwayPlayers(e.target.value)}
                   placeholder="Ex: Edgar, Bigas, Gonzalez, Lirola, Guti..."
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -294,7 +297,7 @@ Everton handicap corners +2.5 cote 1.85
 Format court: +24.5t 1.85 ou PSG -5.5t @ 1.90`}
                 disabled={loading}
                 rows={10}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 font-mono text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 font-mono text-sm text-gray-900 bg-white"
               />
               <p className="mt-1 text-xs text-gray-500">
                 💡 Total: "+24.5 tirs @ 1.85" | Handicap: "PSG handicap tirs -5.5 @ 1.90"
