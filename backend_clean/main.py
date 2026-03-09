@@ -45,17 +45,20 @@ SOCCERSTATS_CODES = {
 }
 
 # Mapping des variations de noms d'équipes
-# Clé = Nom utilisé (API, frontend), Valeur = Nom dans CSV
+# Clé = Nom utilisé (fixtures.csv, API, frontend), Valeur = Nom dans CSV historique
 TEAM_NAME_MAPPING = {
-    # La Liga (Espagne)
-    'Espanyol': 'Espanol',
+    # La Liga (Espagne) - fixtures.csv vs SP1_2526.csv
+    'Espanyol': 'Espanol',              # fixtures.csv → CSV
     'RCD Espanyol': 'Espanol',
     'Atletico Madrid': 'Ath Madrid',
     'Atlético Madrid': 'Ath Madrid',
+    'Atl. Madrid': 'Ath Madrid',        # fixtures.csv → CSV (avec point)
     'Athletic Bilbao': 'Ath Bilbao',
     'Athletic Club': 'Ath Bilbao',
     'Deportivo Alaves': 'Alaves',
     'Real Sociedad': 'Sociedad',
+    'Celta Vigo': 'Celta',               # fixtures.csv → CSV (enlève "Vigo")
+    'Rayo Vallecano': 'Vallecano',       # fixtures.csv → CSV (enlève "Rayo")
 
     # Premier League (Angleterre)
     'Manchester United': 'Man United',
