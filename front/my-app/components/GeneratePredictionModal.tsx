@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface GeneratePredictionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -74,7 +76,7 @@ export default function GeneratePredictionModal({
       }
 
       // Lancer la génération
-      const response = await fetch('http://localhost:8000/api/generate-prediction', {
+      const response = await fetch(`${API_BASE_URL}/api/generate-prediction`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
