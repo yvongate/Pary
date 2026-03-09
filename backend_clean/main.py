@@ -1572,13 +1572,13 @@ async def process_full_prediction(
 
         try:
             # Utiliser le predictor qui fait déjà tout le travail
+            # Note: predict_match ne prend pas les formations en paramètres
+            # Les formations sont utilisées uniquement par l'IA Deep Reasoning
             prediction_result = predictor.predict_match(
                 home_team=home_team,
                 away_team=away_team,
                 league_code=soccerstats_code,
-                match_date=datetime.now(),
-                home_formation=home_formation,
-                away_formation=away_formation
+                match_date=datetime.now()
             )
 
             if 'error' in prediction_result:
