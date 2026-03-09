@@ -1590,6 +1590,9 @@ async def process_full_prediction(
                 match_date=datetime.now()
             )
 
+            # Variable pour savoir si on a une analyse IA complète du predictor
+            has_full_ai_analysis = False
+
             if 'error' in prediction_result:
                 print(f"[PREDICTION {prediction_id}] Predictor error: {prediction_result['error']}")
                 # Fallback sur valeurs par défaut
@@ -1604,6 +1607,12 @@ async def process_full_prediction(
                 home_corners = prediction_result.get('predictions', {}).get('home', {}).get('corners', 6.0)
                 away_corners = prediction_result.get('predictions', {}).get('away', {}).get('corners', 4.0)
 
+                # Vérifier si le predictor a généré une analyse IA complète
+                ai_reasoning = prediction_result.get('predictions', {}).get('ai_reasoning_shots', '')
+                if ai_reasoning and len(ai_reasoning) > 500:  # Analyse complète = au moins 500 caractères
+                    has_full_ai_analysis = True
+                    print(f"[PREDICTION {prediction_id}] ✅ Analyse IA complète disponible ({len(ai_reasoning)} caractères)")
+
                 print(f"[PREDICTION {prediction_id}] Résultats Poisson+IA: {home_team} {home_shots} tirs, {away_team} {away_shots} tirs")
 
         except Exception as e:
@@ -1613,34 +1622,78 @@ async def process_full_prediction(
             away_shots = 10.0
             home_corners = 6.0
             away_corners = 4.0
+            has_full_ai_analysis = False
 
         # ÉTAPE 3: IA Deep Reasoning (analyse complète)
         print(f"[PREDICTION {prediction_id}] IA Deep Reasoning...")
-        from core.ai_deep_reasoning import DeepReasoningAnalyzer
 
-        analyzer = DeepReasoningAnalyzer()
+        # Si le predictor a généré une analyse complète, l'utiliser
+        if has_full_ai_analysis:
+            print(f"[PREDICTION {prediction_id}] Utilisation de l'analyse complète du DynamicPredictor (7+ étapes)")
+            reasoning_text = prediction_result['predictions']['ai_reasoning_shots']
 
-        # Créer contexte enrichi pour l'IA
-        context = {
-            'home_team': home_team,
-            'away_team': away_team,
-            'home_formation': home_formation,
-            'away_formation': away_formation,
-            'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
-            'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
-            'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
-            'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
-            'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
-            'match_date': datetime.now().isoformat(),
-            'bookmaker_propositions': bookmaker_props_text  # Texte brut des propositions
-        }
+            # Extraire les fourchettes depuis le predictor
+            shots_range = {
+                'min': prediction_result['predictions'].get('shots_min', int(home_shots + away_shots - 5)),
+                'max': prediction_result['predictions'].get('shots_max', int(home_shots + away_shots + 5))
+            }
+            corners_range = {
+                'min': prediction_result['predictions'].get('corners_min', int(home_corners + away_corners - 3)),
+                'max': prediction_result['predictions'].get('corners_max', int(home_corners + away_corners + 3))
+            }
 
-        ai_analysis = analyzer.analyze_match(context)
+            # Si l'utilisateur a fourni des propositions bookmaker, enrichir l'analyse
+            if bookmaker_props_text and bookmaker_props_text.strip():
+                print(f"[PREDICTION {prediction_id}] Enrichissement avec propositions bookmaker...")
+                from core.ai_deep_reasoning import DeepReasoningAnalyzer
+                analyzer = DeepReasoningAnalyzer()
 
-        # Extraire résultats
-        shots_range = ai_analysis.get('shots_range', {'min': int(home_shots + away_shots - 5), 'max': int(home_shots + away_shots + 5)})
-        corners_range = ai_analysis.get('corners_range', {'min': int(home_corners + away_corners - 3), 'max': int(home_corners + away_corners + 3)})
-        reasoning_text = ai_analysis.get('reasoning', f'Analyse de {home_team} vs {away_team}...')
+                # Analyse supplémentaire focalisée sur le value betting
+                context = {
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'home_formation': home_formation,
+                    'away_formation': away_formation,
+                    'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
+                    'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
+                    'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
+                    'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
+                    'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
+                    'match_date': datetime.now().isoformat(),
+                    'bookmaker_propositions': bookmaker_props_text
+                }
+                value_betting_analysis = analyzer.analyze_match(context)
+
+                # Combiner les analyses
+                reasoning_text = reasoning_text + "\n\n" + "="*80 + "\n\n" + "🎯 ANALYSE VALUE BETTING (propositions bookmaker)\n\n" + value_betting_analysis.get('reasoning', '')
+
+        else:
+            # Sinon utiliser DeepReasoningAnalyzer (version simplifiée)
+            print(f"[PREDICTION {prediction_id}] Utilisation de DeepReasoningAnalyzer (version simplifiée)")
+            from core.ai_deep_reasoning import DeepReasoningAnalyzer
+            analyzer = DeepReasoningAnalyzer()
+
+            # Créer contexte enrichi pour l'IA
+            context = {
+                'home_team': home_team,
+                'away_team': away_team,
+                'home_formation': home_formation,
+                'away_formation': away_formation,
+                'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
+                'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
+                'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
+                'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
+                'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
+                'match_date': datetime.now().isoformat(),
+                'bookmaker_propositions': bookmaker_props_text  # Texte brut des propositions
+            }
+
+            ai_analysis = analyzer.analyze_match(context)
+
+            # Extraire résultats
+            shots_range = ai_analysis.get('shots_range', {'min': int(home_shots + away_shots - 5), 'max': int(home_shots + away_shots + 5)})
+            corners_range = ai_analysis.get('corners_range', {'min': int(home_corners + away_corners - 3), 'max': int(home_corners + away_corners + 3)})
+            reasoning_text = ai_analysis.get('reasoning', f'Analyse de {home_team} vs {away_team}...')
 
         print(f"[PREDICTION {prediction_id}] IA Deep: Total tirs {shots_range}, corners {corners_range}")
 
