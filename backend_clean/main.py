@@ -1641,18 +1641,24 @@ async def process_full_prediction(
         soccerstats_code = "england"  # Par défaut
 
         # Essayer de détecter la ligue en cherchant les équipes dans les CSV
+        season = get_current_season()  # Ex: "2526"
         for lcode, linfo in LEAGUES.items():
             try:
-                csv_path = f"./data/{lcode}.csv"
+                # Utiliser le bon format de fichier avec la saison
+                csv_path = f"./data/{lcode}_{season}.csv"
                 if os.path.exists(csv_path):
                     df = pd.read_csv(csv_path)
                     if home_team in df['HomeTeam'].values or away_team in df['AwayTeam'].values:
                         league_code = lcode
                         soccerstats_code = SOCCERSTATS_CODES.get(lcode, "england")
-                        print(f"[PREDICTION {prediction_id}] Ligue détectée: {linfo['name']} ({lcode})")
+                        print(f"[PREDICTION {prediction_id}] Ligue détectée: {linfo['name']} ({lcode}) depuis {csv_path}")
                         break
-            except:
+            except Exception as e:
+                print(f"[PREDICTION {prediction_id}] Erreur lecture {csv_path}: {e}")
                 pass
+
+        if league_code == "MANUAL":
+            print(f"[PREDICTION {prediction_id}] ⚠️ Ligue non détectée, utilisation par défaut: england")
 
         # ÉTAPE 2: Utiliser le predictor existant (Poisson + IA Tactique)
         print(f"[PREDICTION {prediction_id}] Calcul Poisson + IA Tactique...")
