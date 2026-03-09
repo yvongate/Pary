@@ -167,7 +167,8 @@ export default function GeneratePredictionModal({
                   placeholder="Ex: Villarreal"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  readOnly={!!initialHomeTeam}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${initialHomeTeam ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 />
               </div>
 
@@ -224,7 +225,8 @@ export default function GeneratePredictionModal({
                   placeholder="Ex: Elche"
                   required
                   disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
+                  readOnly={!!initialAwayTeam}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-gray-900 ${initialAwayTeam ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 />
               </div>
 
