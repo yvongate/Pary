@@ -47,7 +47,8 @@ class DeepReasoningAnalyzer:
                 'shots_range': {'min': int, 'max': int},
                 'corners_range': {'min': int, 'max': int},
                 'reasoning': str,
-                'best_value_bet': str (optionnel, si propositions fournies)
+                'best_value_bet': str (optionnel, si propositions fournies),
+                'best_balanced_bet': str (optionnel, si propositions fournies)
             }
         """
         home_team = context['home_team']
@@ -98,10 +99,29 @@ STATISTIQUES HISTORIQUES (BASELINE):
 MISSION IMPORTANTE - DOUBLE ANALYSE:
 
 TU DOIS IDENTIFIER 2 TYPES DE PARIS:
-1. MEILLEUR VALUE BET (rentabilité long terme, bon EV)
-2. PARI LE PLUS PROBABLE (maximiser chances de gagner CE pari)
+1. MEILLEUR VALUE BET (rentabilité long terme, EV maximal)
+2. BEST BALANCED BET (haute probabilité + bonne cote = sweet spot)
 
 Ces 2 paris sont souvent DIFFÉRENTS!
+
+Le "Balanced Bet" est le COMPROMIS OPTIMAL:
+- Probabilité élevée pour sécurité (>70%)
+- Cote décente pour rentabilité (>1.60)
+- Ni trop risqué, ni cote trop faible
+
+EXEMPLE CONCRET (PSG vs Nantes):
+
+Proposition A: "+27.5 tirs @ 2.50"
+→ EV: +30%, Probabilité: 65%, Cote: 2.50
+→ Type: MEILLEUR VALUE BET (EV maximal mais risqué)
+
+Proposition B: "+25.5 tirs @ 1.85"
+→ EV: +15%, Probabilité: 78%, Cote: 1.85
+→ Type: BEST BALANCED BET (sweet spot) ✅
+
+Proposition C: "+23.5 tirs @ 1.35"
+→ EV: -8%, Probabilité: 92%, Cote: 1.35
+→ Type: REJETE (cote trop faible <1.60) ❌
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -142,12 +162,20 @@ Ces 2 paris sont souvent DIFFÉRENTS!
       - Cherche le plus grand EV positif
       - Focus: Rentabilité long terme
       - Accepte probabilité moyenne (60-70%) si excellente cote
+      - Exemple: EV +30%, proba 65%, cote 2.50
 
-   B) PARI LE PLUS PROBABLE:
-      - Cherche la plus haute probabilité de réussite (> 75%)
-      - Focus: Maximiser chances de gagner
-      - Peu importe si EV négatif ou cote faible
-      - Exemple: Probabilité 85% même avec cote 1.15
+   B) BEST BALANCED BET (Sweet Spot):
+      - Cherche le MEILLEUR COMPROMIS probabilité/cote
+      - Critères OBLIGATOIRES:
+        * Probabilité > 70% (bonne sécurité)
+        * Cote > 1.60 (rentabilité décente)
+        * EV > 5% (au moins un peu de value)
+      - Focus: Balance entre sécurité et rentabilité
+      - Exemple: EV +15%, proba 78%, cote 1.85
+
+      NOTE IMPORTANTE: NE PAS recommander de cotes trop faibles (<1.60)!
+      Si toutes les propositions probables ont cotes <1.60, indique:
+      "AUCUN PARI EQUILIBRE - Toutes les cotes probables sont trop faibles"
 
 4. Justifie CHAQUE recommandation avec analyse tactique
 
@@ -284,17 +312,25 @@ A) MEILLEUR VALUE BET:
    - Si EV > 25%: FORTE VALUE
    - Si EV 10-25%: VALUE MODEREE
    - Si EV < 10%: PAS DE VALUE
-   - Focus: Rentabilité à long terme (bon rapport cote/probabilité)
+   - Focus: Rentabilité à long terme (EV maximal)
+   - Accepte probabilité moyenne (60-65%) si excellente cote (>2.00)
 
-B) PARI LE PLUS PROBABLE:
-   - Cherche la proposition avec la PLUS HAUTE probabilité de réussite
-   - Peu importe si la cote est faible (EV peut être négatif)
-   - Focus: Maximiser les chances de gagner CE pari
-   - Exemple: "+24.5 tirs" avec 85% de probabilité même si cote = 1.20 (EV négatif)
+B) BEST BALANCED BET (Sweet Spot):
+   - Cherche le MEILLEUR COMPROMIS entre probabilité et cote
+   - Critères OBLIGATOIRES:
+     * Probabilité > 70% (bonne sécurité)
+     * Cote > 1.60 (rentabilité décente)
+     * EV > 5% (au moins un peu de value)
+   - Focus: Ni trop risqué, ni cote trop faible
+   - Exemple: Probabilité 78%, cote 1.85, EV +15%
 
-IMPORTANT: Ces 2 paris peuvent être DIFFÉRENTS!
-- Value bet = Bon rapport risque/récompense
-- Pari probable = Maximiser chances de gagner
+   ⚠️ IMPORTANT: Rejette les cotes <1.60 même si probabilité 95%!
+   Si aucune proposition ne respecte les 3 critères, indique:
+   "AUCUN PARI EQUILIBRE TROUVE - Cotes trop faibles ou probabilités insuffisantes"
+
+IMPORTANT: Ces 2 paris sont souvent DIFFÉRENTS!
+- Value bet = EV maximal (peut être risqué)
+- Balanced bet = Sweet spot sécurité/rentabilité
 
 FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 
@@ -311,12 +347,12 @@ Base de calcul: Formations {home_formation} vs {away_formation}
 + Stats historiques + Analyse tactique
 
 ==================================================
-🔥 MEILLEUR VALUE BET (Rentabilité long terme)
+🔥 MEILLEUR VALUE BET (EV Maximal - Rentabilité long terme)
 
 [Proposition] @ [cote]
 
 - Expected Value: +X%
-- MA probabilité réelle: X% (basée sur MA prédiction)
+- MA probabilité réelle: X%
 - Probabilité implicite marché: X% (1/cote)
 - ÉCART: +Y points de %
 - Type: FORTE VALUE / VALUE MODEREE / PAS DE VALUE
@@ -330,25 +366,30 @@ JUSTIFICATION TACTIQUE:
 [Analyse détaillée formations, joueurs, style de jeu]
 
 ==================================================
-✅ PARI LE PLUS PROBABLE (Maximiser chances de gagner)
+⚖️ BEST BALANCED BET (Sweet Spot - Compromis optimal)
 
-[Proposition] @ [cote]
+[Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
 
-- MA probabilité de réussite: X%
-- Expected Value: +/-X% (peut être négatif)
-- Probabilité implicite marché: X% (1/cote)
-- Confiance: TRÈS HAUTE / HAUTE / MOYENNE
+Si trouvé:
+- MA probabilité de réussite: X% (doit être >70%)
+- Cote: X.XX (doit être >1.60)
+- Expected Value: +X% (doit être >5%)
+- Balance: EXCELLENTE / BONNE
 
-POURQUOI CE PARI EST SÛR:
-[Explique pourquoi ce pari a les plus grandes chances de rentrer]
-Exemple: "Avec PSG qui fait en moyenne 20 tirs à domicile et Nantes
-qui concède 15 tirs, le total dépassera facilement 24.5 tirs."
+POURQUOI C'EST LE MEILLEUR COMPROMIS:
+[Explique le balance entre sécurité (haute probabilité) et rentabilité (bonne cote)]
+Exemple: "Probabilité 76% garantit bonne sécurité, tout en gardant
+une cote 1.82 qui offre rentabilité décente (+18% EV). Ni trop risqué, ni cote trop faible."
 
 JUSTIFICATION TACTIQUE:
 [Analyse détaillée basée sur historique et contexte]
 
-NOTE: Si le pari le plus probable = le meilleur value bet, indique:
-"LE PARI LE PLUS PROBABLE EST AUSSI LE MEILLEUR VALUE BET"
+Si aucun trouvé:
+"AUCUN PARI EQUILIBRE TROUVE
+Raison: [Toutes les cotes probables sont <1.60 / Aucune proposition >70% de probabilité / Etc.]"
+
+NOTE: Si le balanced bet = le value bet, indique:
+"LE MEILLEUR VALUE BET EST AUSSI LE MEILLEUR PARI EQUILIBRE (JACKPOT!)"
 
 ==================================================
 AUTRES PROPOSITIONS ANALYSEES
