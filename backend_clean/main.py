@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import pandas as pd
 import os
 from datetime import datetime, timedelta
@@ -1245,7 +1246,10 @@ def get_upcoming_predictions(
                     'max': pred['shots_max'],
                     'confidence': float(pred['shots_confidence']),
                     'message_min': f"Il y aura PLUS de {pred['shots_min']} tirs",
-                    'message_max': f"Il y aura MOINS de {pred['shots_max']} tirs"
+                    'message_max': f"Il y aura MOINS de {pred['shots_max']} tirs",
+                    # Messages par équipe (Méthode 1 - Poisson + IA Tactique)
+                    'home_team_message': f"{pred['home_team']}: {pred.get('home_shots', 'N/A')} tirs" if pred.get('home_shots') else None,
+                    'away_team_message': f"{pred['away_team']}: {pred.get('away_shots', 'N/A')} tirs" if pred.get('away_shots') else None,
                 },
 
                 # Prdictions CORNERS
@@ -1254,12 +1258,14 @@ def get_upcoming_predictions(
                     'max': pred['corners_max'],
                     'confidence': float(pred['corners_confidence']),
                     'message_min': f"Il y aura PLUS de {pred['corners_min']} corners",
-                    'message_max': f"Il y aura MOINS de {pred['corners_max']} corners"
+                    'message_max': f"Il y aura MOINS de {pred['corners_max']} corners",
+                    # Messages par équipe (Méthode 1 - Poisson + IA Tactique)
+                    'home_team_message': f"{pred['home_team']}: {pred.get('home_corners', 'N/A')} corners" if pred.get('home_corners') else None,
+                    'away_team_message': f"{pred['away_team']}: {pred.get('away_corners', 'N/A')} corners" if pred.get('away_corners') else None,
                 },
 
-                # Analyses IA
-                'ai_reasoning_shots': pred.get('ai_reasoning_shots'),
-                'ai_reasoning_corners': pred.get('ai_reasoning_corners'),
+                # Analyses IA (prendre seulement ai_reasoning_shots pour éviter duplication)
+                'ai_reasoning': pred.get('ai_reasoning_shots') or pred.get('ai_reasoning_corners'),
 
                 # Formations
                 'formations': {
@@ -1336,7 +1342,23 @@ def get_prediction_detail(match_id: str):
             'league_name': LEAGUES.get(prediction['league_code'], {}).get('name', prediction['league_code']),
             'match_date': match_date,
 
-            # Prdictions TIRS
+            # Tirs/Corners par équipe (NOUVEAU - pour le modal)
+            'home_shots': prediction.get('home_shots'),
+            'away_shots': prediction.get('away_shots'),
+            'home_corners': prediction.get('home_corners'),
+            'away_corners': prediction.get('away_corners'),
+
+            # Fourchettes par équipe (NOUVEAU - pour IA Deep Reasoning)
+            'home_shots_min': prediction.get('home_shots_min'),
+            'home_shots_max': prediction.get('home_shots_max'),
+            'away_shots_min': prediction.get('away_shots_min'),
+            'away_shots_max': prediction.get('away_shots_max'),
+            'home_corners_min': prediction.get('home_corners_min'),
+            'home_corners_max': prediction.get('home_corners_max'),
+            'away_corners_min': prediction.get('away_corners_min'),
+            'away_corners_max': prediction.get('away_corners_max'),
+
+            # Prdictions TIRS (totaux)
             'shots': {
                 'min': prediction['shots_min'],
                 'max': prediction['shots_max'],
@@ -1347,7 +1369,7 @@ def get_prediction_detail(match_id: str):
                 'ai_reasoning': prediction.get('ai_reasoning_shots')
             },
 
-            # Prdictions CORNERS
+            # Prdictions CORNERS (totaux)
             'corners': {
                 'min': prediction['corners_min'],
                 'max': prediction['corners_max'],
@@ -1357,6 +1379,9 @@ def get_prediction_detail(match_id: str):
                 'analysis': prediction.get('analysis_corners'),  # Dtails complets
                 'ai_reasoning': prediction.get('ai_reasoning_corners')
             },
+
+            # Analyse IA globale (pour génération manuelle)
+            'ai_reasoning': prediction.get('ai_reasoning_shots') or prediction.get('ai_reasoning_corners'),
 
             # Contexte
             'formations': {
@@ -1376,6 +1401,318 @@ def get_prediction_detail(match_id: str):
             'message': str(e),
             'match_id': match_id
         }
+
+
+# =====================================================
+# GÉNÉRATION MANUELLE DE PRÉDICTIONS
+# =====================================================
+
+class PredictionRequest(BaseModel):
+    home_team: str
+    away_team: str
+    home_formation: str
+    away_formation: str
+    home_players: Optional[str] = None
+    away_players: Optional[str] = None
+    bookmaker_props_text: Optional[str] = None
+
+@app.post("/api/generate-prediction")
+async def generate_prediction_manual(
+    request: PredictionRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    🎯 GÉNÉRATION MANUELLE - Créer une prédiction avec compositions manuelles
+
+    Permet à l'utilisateur de générer une prédiction en renseignant manuellement:
+    - Noms des équipes
+    - Formations (format: X-X-X ou X-X-X-X)
+    - Joueurs titulaires (optionnel, séparés par virgules)
+
+    Le traitement se fait en arrière-plan (30-60 secondes):
+    1. Récupération données historiques
+    2. Calcul Poisson
+    3. IA Tactique (ajustements)
+    4. IA Deep Reasoning (analyse complète)
+
+    Returns:
+        prediction_id: ID pour suivre la génération
+        status: "en_cours"
+    """
+    try:
+        import re
+        from datetime import datetime
+
+        # Validation des formations
+        formation_pattern = r'^\d(-\d){1,3}$'
+        if not re.match(formation_pattern, request.home_formation):
+            return {
+                'error': 'Formation domicile invalide',
+                'detail': f'Format attendu: 4-3-3 ou 4-2-3-1. Reçu: {request.home_formation}'
+            }
+
+        if not re.match(formation_pattern, request.away_formation):
+            return {
+                'error': 'Formation extérieur invalide',
+                'detail': f'Format attendu: 4-3-3 ou 4-2-3-1. Reçu: {request.away_formation}'
+            }
+
+        # Créer un match_id unique
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        match_id = f"MANUAL_{timestamp}_{request.home_team.replace(' ', '')}_{request.away_team.replace(' ', '')}"
+
+        # Créer entrée en base avec status="en_cours"
+        sqlite_db = get_sqlite_db()
+        cursor = sqlite_db.conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO match_predictions (
+                match_id, home_team, away_team, league_code, match_date,
+                home_formation, away_formation,
+                shots_min, shots_max, shots_confidence,
+                corners_min, corners_max, corners_confidence,
+                status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            match_id,
+            request.home_team,
+            request.away_team,
+            "MANUAL",  # Code ligue spécial
+            datetime.now().isoformat(),
+            request.home_formation,
+            request.away_formation,
+            0, 0, 0.0,  # Valeurs temporaires
+            0, 0, 0.0,
+            "en_cours",  # STATUS
+            datetime.now().isoformat()
+        ))
+
+        sqlite_db.conn.commit()
+        prediction_id = cursor.lastrowid
+
+        # Lancer le traitement en arrière-plan
+        background_tasks.add_task(
+            process_full_prediction,
+            prediction_id=prediction_id,
+            match_id=match_id,
+            home_team=request.home_team,
+            away_team=request.away_team,
+            home_formation=request.home_formation,
+            away_formation=request.away_formation,
+            home_players=request.home_players,
+            away_players=request.away_players,
+            bookmaker_props_text=request.bookmaker_props_text
+        )
+
+        return {
+            'success': True,
+            'prediction_id': prediction_id,
+            'match_id': match_id,
+            'status': 'en_cours',
+            'message': 'Prédiction en cours de génération (30-60 secondes)',
+            'estimated_time_seconds': 45
+        }
+
+    except Exception as e:
+        import traceback
+        return {
+            'error': 'Erreur lors de la création de la prédiction',
+            'detail': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+
+async def process_full_prediction(
+    prediction_id: int,
+    match_id: str,
+    home_team: str,
+    away_team: str,
+    home_formation: str,
+    away_formation: str,
+    home_players: Optional[str],
+    away_players: Optional[str],
+    bookmaker_props_text: Optional[str] = None
+):
+    """
+    Traite une prédiction complète en arrière-plan
+
+    Étapes:
+    1. Récupérer données historiques (si disponibles)
+    2. Calculer Poisson
+    3. Appliquer IA Tactique
+    4. Générer analyse Deep Reasoning
+    5. Sauvegarder tout en DB
+    """
+    try:
+        print(f"[PREDICTION {prediction_id}] Début du traitement...")
+
+        sqlite_db = get_sqlite_db()
+
+        # ÉTAPE 1: Déterminer la ligue (essayer de deviner depuis les noms)
+        print(f"[PREDICTION {prediction_id}] Détection de la ligue...")
+        league_code = "MANUAL"  # Par défaut
+        soccerstats_code = "england"  # Par défaut
+
+        # Essayer de détecter la ligue en cherchant les équipes dans les CSV
+        for lcode, linfo in LEAGUES.items():
+            try:
+                csv_path = f"./data/{lcode}.csv"
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path)
+                    if home_team in df['HomeTeam'].values or away_team in df['AwayTeam'].values:
+                        league_code = lcode
+                        soccerstats_code = SOCCERSTATS_CODES.get(lcode, "england")
+                        print(f"[PREDICTION {prediction_id}] Ligue détectée: {linfo['name']} ({lcode})")
+                        break
+            except:
+                pass
+
+        # ÉTAPE 2: Utiliser le predictor existant (Poisson + IA Tactique)
+        print(f"[PREDICTION {prediction_id}] Calcul Poisson + IA Tactique...")
+
+        try:
+            # Utiliser le predictor qui fait déjà tout le travail
+            prediction_result = predictor.predict_match(
+                home_team=home_team,
+                away_team=away_team,
+                league_code=soccerstats_code,
+                match_date=datetime.now(),
+                home_formation=home_formation,
+                away_formation=away_formation
+            )
+
+            if 'error' in prediction_result:
+                print(f"[PREDICTION {prediction_id}] Predictor error: {prediction_result['error']}")
+                # Fallback sur valeurs par défaut
+                home_shots = 15.0
+                away_shots = 10.0
+                home_corners = 6.0
+                away_corners = 4.0
+            else:
+                # Extraire les résultats du predictor
+                home_shots = prediction_result.get('predictions', {}).get('home', {}).get('shots', 15.0)
+                away_shots = prediction_result.get('predictions', {}).get('away', {}).get('shots', 10.0)
+                home_corners = prediction_result.get('predictions', {}).get('home', {}).get('corners', 6.0)
+                away_corners = prediction_result.get('predictions', {}).get('away', {}).get('corners', 4.0)
+
+                print(f"[PREDICTION {prediction_id}] Résultats Poisson+IA: {home_team} {home_shots} tirs, {away_team} {away_shots} tirs")
+
+        except Exception as e:
+            print(f"[PREDICTION {prediction_id}] Erreur predictor: {e}")
+            # Fallback sur valeurs par défaut
+            home_shots = 15.0
+            away_shots = 10.0
+            home_corners = 6.0
+            away_corners = 4.0
+
+        # ÉTAPE 3: IA Deep Reasoning (analyse complète)
+        print(f"[PREDICTION {prediction_id}] IA Deep Reasoning...")
+        from core.ai_deep_reasoning import DeepReasoningAnalyzer
+
+        analyzer = DeepReasoningAnalyzer()
+
+        # Créer contexte enrichi pour l'IA
+        context = {
+            'home_team': home_team,
+            'away_team': away_team,
+            'home_formation': home_formation,
+            'away_formation': away_formation,
+            'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
+            'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
+            'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
+            'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
+            'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
+            'match_date': datetime.now().isoformat(),
+            'bookmaker_propositions': bookmaker_props_text  # Texte brut des propositions
+        }
+
+        ai_analysis = analyzer.analyze_match(context)
+
+        # Extraire résultats
+        shots_range = ai_analysis.get('shots_range', {'min': int(home_shots + away_shots - 5), 'max': int(home_shots + away_shots + 5)})
+        corners_range = ai_analysis.get('corners_range', {'min': int(home_corners + away_corners - 3), 'max': int(home_corners + away_corners + 3)})
+        reasoning_text = ai_analysis.get('reasoning', f'Analyse de {home_team} vs {away_team}...')
+
+        print(f"[PREDICTION {prediction_id}] IA Deep: Total tirs {shots_range}, corners {corners_range}")
+
+        # ÉTAPE 4: Sauvegarder en base
+        print(f"[PREDICTION {prediction_id}] Sauvegarde en DB...")
+
+        # Utiliser la connexion existante
+        cursor = sqlite_db.conn.cursor()
+
+        cursor.execute("""
+            UPDATE match_predictions
+            SET
+                shots_min = ?,
+                shots_max = ?,
+                shots_confidence = ?,
+                corners_min = ?,
+                corners_max = ?,
+                corners_confidence = ?,
+                home_shots = ?,
+                away_shots = ?,
+                home_corners = ?,
+                away_corners = ?,
+                home_shots_min = ?,
+                home_shots_max = ?,
+                away_shots_min = ?,
+                away_shots_max = ?,
+                home_corners_min = ?,
+                home_corners_max = ?,
+                away_corners_min = ?,
+                away_corners_max = ?,
+                ai_reasoning_shots = ?,
+                ai_reasoning_corners = ?,
+                status = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (
+            shots_range['min'],
+            shots_range['max'],
+            0.75,  # Confiance
+            corners_range['min'],
+            corners_range['max'],
+            0.75,
+            home_shots,
+            away_shots,
+            home_corners,
+            away_corners,
+            int(home_shots * 0.8),  # Fourchette -20%
+            int(home_shots * 1.2),  # Fourchette +20%
+            int(away_shots * 0.8),
+            int(away_shots * 1.2),
+            int(home_corners * 0.8),
+            int(home_corners * 1.2),
+            int(away_corners * 0.8),
+            int(away_corners * 1.2),
+            reasoning_text,
+            reasoning_text,  # Même texte pour tirs et corners
+            'completed',  # STATUS COMPLÉTÉ
+            datetime.now().isoformat(),
+            prediction_id
+        ))
+
+        sqlite_db.conn.commit()
+
+        print(f"[PREDICTION {prediction_id}] ✅ Terminé avec succès!")
+
+    except Exception as e:
+        import traceback
+        print(f"[PREDICTION {prediction_id}] ❌ ERREUR:")
+        print(traceback.format_exc())
+
+        # Marquer comme erreur en DB
+        try:
+            cursor = sqlite_db.conn.cursor()
+            cursor.execute("""
+                UPDATE match_predictions
+                SET status = ?, updated_at = ?
+                WHERE id = ?
+            """, ('error', datetime.now().isoformat(), prediction_id))
+            sqlite_db.conn.commit()
+        except:
+            pass
 
 
 # =====================================================

@@ -29,8 +29,7 @@ export interface Prediction {
     message_min: string;
     message_max: string;
   };
-  ai_reasoning_shots?: string;
-  ai_reasoning_corners?: string;
+  ai_reasoning?: string;  // Analyse IA Deep Reasoning (unique, pas dupliquée)
   formations?: {
     home: string;
     away: string;
@@ -39,6 +38,27 @@ export interface Prediction {
 }
 
 export interface PredictionDetail extends Prediction {
+  // Tirs/Corners par équipe (Méthode 1 - Poisson + IA Tactique)
+  home_shots?: number;
+  away_shots?: number;
+  home_corners?: number;
+  away_corners?: number;
+
+  // Fourchettes par équipe (Méthode 2 - IA Deep Reasoning)
+  home_shots_min?: number;
+  home_shots_max?: number;
+  away_shots_min?: number;
+  away_shots_max?: number;
+  home_corners_min?: number;
+  home_corners_max?: number;
+  away_corners_min?: number;
+  away_corners_max?: number;
+
+  // Analyses IA (pour génération manuelle et auto)
+  ai_reasoning_shots?: string;  // IA Tactique (méthode 1)
+  ai_reasoning_corners?: string;  // IA Deep Reasoning (méthode 2)
+
+  // Contexte
   shots_analysis?: any;
   corners_analysis?: any;
   weather?: any;

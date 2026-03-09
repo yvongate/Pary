@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { getUpcomingPredictions, getLeagues, Prediction, League } from '../../lib/api';
 import PredictionCard from '../../components/PredictionCard';
 import PredictionModal from '../../components/PredictionModal';
+import GeneratePredictionModal from '../../components/GeneratePredictionModal';
+import PredictionGeneratingNotification from '../../components/PredictionGeneratingNotification';
 
 export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -15,9 +17,14 @@ export default function PredictionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // État du modal
+  // État du modal de détail
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
+
+  // État du modal de génération
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [generatedMatch, setGeneratedMatch] = useState({ homeTeam: '', awayTeam: '' });
 
   // Charger les championnats
   useEffect(() => {
@@ -32,35 +39,61 @@ export default function PredictionsPage() {
     loadLeagues();
   }, []);
 
-  // Charger les prédictions
-  useEffect(() => {
-    async function loadPredictions() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getUpcomingPredictions(selectedLeague || undefined, 50);
-        setPredictions(data.predictions);
-      } catch (err) {
-        setError('Impossible de charger les prédictions. Vérifiez que le backend est démarré.');
-        console.error('Erreur:', err);
-      } finally {
-        setLoading(false);
-      }
+  // Fonction pour charger les prédictions
+  const loadPredictions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getUpcomingPredictions(selectedLeague || undefined, 50);
+      setPredictions(data.predictions);
+    } catch (err) {
+      setError('Impossible de charger les prédictions. Vérifiez que le backend est démarré.');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Charger les prédictions au montage et quand la ligue change
+  useEffect(() => {
     loadPredictions();
   }, [selectedLeague]);
+
+  const handleGenerateSuccess = (predictionId: number) => {
+    // Fermer le modal de génération
+    setGenerateModalOpen(false);
+
+    // Afficher la notification
+    setNotificationOpen(true);
+
+    // Recharger les prédictions après 2 secondes
+    setTimeout(() => {
+      loadPredictions();
+    }, 2000);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            ⚽ Prédictions Football
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Prédictions automatiques de tirs et corners basées sur l'IA
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                ⚽ Prédictions Football
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                Prédictions automatiques de tirs et corners basées sur l'IA
+              </p>
+            </div>
+            <button
+              onClick={() => setGenerateModalOpen(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2 shadow-md"
+            >
+              <span className="text-xl">+</span>
+              Nouvelle prédiction
+            </button>
+          </div>
         </div>
       </div>
 
@@ -144,6 +177,24 @@ export default function PredictionsPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         matchId={selectedMatchId}
+      />
+
+      {/* Modal de génération */}
+      <GeneratePredictionModal
+        isOpen={generateModalOpen}
+        onClose={() => setGenerateModalOpen(false)}
+        onSuccess={(predictionId, homeTeam, awayTeam) => {
+          setGeneratedMatch({ homeTeam, awayTeam });
+          handleGenerateSuccess(predictionId);
+        }}
+      />
+
+      {/* Notification "Prédiction en cours" */}
+      <PredictionGeneratingNotification
+        isOpen={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        homeTeam={generatedMatch.homeTeam}
+        awayTeam={generatedMatch.awayTeam}
       />
     </div>
   );

@@ -41,3 +41,17 @@ mdpsupa.txt
 texte.txt
 cook.png
 token
+
+# Debug files
+backend_clean/debug_*.py
+backend_clean/debug_*.png
+backend_clean/debug_*.html
+backend_clean/*_debug.png
+backend_clean/google_composition_*.png
+backend_clean/composition_*.html
+backend_clean/step*.png
+backend_clean/brightdata_error.png
+hh.png
+
+# Claude settings
+.claude/settings.local.json

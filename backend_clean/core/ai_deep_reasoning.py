@@ -11,6 +11,412 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+class DeepReasoningAnalyzer:
+    """
+    Classe pour analyser les matchs avec génération manuelle (sans historique complet)
+    Utilisée pour les prédictions manuelles où l'utilisateur fournit compositions + propositions bookmaker
+    """
+
+    def __init__(self):
+        self.client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY'),
+            timeout=120.0
+        )
+
+    def analyze_match(self, context: Dict) -> Dict:
+        """
+        Analyse simplifiée pour génération manuelle
+
+        Args:
+            context: {
+                'home_team': str,
+                'away_team': str,
+                'home_formation': str,
+                'away_formation': str,
+                'home_players': List[str],
+                'away_players': List[str],
+                'home_stats': {'avg_shots': float, 'avg_corners': float},
+                'away_stats': {'avg_shots': float, 'avg_corners': float},
+                'league': str,
+                'match_date': str,
+                'bookmaker_propositions': str (optionnel, texte brut)
+            }
+
+        Returns:
+            {
+                'shots_range': {'min': int, 'max': int},
+                'corners_range': {'min': int, 'max': int},
+                'reasoning': str,
+                'best_value_bet': str (optionnel, si propositions fournies)
+            }
+        """
+        home_team = context['home_team']
+        away_team = context['away_team']
+        home_formation = context['home_formation']
+        away_formation = context['away_formation']
+        home_stats = context.get('home_stats', {})
+        away_stats = context.get('away_stats', {})
+        bookmaker_props = context.get('bookmaker_propositions', '')
+
+        # Construire le prompt
+        prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT specialise dans le VALUE BETTING.
+
+MATCH A ANALYSER:
+{home_team} (DOMICILE) vs {away_team} (EXTERIEUR)
+Championnat: {context.get('league', 'Unknown')}
+Date: {context.get('match_date', '')}
+
+COMPOSITIONS CONFIRMEES:
+
+{home_team} ({home_formation}):
+Joueurs: {', '.join(context.get('home_players', [])) if context.get('home_players') else 'Non fournis'}
+
+{away_team} ({away_formation}):
+Joueurs: {', '.join(context.get('away_players', [])) if context.get('away_players') else 'Non fournis'}
+
+STATISTIQUES HISTORIQUES (BASELINE):
+
+{home_team}:
+  - Moyenne tirs: {home_stats.get('avg_shots', 0):.1f} tirs/match
+  - Moyenne corners: {home_stats.get('avg_corners', 0):.1f} corners/match
+
+{away_team}:
+  - Moyenne tirs: {away_stats.get('avg_shots', 0):.1f} tirs/match
+  - Moyenne corners: {away_stats.get('avg_corners', 0):.1f} corners/match
+
+"""
+
+        # Ajouter les propositions bookmaker si fournies
+        if bookmaker_props and bookmaker_props.strip():
+            prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 PROPOSITIONS BOOKMAKER (MARCHE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{bookmaker_props}
+
+MISSION IMPORTANTE - ANALYSE DE VALUE:
+
+1. TYPES DE PROPOSITIONS A ANALYSER:
+
+   A) TOTAL (Over/Under):
+      - "+24.5 tirs @ 1.85" = Plus de 24.5 tirs TOTAL match
+      - "-10.5 corners @ 1.90" = Moins de 10.5 corners TOTAL match
+
+   B) HANDICAPS TIRS/CORNERS:
+      - "PSG handicap tirs -5.5 @ 1.90" = PSG doit faire 6 tirs DE PLUS que adversaire
+      - "Nantes handicap corners +2.5 @ 2.00" = Nantes peut avoir 3 corners DE MOINS
+
+      CALCUL HANDICAP:
+      - Handicap tirs PSG -5.5: PSG_tirs - Adversaire_tirs >= 6
+      - Exemple: PSG 18 tirs, Nantes 7 tirs → Ecart +11 ✅ Gagne handicap -5.5
+      - Exemple: PSG 15 tirs, Nantes 10 tirs → Ecart +5 ❌ Perd handicap -5.5
+
+2. Pour CHAQUE proposition, convertis la cote en probabilite implicite:
+   Probabilite implicite = 1 / cote
+   Exemple: cote 1.85 = 1/1.85 = 54%
+
+3. Compare avec ta prediction pour calculer l'Expected Value (EV):
+
+   POUR TOTAL:
+   - Calcule probabilite que total soit > ou < ligne
+   - EV = (ta_probabilite / proba_implicite) - 1
+
+   POUR HANDICAP:
+   - Prevois ecart tirs/corners entre les 2 equipes
+   - Calcule probabilite que ecart depasse handicap
+   - EV = (ta_probabilite / proba_implicite) - 1
+
+4. Identifie LA MEILLEURE PROPOSITION:
+   - Cherche le plus grand EV positif (> 10%)
+   - Si EV < 10%: PAS DE VALUE
+   - Si EV > 10%: VALUE BET detecte! 🔥
+   - Si EV > 25%: FORTE VALUE! 🚀
+
+5. Justifie avec l'analyse tactique (formations, joueurs, style de jeu)
+
+IMPORTANT:
+- Analyse TOUTES les propositions (total + handicaps)
+- Recommande LA meilleure (plus grand EV)
+- Calcule aussi les HANDICAPS OPTIMAUX meme si non fournis par bookmaker
+"""
+
+        prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INSTRUCTIONS DE RAISONNEMENT (ORDRE CRUCIAL !)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANT CRITIQUE:
+TU DOIS FAIRE TA PROPRE ANALYSE EN PREMIER, **AVANT** DE REGARDER LES COTES.
+NE LAISSE PAS LES COTES INFLUENCER TON ANALYSE TACTIQUE.
+
+Les bookmakers ont des modèles sophistiqués MAIS:
+- Ils n'ont pas les COMPOSITIONS confirmées en temps réel
+- Ils ne font pas d'analyse TACTIQUE approfondie formations
+- Les cotes intègrent la masse des parieurs (pas forcément rationnel)
+
+TON AVANTAGE: Analyse tactique + compositions confirmées
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ETAPE 1: ANALYSE TACTIQUE INDEPENDANTE (SANS regarder les cotes!)
+
+Analyse les formations:
+- {home_formation}: Formation offensive, equilibree ou defensive?
+- {away_formation}: Formation offensive, equilibree ou defensive?
+
+Style de jeu probable:
+- {home_team} avec {home_formation}: Plutot possession? Contre-attaque? Direct?
+- {away_team} avec {away_formation}: Plutot possession? Contre-attaque? Direct?
+
+Matchup tactique:
+- Qui dominera la possession?
+- Qui sera plus agressif offensivement?
+- Style de jeu: Ouvert (beaucoup tirs) ou Fermé (bloc bas)?
+
+Impact sur les tirs et corners:
+- Formations offensives (4-3-3, 3-4-3) = plus de tirs attendus
+- Formations defensives (5-4-1, 4-5-1) = moins de tirs attendus
+- Bloc bas = plus de corners concedes
+- Possession élevée = plus de tirs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ETAPE 2: PREDICTION COMPLETE (TA propre analyse, INDEPENDANTE du marché!)
+
+Basé sur:
+1. Stats historiques: {home_team} {home_stats.get('avg_shots', 0):.1f} tirs, {away_team} {away_stats.get('avg_shots', 0):.1f} tirs
+2. Analyse tactique formations (étape 1)
+3. Contexte du match
+
+CALCULE (sans regarder les cotes bookmaker):
+
+{home_team} prévu:
+- Tirs: [X] (justifie avec formation + stats)
+- Corners: [Y] (justifie avec style de jeu)
+
+{away_team} prévu:
+- Tirs: [Z] (justifie avec formation + stats)
+- Corners: [W] (justifie avec style de jeu)
+
+TOTAL MATCH prévu:
+- Tirs total: [X + Z]
+- Corners total: [Y + W]
+- Écart tirs: {home_team} vs {away_team} = [X - Z]
+- Écart corners: {home_team} vs {away_team} = [Y - W]
+
+⚠️ CHECKPOINT: As-tu fait TA propre prédiction AVANT de regarder les cotes? OUI/NON
+Si NON, recommence l'étape 2!
+
+"""
+
+        # Si propositions bookmaker, ajouter analyse value
+        if bookmaker_props and bookmaker_props.strip():
+            prompt += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ETAPE 3: DETECTION DE VALUE (Compare TA prédiction avec le marché)
+
+MAINTENANT (et seulement maintenant), compare TA prédiction (étape 2) avec les cotes bookmaker.
+
+PROCESSUS DE DETECTION:
+
+Pour CHAQUE proposition bookmaker:
+
+A) Convertis la cote → probabilite implicite
+   Formule: Proba implicite = 1 / cote
+
+B) Calcule TA probabilite (basée sur TON analyse étape 2, PAS sur les cotes!)
+   - Si proposition "+24.5 tirs" et ta prédiction est 28 tirs total
+   - Ta probabilité réelle = Très élevée (ex: 75%)
+
+C) Compare les 2 probabilités:
+   - Proba implicite marché: 54% (1/1.85)
+   - TA proba réelle: 75% (basée sur ton analyse)
+   - ÉCART DÉTECTÉ: +21 points de %
+
+D) Calcule Expected Value (EV):
+   EV = (ta_proba / proba_implicite) - 1
+   EV = (75 / 54) - 1 = +39% 🔥 FORTE VALUE!
+
+E) Interprète le résultat:
+   - EV > 25%: FORTE VALUE → Le marché sous-estime massivement
+   - EV 10-25%: VALUE MODÉRÉE → Opportunité intéressante
+   - EV < 10%: PAS DE VALUE → Marché bien calibré
+
+Exemple concret:
+Proposition: "+24.5 tirs @ 1.85"
+- Proba implicite marché: 1/1.85 = 54%
+- TA prédiction (étape 2): 28 tirs total
+- TA proba réelle "+24.5": 75% (28 > 24.5 très probable)
+- EV: (75/54) - 1 = +39% 🔥 FORTE VALUE!
+
+JUSTIFICATION DE L'ÉCART:
+Pourquoi le marché se trompe?
+→ "Le bookmaker n'a pas vu que PSG joue en 4-3-3 ultra-offensif
+   avec Mbappé-Neymar-Dembélé contre un bloc bas 5-4-1.
+   Les compositions confirment une domination PSG massive."
+
+ETAPE 4: Recommandation finale
+
+Identifie LA proposition avec le meilleur EV:
+- Si EV > 25%: FORTE VALUE (recommande fortement)
+- Si EV 10-25%: VALUE MODEREE (recommande)
+- Si EV < 10%: PAS DE VALUE (ne recommande pas)
+
+FORMAT DE REPONSE OBLIGATOIRE (si propositions):
+
+==================================================
+MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
+
+{home_team}: [X] tirs, [Y] corners
+{away_team}: [Z] tirs, [W] corners
+
+TOTAL: [X+Z] tirs, [Y+W] corners
+ÉCART: {home_team} +[X-Z] tirs, +[Y-W] corners
+
+Base de calcul: Formations {home_formation} vs {away_formation}
++ Stats historiques + Analyse tactique
+
+==================================================
+MEILLEURE PROPOSITION DETECTEE (étape 3 - Comparaison avec marché)
+
+[Proposition] @ [cote] ✅ ou ❌
+
+- Expected Value: +X%
+- MA probabilité réelle: X% (basée sur MA prédiction)
+- Probabilité implicite marché: X% (1/cote)
+- ÉCART: +Y points de %
+- Confiance: X%
+
+POURQUOI LE MARCHE SE TROMPE:
+[Explique pourquoi TA analyse détecte quelque chose que le bookmaker n'a pas vu]
+Exemple: "Le bookmaker n'a pas pris en compte les compositions
+confirmées qui montrent un PSG ultra-offensif contre un bloc bas..."
+
+JUSTIFICATION TACTIQUE:
+[Analyse détaillée formations, joueurs, style de jeu]
+
+==================================================
+AUTRES PROPOSITIONS ANALYSEES
+
+[Pour chaque autre proposition:]
+- EV: +/-X%
+- Verdict: VALUE / PAS DE VALUE / EVITER
+
+==================================================
+HANDICAPS RECOMMANDES (calculés automatiquement)
+
+HANDICAPS TIRS OPTIMAUX:
+- {home_team} handicap tirs [valeur] @ [cote estimée]
+  Ecart prevu: {home_team} [X] tirs - {away_team} [Y] tirs = +[Z] tirs
+
+- {away_team} handicap tirs [valeur] @ [cote estimée]
+  Ecart prevu: [calcul inverse]
+
+HANDICAPS CORNERS OPTIMAUX:
+- {home_team} handicap corners [valeur] @ [cote estimée]
+  Ecart prevu: {home_team} [X] corners - {away_team} [Y] corners = +[Z] corners
+
+- {away_team} handicap corners [valeur] @ [cote estimée]
+  Ecart prevu: [calcul inverse]
+
+NOTE: Ces handicaps sont calcules avec 70% de confiance.
+      Si bookmaker propose handicap proche, FORTE VALUE potentielle!
+==================================================
+"""
+        else:
+            prompt += f"""
+ETAPE 3: Prediction finale
+
+Donne une fourchette realiste:
+- Tirs min/max
+- Corners min/max
+"""
+
+        prompt += f"""
+
+FORMAT DE REPONSE FINAL:
+
+PREDICTION BASELINE:
+Total tirs: [min-max]
+Total corners: [min-max]
+
+SHOTS_RANGE_MIN: [nombre]
+SHOTS_RANGE_MAX: [nombre]
+CORNERS_RANGE_MIN: [nombre]
+CORNERS_RANGE_MAX: [nombre]
+"""
+
+        # Appel à l'IA
+        try:
+            message = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=8192,
+                temperature=0.3,
+                system="Tu es un analyste football expert specialise dans le value betting et l'analyse tactique.",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+
+            reasoning_text = message.content[0].text
+
+            # Parser la réponse
+            result = self._parse_response(reasoning_text)
+            result['reasoning'] = reasoning_text
+
+            return result
+
+        except Exception as e:
+            print(f"[ERREUR IA DEEP REASONING] {e}")
+            # Fallback
+            total_shots = home_stats.get('avg_shots', 15) + away_stats.get('avg_shots', 10)
+            total_corners = home_stats.get('avg_corners', 6) + away_stats.get('avg_corners', 4)
+
+            return {
+                'shots_range': {'min': int(total_shots - 5), 'max': int(total_shots + 5)},
+                'corners_range': {'min': int(total_corners - 3), 'max': int(total_corners + 3)},
+                'reasoning': f'Erreur IA: {e}. Utilisation baseline historique.'
+            }
+
+    def _parse_response(self, text: str) -> Dict:
+        """Parse la réponse de l'IA"""
+        import re
+
+        result = {
+            'shots_range': {'min': 20, 'max': 30},
+            'corners_range': {'min': 8, 'max': 12}
+        }
+
+        # Extraire SHOTS_RANGE_MIN
+        match = re.search(r'SHOTS_RANGE_MIN:\s*(\d+)', text)
+        if match:
+            result['shots_range']['min'] = int(match.group(1))
+
+        # Extraire SHOTS_RANGE_MAX
+        match = re.search(r'SHOTS_RANGE_MAX:\s*(\d+)', text)
+        if match:
+            result['shots_range']['max'] = int(match.group(1))
+
+        # Extraire CORNERS_RANGE_MIN
+        match = re.search(r'CORNERS_RANGE_MIN:\s*(\d+)', text)
+        if match:
+            result['corners_range']['min'] = int(match.group(1))
+
+        # Extraire CORNERS_RANGE_MAX
+        match = re.search(r'CORNERS_RANGE_MAX:\s*(\d+)', text)
+        if match:
+            result['corners_range']['max'] = int(match.group(1))
+
+        return result
+
+
 def generate_deep_analysis_prediction(
     match: Dict,
     home_history: List[Dict],
@@ -64,6 +470,16 @@ def generate_deep_analysis_prediction(
     prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT. Tu dois predire le nombre de TIRS et CORNERS pour ce match.
 
 IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE avec des "SI/ALORS" en cherchant des PATTERNS dans l'historique.
+
+CONSIGNES DE FORMATAGE (CRITIQUE):
+- N'utilise PAS de markdown (#, **, |, ```, etc.)
+- N'utilise PAS de tableaux markdown
+- Utilise du TEXTE SIMPLE et LISIBLE
+- Utilise des tirets (-) pour les listes
+- Utilise des MAJUSCULES pour les titres
+- Utilise des espaces/indentations pour structurer
+- Evite les symboles speciaux (→, ✅, ❌, etc.)
+- Ecris comme si c'etait dans un email ou SMS
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MATCH A ANALYSER
@@ -443,11 +859,43 @@ ETAPE 9: Vérification cohérence
   - Le total est-il réaliste? (≈28 tirs, ≈11 corners total)
   - Ajustements nécessaires?
 
-FORMAT DE REPONSE OBLIGATOIRE:
+FORMAT DE REPONSE OBLIGATOIRE - TEXTE SIMPLE SANS MARKDOWN:
 
-RAISONNEMENT:
-[Ton raisonnement détaillé des 9 étapes ci-dessus]
+EXEMPLE DE BON FORMATAGE:
+==================================================
+RAISONNEMENT DETAILLE - Arsenal vs Chelsea
+==================================================
 
+PARTIE A: ANALYSE ARSENAL (DOMICILE)
+
+ETAPE 1: Profil d'Arsenal
+Arsenal est actuellement 1er du championnat avec 67 points.
+Leur forme recente est excellente (2e sur 8 matchs).
+A domicile, ils sont classes 10e en attaque et 10e en defense.
+
+ETAPE 2: Baseline historique
+En analysant les 14 derniers matchs a domicile:
+  - Moyenne: 15.6 tirs et 5.8 corners
+  - Contre equipes du top 6: 12 tirs en moyenne
+  - Contre equipes du bas: 18 tirs en moyenne
+
+ETAPE 3: Contexte et ajustements
+Blessures: Aucune absence majeure
+Forme: 3 victoires sur les 4 derniers matchs a domicile
+Motivation: Match important pour garder la 1re place
+
+ETAPE 4: Prediction Arsenal
+Baseline: 15-16 tirs, 5-6 corners
+Ajustements: +1 tir (bonne forme), +0 corner
+Prediction finale Arsenal: 15-17 tirs, 5-6 corners
+
+[Meme structure pour PARTIE B avec l'equipe exterieur]
+
+PARTIE C: SYNTHESE FINALE
+Total predit: 27-33 tirs, 10-12 corners
+Coherence: OUI, dans les normes d'un match de Premier League
+
+==================================================
 PREDICTION FINALE:
 
 EQUIPE DOMICILE ({home_team}):
@@ -472,7 +920,7 @@ CONFIANCE: [0-100]%
     try:
         message = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2000,
+            max_tokens=8192,
             temperature=0.3,
             system="Tu es un analyste football expert qui raisonne de maniere structuree avec des SI/ALORS pour trouver des patterns.",
             messages=[

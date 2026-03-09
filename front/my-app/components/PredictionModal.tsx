@@ -2,6 +2,7 @@
  * PredictionModal - Modal détaillé avec sections dépliables
  */
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { PredictionDetail } from '../lib/api';
 
 interface PredictionModalProps {
@@ -232,21 +233,29 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       <h4 className="font-semibold text-gray-900 mb-3">Tirs Prédits</h4>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-                          <span className="font-medium text-gray-900">Liverpool</span>
+                          <span className="font-medium text-gray-900">{prediction?.home_team || 'Équipe domicile'}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
-                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '56%' }}></div>
+                              <div className="bg-blue-600 h-2 rounded-full" style={{
+                                width: `${((prediction?.home_shots || 0) / ((prediction?.home_shots || 0) + (prediction?.away_shots || 0))) * 100}%`
+                              }}></div>
                             </div>
-                            <span className="font-bold text-blue-600 w-12 text-right">15.8</span>
+                            <span className="font-bold text-blue-600 w-12 text-right">
+                              {prediction?.home_shots ? prediction.home_shots.toFixed(1) : 'N/A'}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-                          <span className="font-medium text-gray-900">Man City</span>
+                          <span className="font-medium text-gray-900">{prediction?.away_team || 'Équipe extérieur'}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
-                              <div className="bg-red-600 h-2 rounded-full" style={{ width: '44%' }}></div>
+                              <div className="bg-red-600 h-2 rounded-full" style={{
+                                width: `${((prediction?.away_shots || 0) / ((prediction?.home_shots || 0) + (prediction?.away_shots || 0))) * 100}%`
+                              }}></div>
                             </div>
-                            <span className="font-bold text-red-600 w-12 text-right">12.3</span>
+                            <span className="font-bold text-red-600 w-12 text-right">
+                              {prediction?.away_shots ? prediction.away_shots.toFixed(1) : 'N/A'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -257,21 +266,29 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       <h4 className="font-semibold text-gray-900 mb-3">Corners Prédits</h4>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-                          <span className="font-medium text-gray-900">Liverpool</span>
+                          <span className="font-medium text-gray-900">{prediction?.home_team || 'Équipe domicile'}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
-                              <div className="bg-green-600 h-2 rounded-full" style={{ width: '56%' }}></div>
+                              <div className="bg-green-600 h-2 rounded-full" style={{
+                                width: `${((prediction?.home_corners || 0) / ((prediction?.home_corners || 0) + (prediction?.away_corners || 0))) * 100}%`
+                              }}></div>
                             </div>
-                            <span className="font-bold text-green-600 w-12 text-right">6.2</span>
+                            <span className="font-bold text-green-600 w-12 text-right">
+                              {prediction?.home_corners ? prediction.home_corners.toFixed(1) : 'N/A'}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-                          <span className="font-medium text-gray-900">Man City</span>
+                          <span className="font-medium text-gray-900">{prediction?.away_team || 'Équipe extérieur'}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
-                              <div className="bg-orange-600 h-2 rounded-full" style={{ width: '44%' }}></div>
+                              <div className="bg-orange-600 h-2 rounded-full" style={{
+                                width: `${((prediction?.away_corners || 0) / ((prediction?.home_corners || 0) + (prediction?.away_corners || 0))) * 100}%`
+                              }}></div>
                             </div>
-                            <span className="font-bold text-orange-600 w-12 text-right">4.8</span>
+                            <span className="font-bold text-orange-600 w-12 text-right">
+                              {prediction?.away_corners ? prediction.away_corners.toFixed(1) : 'N/A'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -280,10 +297,12 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                     {/* Raisonnement IA Tactique */}
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <h4 className="font-semibold text-blue-900 mb-2">Raisonnement IA Tactique</h4>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {prediction?.ai_reasoning_shots ||
-                          "Liverpool en 4-3-3 offensive (18.5 tirs/90) face à Man City défensive en 4-2-3-1 (12.3 tirs concédés/90). Baseline symétrique: (18.5 + 12.3) / 2 = 15.4 tirs. Ajusté -1 tir pour absence de Salah. Résultat: 15.8 tirs pour Liverpool."}
-                      </p>
+                      <div className="prose prose-sm max-w-none text-gray-700">
+                        <ReactMarkdown>
+                          {prediction?.ai_reasoning_shots ||
+                            "Liverpool en 4-3-3 offensive (18.5 tirs/90) face à Man City défensive en 4-2-3-1 (12.3 tirs concédés/90). Baseline symétrique: (18.5 + 12.3) / 2 = 15.4 tirs. Ajusté -1 tir pour absence de Salah. Résultat: 15.8 tirs pour Liverpool."}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </AccordionSection>
@@ -302,28 +321,44 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       <h4 className="font-semibold text-gray-900 mb-3">Fourchettes Prédites</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <h5 className="font-medium text-gray-900 mb-3">Liverpool</h5>
+                          <h5 className="font-medium text-gray-900 mb-3">{prediction?.home_team || 'Équipe domicile'}</h5>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Tirs:</span>
-                              <span className="font-semibold text-blue-600">14-17</span>
+                              <span className="font-semibold text-blue-600">
+                                {prediction?.home_shots_min && prediction?.home_shots_max
+                                  ? `${prediction.home_shots_min}-${prediction.home_shots_max}`
+                                  : 'N/A'}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Corners:</span>
-                              <span className="font-semibold text-green-600">5-7</span>
+                              <span className="font-semibold text-green-600">
+                                {prediction?.home_corners_min && prediction?.home_corners_max
+                                  ? `${prediction.home_corners_min}-${prediction.home_corners_max}`
+                                  : 'N/A'}
+                              </span>
                             </div>
                           </div>
                         </div>
                         <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <h5 className="font-medium text-gray-900 mb-3">Man City</h5>
+                          <h5 className="font-medium text-gray-900 mb-3">{prediction?.away_team || 'Équipe extérieur'}</h5>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Tirs:</span>
-                              <span className="font-semibold text-blue-600">10-13</span>
+                              <span className="font-semibold text-blue-600">
+                                {prediction?.away_shots_min && prediction?.away_shots_max
+                                  ? `${prediction.away_shots_min}-${prediction.away_shots_max}`
+                                  : 'N/A'}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Corners:</span>
-                              <span className="font-semibold text-green-600">4-5</span>
+                              <span className="font-semibold text-green-600">
+                                {prediction?.away_corners_min && prediction?.away_corners_max
+                                  ? `${prediction.away_corners_min}-${prediction.away_corners_max}`
+                                  : 'N/A'}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -333,92 +368,42 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                     {/* Raisonnement IA complet */}
                     <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                       <h4 className="font-semibold text-purple-900 mb-2">Analyse Complète IA</h4>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {prediction?.ai_reasoning_corners ||
-                          "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs, Man City plus défensif avec 10-13 tirs."}
-                      </p>
+                      <div className="prose prose-sm max-w-none text-gray-700">
+                        <ReactMarkdown>
+                          {prediction?.ai_reasoning ||
+                            prediction?.ai_reasoning_corners ||
+                            "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs, Man City plus défensif avec 10-13 tirs."}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </AccordionSection>
 
-                {/* Section: Formations Understat */}
+                {/* Section: Formations */}
                 <AccordionSection
-                  title="Stats Formations Historiques"
+                  title="Formations"
                   icon="⚡"
                   isOpen={openSections.has('formations')}
                   onToggle={() => toggleSection('formations')}
-                  badge={prediction?.formations ? 'Disponibles' : 'Non disponibles'}
+                  badge={prediction?.formations?.home && prediction?.formations?.away ? 'Disponibles' : 'Non disponibles'}
                 >
-                  {prediction?.formations ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Liverpool */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3">
-                          Liverpool - {prediction.formations.home}
-                        </h4>
-                        <div className="space-y-3 text-sm">
-                          <div>
-                            <p className="text-gray-600 font-medium mb-1">Offensive:</p>
-                            <ul className="space-y-1 text-gray-700">
-                              <li>• 18.5 tirs/90</li>
-                              <li>• 2.1 xG/90</li>
-                              <li>• 1200 minutes (33% du temps)</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <p className="text-gray-600 font-medium mb-1">Défensive:</p>
-                            <ul className="space-y-1 text-gray-700">
-                              <li>• 12.3 tirs concédés/90</li>
-                              <li>• 1.3 xGA/90</li>
-                            </ul>
-                          </div>
-                          <div className="pt-2 border-t border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div className="bg-green-600 h-2 rounded-full" style={{ width: '80%' }}></div>
-                              </div>
-                              <span className="text-xs text-gray-600">Fiabilité: Forte</span>
-                            </div>
-                          </div>
+                  {prediction?.formations?.home && prediction?.formations?.away ? (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">{prediction.home_team}:</span>
+                          <span className="font-semibold text-gray-900">{prediction.formations.home}</span>
                         </div>
-                      </div>
-
-                      {/* Man City */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3">
-                          Man City - {prediction.formations.away}
-                        </h4>
-                        <div className="space-y-3 text-sm">
-                          <div>
-                            <p className="text-gray-600 font-medium mb-1">Offensive:</p>
-                            <ul className="space-y-1 text-gray-700">
-                              <li>• 16.2 tirs/90</li>
-                              <li>• 1.8 xG/90</li>
-                              <li>• 900 minutes (25% du temps)</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <p className="text-gray-600 font-medium mb-1">Défensive:</p>
-                            <ul className="space-y-1 text-gray-700">
-                              <li>• 14.5 tirs concédés/90</li>
-                              <li>• 1.4 xGA/90</li>
-                            </ul>
-                          </div>
-                          <div className="pt-2 border-t border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-                              </div>
-                              <span className="text-xs text-gray-600">Fiabilité: Moyenne</span>
-                            </div>
-                          </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">{prediction.away_team}:</span>
+                          <span className="font-semibold text-gray-900">{prediction.formations.away}</span>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <p className="text-sm text-yellow-800">
-                        Formations non disponibles. Les prédictions utilisent l'historique général des équipes.
+                        Formations non disponibles pour ce match. Les prédictions utilisent l'historique général des équipes.
                       </p>
                     </div>
                   )}
@@ -426,108 +411,20 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
 
                 {/* Section: Contexte */}
                 <AccordionSection
-                  title="Contexte du Match"
+                  title="Contexte & Données Utilisées"
                   icon="🌍"
                   isOpen={openSections.has('context')}
                   onToggle={() => toggleSection('context')}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Classements */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>🏆</span> Classements
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <p className="font-medium text-gray-700">Liverpool:</p>
-                          <ul className="ml-4 text-gray-600">
-                            <li>• 2e au général</li>
-                            <li>• 1er attaque domicile</li>
-                            <li>• 3e défense domicile</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-700">Man City:</p>
-                          <ul className="ml-4 text-gray-600">
-                            <li>• 3e au général</li>
-                            <li>• 5e attaque extérieur</li>
-                            <li>• 4e défense extérieur</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Météo */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>🌤️</span> Météo
-                      </h4>
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Température:</span>
-                          <span className="font-medium">12°C</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Vent:</span>
-                          <span className="font-medium">15 km/h</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Précipitations:</span>
-                          <span className="font-medium">0 mm</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Condition:</span>
-                          <span className="font-medium">Partiellement nuageux</span>
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <p className="text-xs text-gray-600 italic">
-                            Conditions normales, pas d'impact significatif prévu
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Blessures */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>⚕️</span> Blessures & Absences
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <p className="font-medium text-gray-700">Liverpool:</p>
-                          <ul className="ml-4 text-gray-600">
-                            <li>• Salah (blessure) - absent</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-700">Man City:</p>
-                          <ul className="ml-4 text-gray-600">
-                            <li>• Aucune absence majeure</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Autres */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>ℹ️</span> Informations
-                      </h4>
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-600">Derby:</span>
-                          <span className="font-medium">Non</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-600">Importance:</span>
-                          <span className="font-medium">Haute (Top 4)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-600">Historique:</span>
-                          <span className="font-medium">Équilibré (3-2-3 sur 8 derniers)</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">Sources de Données</h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li>• Classements live (12 tableaux SoccerStats)</li>
+                      <li>• Historique complet des matchs (Football-Data.co.uk)</li>
+                      <li>• Météo du jour (température, vent, précipitations)</li>
+                      <li>• Contexte match (blessures, forme récente)</li>
+                      {prediction?.formations?.home && <li>• Formations confirmées (Google/Bright Data)</li>}
+                    </ul>
                   </div>
                 </AccordionSection>
               </div>

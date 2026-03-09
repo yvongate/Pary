@@ -565,13 +565,16 @@ GÉNÉRAL:
 - Si formations disponibles, les prioriser (données réelles > historique général)
 - Si formations manquantes, utiliser baseline Poisson avec ajustements contextuels uniquement
 
-FORMAT DE RÉPONSE (JSON uniquement):
+FORMAT DE REPONSE:
+IMPORTANT: Renvoie UNIQUEMENT le JSON, sans texte avant/apres, sans balises markdown, sans code block.
+
+Exemple de reponse attendue:
 {{
   "lambda_home_adjusted": 15.5,
   "lambda_away_adjusted": 11.2,
   "lambda_home_adjusted_corners": 6.2,
   "lambda_away_adjusted_corners": 4.8,
-  "reasoning": "Symétrique: {home_team} offensive+défensive {away_team} = X tirs, Y corners. {away_team} offensive+défensive {home_team} = Z tirs, W corners. Ajusté avec contexte."
+  "reasoning": "Symetrique: {home_team} offensive+defensive {away_team} = X tirs, Y corners. {away_team} offensive+defensive {home_team} = Z tirs, W corners. Ajuste avec contexte."
 }}
 
 IMPORTANT: Retourne UNIQUEMENT le JSON, sans texte additionnel.
@@ -593,15 +596,18 @@ Analyse et ajuste maintenant:"""
             import re
 
             # Extraire JSON (supporter les code blocks markdown)
-            # Essayer d'abord avec ```json ... ```
-            json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', result_text)
+            # Essayer d'abord avec ```json ... ``` ou ``` ... ```
+            json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', result_text, re.DOTALL)
             if json_match:
-                result_text = json_match.group(1)
+                result_text = json_match.group(1).strip()
             else:
                 # Sinon chercher le JSON brut
-                json_match = re.search(r'\{[\s\S]*\}', result_text)
+                json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', result_text, re.DOTALL)
                 if json_match:
-                    result_text = json_match.group(0)
+                    result_text = json_match.group(1).strip()
+
+            # Nettoyer les retours à la ligne et espaces
+            result_text = result_text.strip()
 
             result = json.loads(result_text)
 

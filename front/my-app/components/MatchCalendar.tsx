@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { MatchDay, Fixture, getFixturesByDate, League, getLeagues } from '@/lib/api';
 import LineupModal from './LineupModal';
+import GeneratePredictionModal from './GeneratePredictionModal';
+import PredictionGeneratingNotification from './PredictionGeneratingNotification';
 
 const LEAGUE_COLORS: { [key: string]: string } = {
   'Premier League': 'bg-purple-500',
@@ -41,6 +43,12 @@ export default function MatchCalendar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<Fixture | null>(null);
+
+  // États pour modal de génération de prédiction
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [matchToPredict, setMatchToPredict] = useState<Fixture | null>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [generatedMatch, setGeneratedMatch] = useState({ homeTeam: '', awayTeam: '' });
 
   useEffect(() => {
     loadLeagues();
@@ -118,8 +126,23 @@ export default function MatchCalendar() {
 
   const handleMatchClick = (match: Fixture) => {
     if (match.status === 'FINISHED') {
+      // Match terminé → Ouvrir modal lineups (ancien comportement)
       setSelectedMatch(match);
+    } else {
+      // Match à venir → Ouvrir modal génération prédiction
+      setMatchToPredict(match);
+      setGenerateModalOpen(true);
     }
+  };
+
+  const handleGenerateSuccess = (predictionId: number, homeTeam: string, awayTeam: string) => {
+    setGenerateModalOpen(false);
+    setGeneratedMatch({ homeTeam, awayTeam });
+    setNotificationOpen(true);
+
+    // Message console pour l'utilisateur
+    console.log(`Prédiction générée ! ID: ${predictionId}`);
+    console.log(`Consulte-la sur http://localhost:3000/predictions`);
   };
 
   if (loading) {
@@ -233,9 +256,7 @@ export default function MatchCalendar() {
               <div
                 key={match.id}
                 onClick={() => handleMatchClick(match)}
-                className={`p-4 hover:bg-gray-800/50 transition flex items-center justify-between ${
-                  match.status === 'FINISHED' ? 'cursor-pointer' : ''
-                }`}
+                className="p-4 hover:bg-gray-800/50 transition flex items-center justify-between cursor-pointer"
               >
                 <div className="flex items-center gap-4 flex-1">
                   {/* League Badge */}
@@ -292,13 +313,30 @@ export default function MatchCalendar() {
         ))}
       </div>
 
-      {/* Lineup Modal */}
+      {/* Lineup Modal (matchs terminés) */}
       {selectedMatch && (
         <LineupModal
           match={selectedMatch}
           onClose={() => setSelectedMatch(null)}
         />
       )}
+
+      {/* Modal de génération de prédiction (matchs à venir) */}
+      <GeneratePredictionModal
+        isOpen={generateModalOpen}
+        onClose={() => setGenerateModalOpen(false)}
+        onSuccess={handleGenerateSuccess}
+        initialHomeTeam={matchToPredict?.home_team || ''}
+        initialAwayTeam={matchToPredict?.away_team || ''}
+      />
+
+      {/* Notification "Prédiction en cours" */}
+      <PredictionGeneratingNotification
+        isOpen={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        homeTeam={generatedMatch.homeTeam}
+        awayTeam={generatedMatch.awayTeam}
+      />
     </div>
   );
 }

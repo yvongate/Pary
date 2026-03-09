@@ -36,6 +36,18 @@ class SQLiteDatabaseService:
                 corners_min INTEGER NOT NULL,
                 corners_max INTEGER NOT NULL,
                 corners_confidence REAL NOT NULL,
+                home_shots REAL,
+                away_shots REAL,
+                home_corners REAL,
+                away_corners REAL,
+                home_shots_min INTEGER,
+                home_shots_max INTEGER,
+                away_shots_min INTEGER,
+                away_shots_max INTEGER,
+                home_corners_min INTEGER,
+                home_corners_max INTEGER,
+                away_corners_min INTEGER,
+                away_corners_max INTEGER,
                 analysis_shots TEXT,
                 analysis_corners TEXT,
                 ai_reasoning_shots TEXT,
@@ -44,26 +56,33 @@ class SQLiteDatabaseService:
                 away_formation TEXT,
                 weather TEXT,
                 rankings_used TEXT,
+                status TEXT DEFAULT 'completed',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
-        # Ajouter les colonnes home_shots, away_shots, home_corners, away_corners si elles n'existent pas
-        try:
-            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_shots REAL")
-        except sqlite3.OperationalError:
-            pass  # Colonne existe déjà
+        # Ajouter les colonnes manquantes si elles n'existent pas (migration)
+        new_columns = [
+            ("home_shots", "REAL"),
+            ("away_shots", "REAL"),
+            ("home_corners", "REAL"),
+            ("away_corners", "REAL"),
+            ("home_shots_min", "INTEGER"),
+            ("home_shots_max", "INTEGER"),
+            ("away_shots_min", "INTEGER"),
+            ("away_shots_max", "INTEGER"),
+            ("home_corners_min", "INTEGER"),
+            ("home_corners_max", "INTEGER"),
+            ("away_corners_min", "INTEGER"),
+            ("away_corners_max", "INTEGER"),
+        ]
 
-        try:
-            cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_shots REAL")
-        except sqlite3.OperationalError:
-            pass
-
-        try:
-            cursor.execute("ALTER TABLE match_predictions ADD COLUMN home_corners REAL")
-        except sqlite3.OperationalError:
-            pass
+        for column_name, column_type in new_columns:
+            try:
+                cursor.execute(f"ALTER TABLE match_predictions ADD COLUMN {column_name} {column_type}")
+            except sqlite3.OperationalError:
+                pass  # Colonne existe déjà
 
         try:
             cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_corners REAL")
@@ -110,6 +129,12 @@ class SQLiteDatabaseService:
             cursor.execute("ALTER TABLE match_predictions ADD COLUMN away_corners_max INTEGER")
         except sqlite3.OperationalError:
             pass
+
+        # Ajouter la colonne status (pour suivre l'état des prédictions en cours)
+        try:
+            cursor.execute("ALTER TABLE match_predictions ADD COLUMN status TEXT DEFAULT 'completed'")
+        except sqlite3.OperationalError:
+            pass  # Colonne existe déjà
 
         # Table pour stocker les lineups (compositions) récupérées via SerpAPI
         cursor.execute("""

@@ -2,6 +2,7 @@
  * PredictionCard - Carte d'affichage d'une prédiction
  */
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Prediction } from '../lib/api';
 
 interface PredictionCardProps {
@@ -98,15 +99,10 @@ export default function PredictionCard({ prediction, onClick }: PredictionCardPr
           </div>
         </div>
 
-        {prediction.ai_reasoning_shots && (
-          <div className="mt-3 pt-3 border-t border-blue-200">
-            <p className="text-xs text-gray-700 italic">{prediction.ai_reasoning_shots}</p>
-          </div>
-        )}
       </div>
 
       {/* Prédictions CORNERS */}
-      <div className="bg-green-50 rounded-lg p-4">
+      <div className="bg-green-50 rounded-lg p-4 mb-4">
         <div className="flex items-center mb-2">
           <span className="text-2xl mr-2">⚽</span>
           <h3 className="font-bold text-green-900">CORNERS</h3>
@@ -146,12 +142,20 @@ export default function PredictionCard({ prediction, onClick }: PredictionCardPr
           </div>
         </div>
 
-        {prediction.ai_reasoning_corners && (
-          <div className="mt-3 pt-3 border-t border-green-200">
-            <p className="text-xs text-gray-700 italic">{prediction.ai_reasoning_corners}</p>
-          </div>
-        )}
       </div>
+
+      {/* Analyse IA Deep Reasoning (affichée UNE SEULE fois) */}
+      {prediction.ai_reasoning && (
+        <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-purple-500">
+          <div className="flex items-center mb-2">
+            <span className="text-xl mr-2">🤖</span>
+            <h3 className="font-bold text-purple-900">ANALYSE IA</h3>
+          </div>
+          <div className="prose prose-sm max-w-none text-gray-700">
+            <ReactMarkdown>{prediction.ai_reasoning}</ReactMarkdown>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
