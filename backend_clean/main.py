@@ -44,6 +44,72 @@ SOCCERSTATS_CODES = {
     "D1": "germany",
 }
 
+# Mapping des variations de noms d'équipes
+# Clé = Nom utilisé (API, frontend), Valeur = Nom dans CSV
+TEAM_NAME_MAPPING = {
+    # La Liga (Espagne)
+    'Espanyol': 'Espanol',
+    'RCD Espanyol': 'Espanol',
+    'Atletico Madrid': 'Ath Madrid',
+    'Atlético Madrid': 'Ath Madrid',
+    'Athletic Bilbao': 'Ath Bilbao',
+    'Athletic Club': 'Ath Bilbao',
+    'Deportivo Alaves': 'Alaves',
+    'Real Sociedad': 'Sociedad',
+
+    # Premier League (Angleterre)
+    'Manchester United': 'Man United',
+    'Manchester City': 'Man City',
+    'Newcastle United': 'Newcastle',
+    'Tottenham Hotspur': 'Tottenham',
+    'Nottingham Forest': "Nott'm Forest",
+    'West Ham United': 'West Ham',
+    'Wolverhampton': 'Wolves',
+    'Brighton & Hove Albion': 'Brighton',
+    'Leicester City': 'Leicester',
+
+    # Ligue 1 (France)
+    'Paris Saint-Germain': 'Paris SG',
+    'Paris Saint Germain': 'Paris SG',
+    'PSG': 'Paris SG',
+    'Olympique Marseille': 'Marseille',
+    'Olympique Lyonnais': 'Lyon',
+
+    # Bundesliga (Allemagne)
+    'Bayern Munich': 'Bayern Munich',
+    'Bayern München': 'Bayern Munich',
+    'Borussia Dortmund': 'Dortmund',
+    'Borussia Mönchengladbach': "M'gladbach",
+    'VfB Stuttgart': 'Stuttgart',
+
+    # Serie A (Italie)
+    'Inter Milan': 'Inter',
+    'AC Milan': 'Milan',
+    'AS Roma': 'Roma',
+}
+
+def normalize_team_name(team_name: str) -> str:
+    """
+    Normalise un nom d'équipe pour correspondre au format CSV
+
+    Args:
+        team_name: Nom de l'équipe (peut varier)
+
+    Returns:
+        Nom normalisé correspondant au CSV
+    """
+    # Enlever espaces superflus
+    team_name = team_name.strip()
+
+    # Vérifier mapping direct
+    if team_name in TEAM_NAME_MAPPING:
+        normalized = TEAM_NAME_MAPPING[team_name]
+        print(f"[NORMALIZE] '{team_name}' → '{normalized}'")
+        return normalized
+
+    # Sinon retourner tel quel
+    return team_name
+
 def get_current_season():
     now = datetime.now()
     year_start = now.year if now.month >= 8 else now.year - 1
@@ -1545,6 +1611,15 @@ async def process_full_prediction(
     """
     try:
         print(f"[PREDICTION {prediction_id}] Début du traitement...")
+
+        # NORMALISATION DES NOMS D'ÉQUIPES (gérer les variations)
+        home_team_original = home_team
+        away_team_original = away_team
+        home_team = normalize_team_name(home_team)
+        away_team = normalize_team_name(away_team)
+
+        if home_team != home_team_original or away_team != away_team_original:
+            print(f"[PREDICTION {prediction_id}] Noms normalisés: '{home_team_original}' → '{home_team}', '{away_team_original}' → '{away_team}'")
 
         sqlite_db = get_sqlite_db()
 
