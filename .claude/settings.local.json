@@ -78,7 +78,10 @@
       "Bash(dir:*)",
       "Bash(C:UsersYvonAppDataLocalProgramsPythonPython312python.exe test_integration_brightdata.py)",
       "Bash(\"C:\\\\Users\\\\Yvon\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python312\\\\python.exe\" test_integration_brightdata.py)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFeature: Add value betting with handicaps analysis \\(shots/corners\\)\n\nBACKEND:\n- DeepReasoningAnalyzer: 3-stage AI analysis \\(tactical → prediction → value detection\\)\n- Anti-bias protection: AI must analyze BEFORE seeing bookmaker odds\n- Handicaps support: Shots handicaps \\(PSG -5.5 shots\\) & Corners handicaps\n- Bookmaker propositions input: Free-text format for AI parsing\n- API endpoint: POST /api/generate-prediction with bookmaker_props_text field\n- Fix: Replace _get_connection\\(\\) with sqlite_db.conn \\(3 occurrences\\)\n\nFRONTEND:\n- Click-to-generate UX: Click upcoming match in calendar → opens pre-filled form\n- GeneratePredictionModal: New component with formations, players, bookmaker props\n- PredictionGeneratingNotification: Toast notification on generation success\n- MatchCalendar: Split behavior \\(finished → lineups, upcoming → prediction\\)\n- Dependencies: Add react-markdown ^9.1.0\n\nCONFIG:\n- .gitignore: Add debug files, screenshots, local settings\n\nValue betting flow:\n1. User clicks upcoming match in calendar\n2. Modal opens with teams pre-filled\n3. User enters formations + optional bookmaker handicaps\n4. AI analyzes independently, then compares with market\n5. Results show value bets with tactical justification\n\n🤖 Generated with Claude Code \\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(dir /B:*)",
+      "Bash(git push)"
     ]
   }
 }

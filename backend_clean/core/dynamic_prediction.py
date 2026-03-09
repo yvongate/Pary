@@ -361,10 +361,17 @@ class DynamicPredictor:
         # Chercher avec le nom SoccerStats
         for team in rankings[ranking_type]:
             team_name_lower = team['team'].lower()
+            soccerstats_lower = soccerstats_name.lower()
+
             # Essayer correspondance exacte
-            if team_name_lower == soccerstats_name.lower():
+            if team_name_lower == soccerstats_lower:
                 return team['position']
-            # Essayer correspondance partielle (fallback)
+
+            # Essayer correspondance partielle (avec nom converti)
+            if soccerstats_lower in team_name_lower or team_name_lower in soccerstats_lower:
+                return team['position']
+
+            # Dernier fallback: essayer avec le nom CSV original
             if team_name.lower() in team_name_lower or team_name_lower in team_name.lower():
                 return team['position']
 
