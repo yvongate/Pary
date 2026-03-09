@@ -354,10 +354,21 @@ class DynamicPredictor:
         if not rankings or ranking_type not in rankings:
             return 10  # Rang moyen par dfaut
 
+        # Convertir le nom CSV vers le format SoccerStats
+        from main import csv_to_soccerstats_name
+        soccerstats_name = csv_to_soccerstats_name(team_name)
+
+        # Chercher avec le nom SoccerStats
         for team in rankings[ranking_type]:
-            if team['team'].lower() == team_name.lower():
+            team_name_lower = team['team'].lower()
+            # Essayer correspondance exacte
+            if team_name_lower == soccerstats_name.lower():
+                return team['position']
+            # Essayer correspondance partielle (fallback)
+            if team_name.lower() in team_name_lower or team_name_lower in team_name.lower():
                 return team['position']
 
+        print(f"[WARNING] Équipe '{team_name}' (SoccerStats: '{soccerstats_name}') non trouvée dans {ranking_type}")
         return 10  # Pas trouv = rang moyen
 
     def get_ai_tactical_adjustment(self,

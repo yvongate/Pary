@@ -44,7 +44,7 @@ SOCCERSTATS_CODES = {
     "D1": "germany",
 }
 
-# Mapping des variations de noms d'équipes
+# Mapping 1: Nom frontend/API → Nom CSV
 # Clé = Nom utilisé (fixtures.csv, API, frontend), Valeur = Nom dans CSV historique
 TEAM_NAME_MAPPING = {
     # La Liga (Espagne) - fixtures.csv vs SP1_2526.csv
@@ -91,6 +91,67 @@ TEAM_NAME_MAPPING = {
     'AS Roma': 'Roma',
 }
 
+# Mapping 2: Nom CSV → Nom SoccerStats (pour scraping)
+# Clé = Nom dans CSV, Valeur = Nom sur soccerstats.com
+CSV_TO_SOCCERSTATS_MAPPING = {
+    # La Liga (Espagne)
+    'Oviedo': 'Real Oviedo',
+    'Barcelona': 'FC Barcelona',
+    'Espanol': 'Espanyol',  # SoccerStats utilise 'Espanyol' avec y
+    'Ath Madrid': 'Atletico Mad.',
+    'Betis': 'Real Betis',
+    'Celta': 'Celta Vigo',
+    'Sevilla': 'Sevilla FC',
+    'Ath Bilbao': 'Athletic Bil.',
+    'Sociedad': 'Real Sociedad',
+    'Vallecano': 'Rayo Valleca.',
+    'Real Madrid': 'Real Madrid',
+    'Villarreal': 'Villarreal',
+    'Getafe': 'Getafe',
+    'Valencia': 'Valencia',
+    'Osasuna': 'Osasuna',
+    'Mallorca': 'Mallorca',
+    'Levante': 'Levante',
+    'Girona': 'Girona',
+    'Alaves': 'Alaves',
+    'Elche': 'Elche',
+
+    # Premier League (Angleterre)
+    'Man United': 'Manchester Utd',
+    'Man City': 'Manchester City',
+    'Newcastle': 'Newcastle Utd',
+    'Tottenham': 'Tottenham',
+    'West Ham': 'West Ham',
+    'Wolves': 'Wolverhampton',
+    'Brighton': 'Brighton',
+    'Leicester': 'Leicester City',
+    "Nott'm Forest": 'Nottingham For.',
+    'Liverpool': 'Liverpool',
+    'Arsenal': 'Arsenal',
+    'Chelsea': 'Chelsea',
+
+    # Ligue 1 (France)
+    'Paris SG': 'Paris SG',
+    'Marseille': 'Marseille',
+    'Lyon': 'Lyon',
+    'Monaco': 'Monaco',
+    'Lille': 'Lille',
+
+    # Bundesliga (Allemagne)
+    'Bayern Munich': 'Bayern Munich',
+    'Dortmund': 'Dortmund',
+    "M'gladbach": 'Monchengladba.',
+    'Stuttgart': 'Stuttgart',
+    'Leipzig': 'RB Leipzig',
+
+    # Serie A (Italie)
+    'Inter': 'Inter Milan',
+    'Milan': 'AC Milan',
+    'Roma': 'Roma',
+    'Juventus': 'Juventus',
+    'Napoli': 'Napoli',
+}
+
 def normalize_team_name(team_name: str) -> str:
     """
     Normalise un nom d'équipe pour correspondre au format CSV
@@ -112,6 +173,18 @@ def normalize_team_name(team_name: str) -> str:
 
     # Sinon retourner tel quel
     return team_name
+
+def csv_to_soccerstats_name(csv_name: str) -> str:
+    """
+    Convertit un nom CSV vers le format SoccerStats pour le scraping
+
+    Args:
+        csv_name: Nom dans le CSV (ex: 'Oviedo')
+
+    Returns:
+        Nom tel qu'il apparaît sur SoccerStats (ex: 'Real Oviedo')
+    """
+    return CSV_TO_SOCCERSTATS_MAPPING.get(csv_name, csv_name)
 
 def get_current_season():
     now = datetime.now()
