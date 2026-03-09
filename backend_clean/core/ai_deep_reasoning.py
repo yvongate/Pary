@@ -111,17 +111,33 @@ Le "Balanced Bet" est le COMPROMIS OPTIMAL:
 
 EXEMPLE CONCRET (PSG vs Nantes):
 
+TOTAUX:
 Proposition A: "+27.5 tirs @ 2.50"
 → EV: +30%, Probabilité: 65%, Cote: 2.50
-→ Type: MEILLEUR VALUE BET (EV maximal mais risqué)
+→ Type: VALUE BET candidat
 
 Proposition B: "+25.5 tirs @ 1.85"
 → EV: +15%, Probabilité: 78%, Cote: 1.85
-→ Type: BEST BALANCED BET (sweet spot) ✅
+→ Type: BALANCED BET candidat ✅
 
 Proposition C: "+23.5 tirs @ 1.35"
 → EV: -8%, Probabilité: 92%, Cote: 1.35
 → Type: REJETE (cote trop faible <1.60) ❌
+
+HANDICAPS:
+Proposition D: "PSG handicap -7.5 tirs @ 2.80"
+→ EV: +35%, Probabilité: 62%, Cote: 2.80
+→ Type: MEILLEUR VALUE BET (EV maximal) 🔥
+
+Proposition E: "PSG handicap -5.5 tirs @ 1.90"
+→ EV: +18%, Probabilité: 72%, Cote: 1.90
+→ Type: Autre BALANCED BET candidat
+
+RECOMMANDATIONS FINALES:
+🔥 Value Bet: Handicap "PSG -7.5 @ 2.80" (EV +35%)
+⚖️ Balanced Bet: Total "+25.5 @ 1.85" (prob 78%, cote décente)
+
+→ Les 2 recommandations peuvent être de types différents!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -144,7 +160,15 @@ Proposition C: "+23.5 tirs @ 1.35"
 
    A) PROBABILITÉ RÉELLE (ta prédiction):
       - Basée sur ton analyse tactique + stats + formations
+
+      POUR TOTAUX:
       - Exemple: "+24.5 tirs" → ta prédiction = 28 tirs total → probabilité 80%
+
+      POUR HANDICAPS:
+      - Exemple: "PSG -5.5 tirs" → ta prédiction = PSG 20 tirs, Nantes 8 tirs
+        → Écart prévu = +12 tirs → Dépasse largement -5.5 → probabilité 75%
+      - Exemple: "PSG -9.5 tirs" → ta prédiction = PSG 20 tirs, Nantes 8 tirs
+        → Écart prévu = +12 tirs → Dépasse -9.5 de peu → probabilité 55%
 
    B) PROBABILITÉ IMPLICITE (marché):
       - Probabilite implicite = 1 / cote
@@ -156,22 +180,36 @@ Proposition C: "+23.5 tirs @ 1.35"
       - EV 10-25%: VALUE MODEREE
       - EV < 10%: PAS DE VALUE
 
-3. Identifie les 2 MEILLEURS PARIS:
+3. Identifie les 2 MEILLEURS PARIS (parmi TOUS les types):
+
+   ⚠️ IMPORTANT: Analyse TOUTES les propositions (totaux + handicaps)!
+   Tes 2 recommandations peuvent être:
+   - 2 totaux différents
+   - 1 total + 1 handicap
+   - 2 handicaps différents
+
+   Choisis le MEILLEUR pari de chaque type, peu importe si c'est total ou handicap!
 
    A) MEILLEUR VALUE BET:
-      - Cherche le plus grand EV positif
+      - Cherche le plus grand EV positif (parmi totaux ET handicaps)
       - Focus: Rentabilité long terme
       - Accepte probabilité moyenne (60-70%) si excellente cote
-      - Exemple: EV +30%, proba 65%, cote 2.50
+      - Exemples:
+        * Total: "+27.5 tirs @ 2.50" (EV +30%, proba 65%)
+        * Handicap: "PSG -6.5 tirs @ 2.20" (EV +28%, proba 68%)
+      → Choisis celui avec le MEILLEUR EV!
 
    B) BEST BALANCED BET (Sweet Spot):
-      - Cherche le MEILLEUR COMPROMIS probabilité/cote
+      - Cherche le MEILLEUR COMPROMIS (parmi totaux ET handicaps)
       - Critères OBLIGATOIRES:
         * Probabilité > 70% (bonne sécurité)
         * Cote > 1.60 (rentabilité décente)
         * EV > 5% (au moins un peu de value)
       - Focus: Balance entre sécurité et rentabilité
-      - Exemple: EV +15%, proba 78%, cote 1.85
+      - Exemples:
+        * Total: "+25.5 tirs @ 1.85" (EV +15%, proba 78%)
+        * Handicap: "PSG -4.5 tirs @ 1.75" (EV +12%, proba 76%)
+      → Choisis celui avec le MEILLEUR compromis!
 
       NOTE IMPORTANTE: NE PAS recommander de cotes trop faibles (<1.60)!
       Si toutes les propositions probables ont cotes <1.60, indique:
@@ -305,17 +343,21 @@ Pourquoi le marché se trompe?
 
 ETAPE 4: Double Recommandation finale
 
+⚠️ CRITIQUE: Analyse TOUTES les propositions (totaux ET handicaps)!
+Tes 2 recommandations peuvent être des totaux, des handicaps, ou un mix!
+
 Tu dois identifier 2 TYPES de paris distincts:
 
-A) MEILLEUR VALUE BET:
+A) MEILLEUR VALUE BET (parmi TOUS les types):
    - Cherche le plus grand EV positif (> 10%)
    - Si EV > 25%: FORTE VALUE
    - Si EV 10-25%: VALUE MODEREE
    - Si EV < 10%: PAS DE VALUE
    - Focus: Rentabilité à long terme (EV maximal)
    - Accepte probabilité moyenne (60-65%) si excellente cote (>2.00)
+   - Peut être un total OU un handicap - choisis le meilleur EV!
 
-B) BEST BALANCED BET (Sweet Spot):
+B) BEST BALANCED BET (Sweet Spot - parmi TOUS les types):
    - Cherche le MEILLEUR COMPROMIS entre probabilité et cote
    - Critères OBLIGATOIRES:
      * Probabilité > 70% (bonne sécurité)
@@ -323,14 +365,20 @@ B) BEST BALANCED BET (Sweet Spot):
      * EV > 5% (au moins un peu de value)
    - Focus: Ni trop risqué, ni cote trop faible
    - Exemple: Probabilité 78%, cote 1.85, EV +15%
+   - Peut être un total OU un handicap - choisis le meilleur compromis!
 
    ⚠️ IMPORTANT: Rejette les cotes <1.60 même si probabilité 95%!
    Si aucune proposition ne respecte les 3 critères, indique:
    "AUCUN PARI EQUILIBRE TROUVE - Cotes trop faibles ou probabilités insuffisantes"
 
+EXEMPLES DE RECOMMANDATIONS VALIDES:
+- Value: Total "+27.5 @ 2.50", Balanced: Total "+25.5 @ 1.85"
+- Value: Handicap "PSG -7.5 @ 2.80", Balanced: Total "+25.5 @ 1.85"
+- Value: Handicap "PSG -7.5 @ 2.80", Balanced: Handicap "PSG -5.5 @ 1.90"
+
 IMPORTANT: Ces 2 paris sont souvent DIFFÉRENTS!
-- Value bet = EV maximal (peut être risqué)
-- Balanced bet = Sweet spot sécurité/rentabilité
+- Value bet = EV maximal (peut être risqué, total OU handicap)
+- Balanced bet = Sweet spot sécurité/rentabilité (total OU handicap)
 
 FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 
@@ -349,7 +397,11 @@ Base de calcul: Formations {home_formation} vs {away_formation}
 ==================================================
 🔥 MEILLEUR VALUE BET (EV Maximal - Rentabilité long terme)
 
-[Proposition] @ [cote]
+[Type: TOTAL ou HANDICAP] [Proposition] @ [cote]
+
+Exemples:
+- TOTAL: "+27.5 tirs @ 2.50"
+- HANDICAP: "PSG handicap tirs -7.5 @ 2.80"
 
 - Expected Value: +X%
 - MA probabilité réelle: X%
@@ -359,8 +411,10 @@ Base de calcul: Formations {home_formation} vs {away_formation}
 
 POURQUOI LE MARCHE SE TROMPE:
 [Explique pourquoi TA analyse détecte quelque chose que le bookmaker n'a pas vu]
-Exemple: "Le bookmaker n'a pas pris en compte les compositions
+Exemple pour total: "Le bookmaker n'a pas pris en compte les compositions
 confirmées qui montrent un PSG ultra-offensif contre un bloc bas..."
+Exemple pour handicap: "Avec PSG qui fait 20 tirs à domicile et Nantes
+seulement 8, l'écart de +12 tirs dépassera largement le handicap -7.5..."
 
 JUSTIFICATION TACTIQUE:
 [Analyse détaillée formations, joueurs, style de jeu]
@@ -368,7 +422,11 @@ JUSTIFICATION TACTIQUE:
 ==================================================
 ⚖️ BEST BALANCED BET (Sweet Spot - Compromis optimal)
 
-[Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
+[Type: TOTAL ou HANDICAP] [Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
+
+Exemples:
+- TOTAL: "+25.5 tirs @ 1.85"
+- HANDICAP: "PSG handicap tirs -5.5 @ 1.90"
 
 Si trouvé:
 - MA probabilité de réussite: X% (doit être >70%)
@@ -378,8 +436,10 @@ Si trouvé:
 
 POURQUOI C'EST LE MEILLEUR COMPROMIS:
 [Explique le balance entre sécurité (haute probabilité) et rentabilité (bonne cote)]
-Exemple: "Probabilité 76% garantit bonne sécurité, tout en gardant
+Exemple pour total: "Probabilité 76% garantit bonne sécurité, tout en gardant
 une cote 1.82 qui offre rentabilité décente (+18% EV). Ni trop risqué, ni cote trop faible."
+Exemple pour handicap: "Avec écart prévu de +8 tirs pour PSG, le handicap -5.5
+a 74% de chances de réussite, tout en offrant cote 1.90 décente."
 
 JUSTIFICATION TACTIQUE:
 [Analyse détaillée basée sur historique et contexte]
