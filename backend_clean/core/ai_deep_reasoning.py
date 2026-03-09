@@ -95,7 +95,15 @@ STATISTIQUES HISTORIQUES (BASELINE):
 
 {bookmaker_props}
 
-MISSION IMPORTANTE - ANALYSE DE VALUE:
+MISSION IMPORTANTE - DOUBLE ANALYSE:
+
+TU DOIS IDENTIFIER 2 TYPES DE PARIS:
+1. MEILLEUR VALUE BET (rentabilité long terme, bon EV)
+2. PARI LE PLUS PROBABLE (maximiser chances de gagner CE pari)
+
+Ces 2 paris sont souvent DIFFÉRENTS!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. TYPES DE PROPOSITIONS A ANALYSER:
 
@@ -112,28 +120,36 @@ MISSION IMPORTANTE - ANALYSE DE VALUE:
       - Exemple: PSG 18 tirs, Nantes 7 tirs → Ecart +11 ✅ Gagne handicap -5.5
       - Exemple: PSG 15 tirs, Nantes 10 tirs → Ecart +5 ❌ Perd handicap -5.5
 
-2. Pour CHAQUE proposition, convertis la cote en probabilite implicite:
-   Probabilite implicite = 1 / cote
-   Exemple: cote 1.85 = 1/1.85 = 54%
+2. Pour CHAQUE proposition, calcule:
 
-3. Compare avec ta prediction pour calculer l'Expected Value (EV):
+   A) PROBABILITÉ RÉELLE (ta prédiction):
+      - Basée sur ton analyse tactique + stats + formations
+      - Exemple: "+24.5 tirs" → ta prédiction = 28 tirs total → probabilité 80%
 
-   POUR TOTAL:
-   - Calcule probabilite que total soit > ou < ligne
-   - EV = (ta_probabilite / proba_implicite) - 1
+   B) PROBABILITÉ IMPLICITE (marché):
+      - Probabilite implicite = 1 / cote
+      - Exemple: cote 1.85 = 1/1.85 = 54%
 
-   POUR HANDICAP:
-   - Prevois ecart tirs/corners entre les 2 equipes
-   - Calcule probabilite que ecart depasse handicap
-   - EV = (ta_probabilite / proba_implicite) - 1
+   C) EXPECTED VALUE (EV):
+      - EV = (ta_probabilite / proba_implicite) - 1
+      - EV > 25%: FORTE VALUE
+      - EV 10-25%: VALUE MODEREE
+      - EV < 10%: PAS DE VALUE
 
-4. Identifie LA MEILLEURE PROPOSITION:
-   - Cherche le plus grand EV positif (> 10%)
-   - Si EV < 10%: PAS DE VALUE
-   - Si EV > 10%: VALUE BET detecte! 🔥
-   - Si EV > 25%: FORTE VALUE! 🚀
+3. Identifie les 2 MEILLEURS PARIS:
 
-5. Justifie avec l'analyse tactique (formations, joueurs, style de jeu)
+   A) MEILLEUR VALUE BET:
+      - Cherche le plus grand EV positif
+      - Focus: Rentabilité long terme
+      - Accepte probabilité moyenne (60-70%) si excellente cote
+
+   B) PARI LE PLUS PROBABLE:
+      - Cherche la plus haute probabilité de réussite (> 75%)
+      - Focus: Maximiser chances de gagner
+      - Peu importe si EV négatif ou cote faible
+      - Exemple: Probabilité 85% même avec cote 1.15
+
+4. Justifie CHAQUE recommandation avec analyse tactique
 
 IMPORTANT:
 - Analyse TOUTES les propositions (total + handicaps)
@@ -259,12 +275,26 @@ Pourquoi le marché se trompe?
    avec Mbappé-Neymar-Dembélé contre un bloc bas 5-4-1.
    Les compositions confirment une domination PSG massive."
 
-ETAPE 4: Recommandation finale
+ETAPE 4: Double Recommandation finale
 
-Identifie LA proposition avec le meilleur EV:
-- Si EV > 25%: FORTE VALUE (recommande fortement)
-- Si EV 10-25%: VALUE MODEREE (recommande)
-- Si EV < 10%: PAS DE VALUE (ne recommande pas)
+Tu dois identifier 2 TYPES de paris distincts:
+
+A) MEILLEUR VALUE BET:
+   - Cherche le plus grand EV positif (> 10%)
+   - Si EV > 25%: FORTE VALUE
+   - Si EV 10-25%: VALUE MODEREE
+   - Si EV < 10%: PAS DE VALUE
+   - Focus: Rentabilité à long terme (bon rapport cote/probabilité)
+
+B) PARI LE PLUS PROBABLE:
+   - Cherche la proposition avec la PLUS HAUTE probabilité de réussite
+   - Peu importe si la cote est faible (EV peut être négatif)
+   - Focus: Maximiser les chances de gagner CE pari
+   - Exemple: "+24.5 tirs" avec 85% de probabilité même si cote = 1.20 (EV négatif)
+
+IMPORTANT: Ces 2 paris peuvent être DIFFÉRENTS!
+- Value bet = Bon rapport risque/récompense
+- Pari probable = Maximiser chances de gagner
 
 FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 
@@ -281,15 +311,15 @@ Base de calcul: Formations {home_formation} vs {away_formation}
 + Stats historiques + Analyse tactique
 
 ==================================================
-MEILLEURE PROPOSITION DETECTEE (étape 3 - Comparaison avec marché)
+🔥 MEILLEUR VALUE BET (Rentabilité long terme)
 
-[Proposition] @ [cote] ✅ ou ❌
+[Proposition] @ [cote]
 
 - Expected Value: +X%
 - MA probabilité réelle: X% (basée sur MA prédiction)
 - Probabilité implicite marché: X% (1/cote)
 - ÉCART: +Y points de %
-- Confiance: X%
+- Type: FORTE VALUE / VALUE MODEREE / PAS DE VALUE
 
 POURQUOI LE MARCHE SE TROMPE:
 [Explique pourquoi TA analyse détecte quelque chose que le bookmaker n'a pas vu]
@@ -300,9 +330,31 @@ JUSTIFICATION TACTIQUE:
 [Analyse détaillée formations, joueurs, style de jeu]
 
 ==================================================
+✅ PARI LE PLUS PROBABLE (Maximiser chances de gagner)
+
+[Proposition] @ [cote]
+
+- MA probabilité de réussite: X%
+- Expected Value: +/-X% (peut être négatif)
+- Probabilité implicite marché: X% (1/cote)
+- Confiance: TRÈS HAUTE / HAUTE / MOYENNE
+
+POURQUOI CE PARI EST SÛR:
+[Explique pourquoi ce pari a les plus grandes chances de rentrer]
+Exemple: "Avec PSG qui fait en moyenne 20 tirs à domicile et Nantes
+qui concède 15 tirs, le total dépassera facilement 24.5 tirs."
+
+JUSTIFICATION TACTIQUE:
+[Analyse détaillée basée sur historique et contexte]
+
+NOTE: Si le pari le plus probable = le meilleur value bet, indique:
+"LE PARI LE PLUS PROBABLE EST AUSSI LE MEILLEUR VALUE BET"
+
+==================================================
 AUTRES PROPOSITIONS ANALYSEES
 
 [Pour chaque autre proposition:]
+- Probabilité réelle: X%
 - EV: +/-X%
 - Verdict: VALUE / PAS DE VALUE / EVITER
 
