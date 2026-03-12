@@ -341,6 +341,132 @@ Pourquoi le marché se trompe?
    avec Mbappé-Neymar-Dembélé contre un bloc bas 5-4-1.
    Les compositions confirment une domination PSG massive."
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ETAPE 3.5: VALIDATION STATIQUE (CRITIQUE - OBLIGATOIRE!)
+
+⚠️ AVANT de recommander quoi que ce soit, tu DOIS valider la cohérence mathématique!
+
+Cette étape empêche les erreurs, incohérences et fausses alertes.
+
+═══════════════════════════════════════════════════════
+RÈGLE 1: VÉRIFIER LES SEUILS D'EXPECTED VALUE (EV)
+═══════════════════════════════════════════════════════
+
+Pour CHAQUE proposition analysée:
+
+A) Si EV < 10%:
+   Décision: ❌ REJETER
+   Raison: Le marché est mieux calibré que ma prédiction
+   Message: "Marché trop proche, pas d'avantage détectable"
+   Action: NE PAS recommander ce pari
+
+B) Si 10% ≤ EV < 25%:
+   Décision: ✅ VALUE MODÉRÉE (normal)
+   Raison: Écart normal qu'un bon modèle peut détecter
+   Message: "Bonne value, cohérente avec mon avantage analytique"
+   Action: Recommander le pari
+
+C) Si 25% ≤ EV < 50%:
+   Décision: ⚠️ VALUE ÉLEVÉE (vigilance)
+   Raison: Écart important, vérifier avant de valider
+   Message: "Value intéressante mais inhabituelle"
+   Action: Recommander MAIS ajouter avertissement:
+   "⚠️ EV élevé (+X%). Vérifiez manuellement les compositions et contexte."
+
+D) Si EV ≥ 50%:
+   Décision: 🚨 RED FLAG (probable erreur)
+   Raison: Trop beau pour être vrai
+   Message: "Écart anormalement élevé (+X%).
+   Soit opportunité exceptionnelle rare, soit j'ai raté une info importante.
+   VÉRIFICATION MANUELLE OBLIGATOIRE avant de parier!"
+   Action: Recommander avec ALERTE MAXIMUM
+
+═══════════════════════════════════════════════════════
+RÈGLE 2: VÉRIFIER LA COHÉRENCE INTERNE
+═══════════════════════════════════════════════════════
+
+Vérification A - Total des tirs/corners:
+
+Si tu prévois: {home_team} [X] tirs, {away_team} [Z] tirs
+Alors total = [X + Z] tirs
+
+Vérifie CHAQUE proposition "+ligne" ou "-ligne":
+- Si "+27.5 tirs" et ton total = 30 → ✅ Cohérent
+- Si "+35.5 tirs" et ton total = 30 → ❌ INCOHÉRENT (rejette!)
+
+Vérification B - Probabilités extrêmes (suspect):
+
+- Si probabilité > 90% → Suspect (sauf cas très rare comme PSG vs amateur)
+- Si probabilité < 10% mais EV positif → Incohérent (rejette!)
+
+Vérification C - Logique des handicaps:
+
+Si tu prévois écart de +8 tirs pour {home_team}:
+- Handicap {home_team} -5.5 → ✅ Cohérent (8 > 5.5)
+- Handicap {home_team} -10.5 → ❌ Incohérent (8 < 10.5, rejette!)
+
+═══════════════════════════════════════════════════════
+RÈGLE 3: DÉTECTER LES BIAIS DES DEUX CÔTÉS (CRITIQUE!)
+═══════════════════════════════════════════════════════
+
+🚨 RÈGLE MATHÉMATIQUE FONDAMENTALE:
+
+Deux paris OPPOSÉS ne peuvent PAS avoir de value simultanément!
+
+Exemple d'INCOHÉRENCE à détecter:
+- {home_team} handicap -4.5 @ 2.37 → EV: +17%
+- {away_team} handicap +4.5 @ 2.37 → EV: +12%
+
+🚨 IMPOSSIBLE! Ce sont des paris opposés:
+- Si {home_team} -4.5 gagne → {away_team} +4.5 perd
+- Si {away_team} +4.5 gagne → {home_team} -4.5 perd
+
+ACTION OBLIGATOIRE:
+Si tu détectes value des DEUX côtés d'un même pari:
+→ REJETTE LES DEUX
+→ Indique: "Incohérence mathématique détectée. Mes calculs sont erronés."
+
+Exception acceptable:
+Si TOUS les EV positifs sont du MÊME côté → ✅ Normal
+Exemple: Tous les bons paris sur {home_team} (si dominance claire)
+
+═══════════════════════════════════════════════════════
+RÈGLE 4: CONCLUSION DE VALIDATION
+═══════════════════════════════════════════════════════
+
+Pour CHAQUE pari candidat, vérifie:
+
+✅ CAS 1 - VALIDATION RÉUSSIE:
+- EV entre 10-25%
+- Cohérence interne OK (totaux corrects, probas normales)
+- Pas de biais des deux côtés
+→ PARI VALIDÉ, procède à la recommandation
+
+⚠️ CAS 2 - VALIDATION AVEC VIGILANCE:
+- EV entre 25-50%
+- OU probabilité > 85% (vérifier pourquoi)
+→ PARI VALIDÉ avec avertissement vigilance
+
+🚨 CAS 3 - VALIDATION AVEC ALERTE MAX:
+- EV ≥ 50%
+→ PARI VALIDÉ mais ALERTE MAXIMUM (vérification manuelle obligatoire)
+
+❌ CAS 4 - REJET:
+- EV < 10%
+- OU incohérence interne (totaux, probas)
+- OU biais des deux côtés
+- OU probabilité > 95% (sauf contexte exceptionnel)
+→ PARI REJETÉ, ne pas recommander
+
+⚠️ SI AUCUN PARI NE PASSE LA VALIDATION:
+Indique clairement:
+"Aucune proposition ne passe les critères de validation.
+Le marché est bien calibré ou mes prédictions manquent de confiance.
+Recommandation: NE PAS PARIER sur ce match."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ETAPE 4: Double Recommandation finale
 
 ⚠️ CRITIQUE: Analyse TOUTES les propositions (totaux ET handicaps)!
