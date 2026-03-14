@@ -1019,8 +1019,13 @@ Analyse et ajuste maintenant:"""
         home_detailed_stats = None
         away_detailed_stats = None
         try:
-            home_detailed_stats = soccerstats_working.get_team_context(home_team, league_code)
-            away_detailed_stats = soccerstats_working.get_team_context(away_team, league_code)
+            # Convertir vers noms SoccerStats pour recherche précise
+            from main import csv_to_soccerstats_name
+            home_soccerstats = csv_to_soccerstats_name(home_team)
+            away_soccerstats = csv_to_soccerstats_name(away_team)
+
+            home_detailed_stats = soccerstats_working.get_team_context(home_soccerstats, league_code)
+            away_detailed_stats = soccerstats_working.get_team_context(away_soccerstats, league_code)
 
             if home_detailed_stats:
                 print(f"    {home_team}: {home_detailed_stats['won']}V-{home_detailed_stats['drawn']}N-{home_detailed_stats['lost']}D, "
