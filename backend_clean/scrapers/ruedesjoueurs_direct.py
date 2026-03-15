@@ -35,18 +35,39 @@ def normalize_team_name(name: str) -> str:
 
     # Remplacements courants
     replacements = {
+        # Premier League
         'man united': 'manchester united',
         'man utd': 'manchester united',
         'man city': 'manchester city',
         'newcastle': 'newcastle united',
         'tottenham': 'tottenham hotspur',
         'west ham': 'west ham united',
+
+        # Ligue 1
         'psg': 'paris saint-germain',
         'paris sg': 'paris saint-germain',
         'om': 'marseille',
         'ol': 'lyon',
         'asse': 'saint-etienne',
-        'losc': 'lille'
+        'losc': 'lille',
+
+        # La Liga - RDJ utilise les noms francais
+        'barcelona': 'barcelone',
+        'fc barcelona': 'barcelone',
+        'sevilla': 'seville',
+        'atletico madrid': 'atletico madrid',
+        'ath madrid': 'atletico madrid',
+        'athletic bilbao': 'athletic bilbao',
+        'ath bilbao': 'athletic bilbao',
+        'real sociedad': 'real sociedad',
+        'sociedad': 'real sociedad',
+        'celta vigo': 'celta vigo',
+        'celta': 'celta vigo',
+        'rayo vallecano': 'rayo vallecano',
+        'vallecano': 'rayo vallecano',
+        'deportivo alaves': 'alaves',
+        'espanyol': 'espanyol',
+        'espanol': 'espanyol'
     }
 
     for old, new in replacements.items():
