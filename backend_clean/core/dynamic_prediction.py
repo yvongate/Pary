@@ -430,8 +430,6 @@ class DynamicPredictor:
     def get_ai_tactical_adjustment(self,
                                    lambda_home_base: float,
                                    lambda_away_base: float,
-                                   lambda_home_base_corners: float,
-                                   lambda_away_base_corners: float,
                                    home_team: str,
                                    away_team: str,
                                    rdj_context: Optional[Dict],
@@ -442,13 +440,11 @@ class DynamicPredictor:
                                    home_formation_stats: Optional[Dict] = None,
                                    away_formation_stats: Optional[Dict] = None) -> Dict:
         """
-        IA qui RAISONNE sur tous les contextes et ajuste intelligemment TIRS ET CORNERS
+        IA qui RAISONNE sur tous les contextes et ajuste intelligemment TIRS
 
         Args:
             lambda_home_base: Résultat Poisson brut tirs home
             lambda_away_base: Résultat Poisson brut tirs away
-            lambda_home_base_corners: Résultat Poisson brut corners home
-            lambda_away_base_corners: Résultat Poisson brut corners away
             home_team: Équipe domicile
             away_team: Équipe extérieur
             rdj_context: Contexte RDJ (blessures, analyses)
@@ -615,19 +611,9 @@ POUR {away_team}:
   ETAPE 2: Pondérer selon fiabilité
   ETAPE 3: Ajuster avec contexte
 
-BASELINE CORNERS POISSON:
-  {home_team}: {lambda_home_base_corners:.1f} corners
-  {away_team}: {lambda_away_base_corners:.1f} corners
-  Total: {lambda_home_base_corners + lambda_away_base_corners:.1f} corners (~11 corners attendus)
-
 CONTRAINTES IMPORTANTES:
-TIRS:
 - Le total des tirs doit rester entre 24 et 32 tirs
 - Ne pas s'écarter de plus de ±4 tirs du baseline Poisson
-CORNERS:
-- Le total des corners doit rester entre 9 et 13 corners
-- Ne pas s'écarter de plus de ±2 corners du baseline Poisson
-GÉNÉRAL:
 - Aucune équipe priorisée, raisonnement OBJECTIF
 - Si formations disponibles, les prioriser (données réelles > historique général)
 - Si formations manquantes, utiliser baseline Poisson avec ajustements contextuels uniquement
@@ -639,9 +625,7 @@ Exemple de reponse attendue:
 {{
   "lambda_home_adjusted": 15.5,
   "lambda_away_adjusted": 11.2,
-  "lambda_home_adjusted_corners": 6.2,
-  "lambda_away_adjusted_corners": 4.8,
-  "reasoning": "Symetrique: {home_team} offensive+defensive {away_team} = X tirs, Y corners. {away_team} offensive+defensive {home_team} = Z tirs, W corners. Ajuste avec contexte."
+  "reasoning": "Symetrique: {home_team} offensive+defensive {away_team} = X tirs. {away_team} offensive+defensive {home_team} = Z tirs. Ajuste avec contexte."
 }}
 
 IMPORTANT: Retourne UNIQUEMENT le JSON, sans texte additionnel.
@@ -687,16 +671,12 @@ Analyse et ajuste maintenant:"""
                 # Tentative 1: Extraire les valeurs numériques directement avec regex
                 lambda_home_match = re.search(r'"lambda_home_adjusted":\s*([\d.]+)', result_text)
                 lambda_away_match = re.search(r'"lambda_away_adjusted":\s*([\d.]+)', result_text)
-                lambda_home_corners_match = re.search(r'"lambda_home_adjusted_corners":\s*([\d.]+)', result_text)
-                lambda_away_corners_match = re.search(r'"lambda_away_adjusted_corners":\s*([\d.]+)', result_text)
                 reasoning_match = re.search(r'"reasoning":\s*"([^"]*)"', result_text)
 
                 if lambda_home_match and lambda_away_match:
                     result = {
                         'lambda_home_adjusted': float(lambda_home_match.group(1)),
                         'lambda_away_adjusted': float(lambda_away_match.group(1)),
-                        'lambda_home_adjusted_corners': float(lambda_home_corners_match.group(1)) if lambda_home_corners_match else lambda_home_base_corners,
-                        'lambda_away_adjusted_corners': float(lambda_away_corners_match.group(1)) if lambda_away_corners_match else lambda_away_base_corners,
                         'reasoning': reasoning_match.group(1) if reasoning_match else 'JSON parsé partiellement'
                     }
                     print(f"[INFO] JSON réparé avec succès via regex")
@@ -720,28 +700,11 @@ Analyse et ajuste maintenant:"""
                 home_adj *= ratio
                 away_adj *= ratio
 
-            # Validation CORNERS
-            home_adj_corners = result.get('lambda_home_adjusted_corners', lambda_home_base_corners)
-            away_adj_corners = result.get('lambda_away_adjusted_corners', lambda_away_base_corners)
-
-            # Limites de sécurité CORNERS
-            home_adj_corners = max(lambda_home_base_corners - 2, min(lambda_home_base_corners + 2, home_adj_corners))
-            away_adj_corners = max(lambda_away_base_corners - 2, min(lambda_away_base_corners + 2, away_adj_corners))
-
-            # Vérifier contrainte totale CORNERS (9-13 corners)
-            total_corners = home_adj_corners + away_adj_corners
-            if total_corners < 9 or total_corners > 13:
-                # Réajuster proportionnellement
-                target_corners = 11
-                ratio_corners = target_corners / total_corners
-                home_adj_corners *= ratio_corners
-                away_adj_corners *= ratio_corners
-
             reasoning = result.get('reasoning', '')
 
             print(f"\n[IA TACTIQUE] Ajustement intelligent:")
-            print(f"  {home_team}: {lambda_home_base:.1f} -> {home_adj:.1f} tirs, {lambda_home_base_corners:.1f} -> {home_adj_corners:.1f} corners")
-            print(f"  {away_team}: {lambda_away_base:.1f} -> {away_adj:.1f} tirs, {lambda_away_base_corners:.1f} -> {away_adj_corners:.1f} corners")
+            print(f"  {home_team}: {lambda_home_base:.1f} -> {home_adj:.1f} tirs")
+            print(f"  {away_team}: {lambda_away_base:.1f} -> {away_adj:.1f} tirs")
             # Encoder pour éviter erreurs Unicode sur Windows
             try:
                 print(f"  Raisonnement: {reasoning[:200]}...")
@@ -751,8 +714,6 @@ Analyse et ajuste maintenant:"""
             return {
                 'lambda_home_adjusted': home_adj,
                 'lambda_away_adjusted': away_adj,
-                'lambda_home_adjusted_corners': home_adj_corners,
-                'lambda_away_adjusted_corners': away_adj_corners,
                 'reasoning': reasoning
             }
 
@@ -810,7 +771,6 @@ Analyse et ajuste maintenant:"""
         # Collecter données HOME
         X_home = []
         y_shots_home = []
-        y_corners_home = []
 
         for match in home_matches:
             opponent = match['opponent']
@@ -826,12 +786,10 @@ Analyse et ajuste maintenant:"""
 
                 X_home.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_home.append(match['shots'])
-                y_corners_home.append(match['corners'])
 
         # Collecter données AWAY
         X_away = []
         y_shots_away = []
-        y_corners_away = []
 
         for match in away_matches:
             opponent = match['opponent']
@@ -846,14 +804,11 @@ Analyse et ajuste maintenant:"""
 
                 X_away.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_away.append(match['shots'])
-                y_corners_away.append(match['corners'])
 
         X_home = np.array(X_home)
         y_shots_home = np.array(y_shots_home)
-        y_corners_home = np.array(y_corners_home)
         X_away = np.array(X_away)
         y_shots_away = np.array(y_shots_away)
-        y_corners_away = np.array(y_corners_away)
 
         # Fonction de log-vraisemblance Poisson pour TIRS (bidirectionnel)
         def poisson_log_likelihood_shots(params):
@@ -881,36 +836,12 @@ Analyse et ajuste maintenant:"""
             # Maximiser log-vraisemblance = minimiser négatif
             return -(ll_home + ll_away) + penalty
 
-        # Fonction de log-vraisemblance Poisson pour CORNERS (bidirectionnel)
-        def poisson_log_likelihood_corners(params):
-            beta_home = params[0:4]
-            beta_away = params[4:8]
-
-            lambda_home = np.exp(X_home @ beta_home)
-            lambda_away = np.exp(X_away @ beta_away)
-
-            ll_home = np.sum(y_corners_home * np.log(lambda_home + 1e-10) - lambda_home)
-            ll_away = np.sum(y_corners_away * np.log(lambda_away + 1e-10) - lambda_away)
-
-            avg_total = np.mean(lambda_home) + np.mean(lambda_away)
-            penalty = 10 * (avg_total - 11)**2  # Pénalité si total != 11 corners
-
-            return -(ll_home + ll_away) + penalty
-
         # Valeurs initiales (régression linéaire simple comme point de départ)
         initial_params = np.array([0.5, 0.1, 0.1, 0.05, 0.5, 0.1, 0.1, 0.05])
 
         # Optimisation TIRS
         result_shots = minimize(
             poisson_log_likelihood_shots,
-            initial_params,
-            method='L-BFGS-B',
-            options={'maxiter': 1000}
-        )
-
-        # Optimisation CORNERS
-        result_corners = minimize(
-            poisson_log_likelihood_corners,
             initial_params,
             method='L-BFGS-B',
             options={'maxiter': 1000}
@@ -923,19 +854,11 @@ Analyse et ajuste maintenant:"""
                 'success': result_shots.success,
                 'log_likelihood': -result_shots.fun
             },
-            'corners': {
-                'beta_home': result_corners.x[0:4].tolist(),
-                'beta_away': result_corners.x[4:8].tolist(),
-                'success': result_corners.success,
-                'log_likelihood': -result_corners.fun
-            },
             'stats': {
                 'home_matches_analyzed': len(X_home),
                 'away_matches_analyzed': len(X_away),
                 'avg_shots_home': float(np.mean(y_shots_home)),
-                'avg_shots_away': float(np.mean(y_shots_away)),
-                'avg_corners_home': float(np.mean(y_corners_home)),
-                'avg_corners_away': float(np.mean(y_corners_away))
+                'avg_shots_away': float(np.mean(y_shots_away))
             },
             'max_rank': max_rank
         }
@@ -1090,26 +1013,18 @@ Analyse et ajuste maintenant:"""
         # λ = exp(β · X)
         beta_shots_home = np.array(poisson_model['shots']['beta_home'])
         beta_shots_away = np.array(poisson_model['shots']['beta_away'])
-        beta_corners_home = np.array(poisson_model['corners']['beta_home'])
-        beta_corners_away = np.array(poisson_model['corners']['beta_away'])
 
         # Prdictions TIRS
         lambda_shots_home = np.exp(np.dot(beta_shots_home, X_home_match))
         lambda_shots_away = np.exp(np.dot(beta_shots_away, X_away_match))
 
-        # Prdictions CORNERS
-        lambda_corners_home = np.exp(np.dot(beta_corners_home, X_home_match))
-        lambda_corners_away = np.exp(np.dot(beta_corners_away, X_away_match))
-
         home_shots_raw = float(lambda_shots_home)
         away_shots_raw = float(lambda_shots_away)
-        home_corners_raw = float(lambda_corners_home)
-        away_corners_raw = float(lambda_corners_away)
 
-        print(f"    {home_team}: lambda_tirs={home_shots_raw:.1f}, lambda_corners={home_corners_raw:.1f}")
-        print(f"    {away_team}: lambda_tirs={away_shots_raw:.1f}, lambda_corners={away_corners_raw:.1f}")
-        print(f"    Total prdictions (base): {home_shots_raw + away_shots_raw:.1f} tirs, {home_corners_raw + away_corners_raw:.1f} corners")
-        print(f"    NOTE: Le total est contraint  ~28 tirs et ~11 corners via le modle de Poisson")
+        print(f"    {home_team}: lambda_tirs={home_shots_raw:.1f}")
+        print(f"    {away_team}: lambda_tirs={away_shots_raw:.1f}")
+        print(f"    Total prdictions (base): {home_shots_raw + away_shots_raw:.1f} tirs")
+        print(f"    NOTE: Le total est contraint  ~28 tirs via le modle de Poisson")
 
         # 5b. NOUVEAU - Rcuprer mto pour ajustements contextuels
         print(f"\n tape 5b: Rcupration mto et analyse contexte...")
@@ -1227,13 +1142,11 @@ Analyse et ajuste maintenant:"""
                 home_formation_stats = None
                 away_formation_stats = None
 
-        # L'IA raisonne sur tous les contextes et ajuste intelligemment TIRS ET CORNERS
+        # L'IA raisonne sur tous les contextes et ajuste intelligemment TIRS
         if lineups or rdj_context or weather:
             tactical_result = self.get_ai_tactical_adjustment(
                 lambda_home_base=home_shots_raw,
                 lambda_away_base=away_shots_raw,
-                lambda_home_base_corners=home_corners_raw,
-                lambda_away_base_corners=away_corners_raw,
                 home_team=home_team,
                 away_team=away_team,
                 rdj_context=rdj_context,
@@ -1247,17 +1160,15 @@ Analyse et ajuste maintenant:"""
 
             home_shots_adjusted = tactical_result['lambda_home_adjusted']
             away_shots_adjusted = tactical_result['lambda_away_adjusted']
-            home_corners_adjusted = tactical_result.get('lambda_home_adjusted_corners', home_corners_raw)
-            away_corners_adjusted = tactical_result.get('lambda_away_adjusted_corners', away_corners_raw)
             tactical_reasoning = tactical_result['reasoning']
 
             print(f"\n    Baseline Poisson:")
-            print(f"      {home_team}: {home_shots_raw:.1f} tirs, {home_corners_raw:.1f} corners")
-            print(f"      {away_team}: {away_shots_raw:.1f} tirs, {away_corners_raw:.1f} corners")
+            print(f"      {home_team}: {home_shots_raw:.1f} tirs")
+            print(f"      {away_team}: {away_shots_raw:.1f} tirs")
             print(f"\n    Aprs raisonnement IA:")
-            print(f"      {home_team}: {home_shots_raw:.1f} -> {home_shots_adjusted:.1f} tirs, {home_corners_raw:.1f} -> {home_corners_adjusted:.1f} corners")
-            print(f"      {away_team}: {away_shots_raw:.1f} -> {away_shots_adjusted:.1f} tirs, {away_corners_raw:.1f} -> {away_corners_adjusted:.1f} corners")
-            print(f"      Total: {home_shots_adjusted + away_shots_adjusted:.1f} tirs, {home_corners_adjusted + away_corners_adjusted:.1f} corners")
+            print(f"      {home_team}: {home_shots_raw:.1f} -> {home_shots_adjusted:.1f} tirs")
+            print(f"      {away_team}: {away_shots_raw:.1f} -> {away_shots_adjusted:.1f} tirs")
+            print(f"      Total: {home_shots_adjusted + away_shots_adjusted:.1f} tirs")
             # Encoder pour éviter erreurs Unicode sur Windows
             try:
                 print(f"\n    Raisonnement: {tactical_reasoning[:150]}...")
@@ -1267,16 +1178,12 @@ Analyse et ajuste maintenant:"""
             # Pas de contexte disponible, garder baseline
             home_shots_adjusted = home_shots_raw
             away_shots_adjusted = away_shots_raw
-            home_corners_adjusted = home_corners_raw
-            away_corners_adjusted = away_corners_raw
             tactical_reasoning = "Baseline Poisson conservé (aucun contexte disponible)"
             print(f"    Aucun contexte disponible, baseline Poisson conserv")
 
         # Utiliser les valeurs ajustées
         home_shots_raw = home_shots_adjusted
         away_shots_raw = away_shots_adjusted
-        home_corners_raw = home_corners_adjusted
-        away_corners_raw = away_corners_adjusted
 
         # 6. Estimer la possession (informatif)
         print(f"\n tape 6: Estimation de la possession...")
@@ -1296,23 +1203,15 @@ Analyse et ajuste maintenant:"""
 
         # Prédictions finales (déjà ajustées pour blessures/derbies)
         home_shots = max(0, home_shots_raw)
-        home_corners = max(0, home_corners_raw)
         away_shots = max(0, away_shots_raw)
-        away_corners = max(0, away_corners_raw)
 
         # Calculer fourchettes par équipe (±15% pour créer une plage réaliste)
         variance_shots = 0.15  # 15% de variance
-        variance_corners = 0.15
 
         home_shots_min = int(max(0, home_shots * (1 - variance_shots)))
         home_shots_max = int(home_shots * (1 + variance_shots))
         away_shots_min = int(max(0, away_shots * (1 - variance_shots)))
         away_shots_max = int(away_shots * (1 + variance_shots))
-
-        home_corners_min = int(max(0, home_corners * (1 - variance_corners)))
-        home_corners_max = int(home_corners * (1 + variance_corners))
-        away_corners_min = int(max(0, away_corners * (1 - variance_corners)))
-        away_corners_max = int(away_corners * (1 + variance_corners))
 
         # 8. Construire le rsultat
         result = {
@@ -1324,28 +1223,19 @@ Analyse et ajuste maintenant:"""
             },
             'predictions': {
                 'home_shots': round(home_shots, 1),
-                'home_corners': round(home_corners, 1),
                 'away_shots': round(away_shots, 1),
-                'away_corners': round(away_corners, 1),
                 'home_shots_min': home_shots_min,
                 'home_shots_max': home_shots_max,
                 'away_shots_min': away_shots_min,
                 'away_shots_max': away_shots_max,
-                'home_corners_min': home_corners_min,
-                'home_corners_max': home_corners_max,
-                'away_corners_min': away_corners_min,
-                'away_corners_max': away_corners_max,
                 'total_shots': round(home_shots + away_shots, 1),
-                'total_corners': round(home_corners + away_corners, 1),
                 'baseline_home_shots': round(baseline_home_shots, 1),
                 'baseline_away_shots': round(baseline_away_shots, 1)
             },
             'confidence': {
                 'model_type': 'Poisson bidirectionnel',
                 'shots_log_likelihood': round(poisson_model['shots']['log_likelihood'], 2),
-                'corners_log_likelihood': round(poisson_model['corners']['log_likelihood'], 2),
                 'shots_optimization_success': poisson_model['shots']['success'],
-                'corners_optimization_success': poisson_model['corners']['success'],
                 'note': 'Confiance basée sur log-vraisemblance du modèle de Poisson (plus élevé = meilleur)'
             },
             'analysis': {
@@ -1435,25 +1325,22 @@ Analyse et ajuste maintenant:"""
             # Total (pour compatibilité)
             result['predictions']['ai_shots_min'] = ai_result.get('home_shots_min', 0) + ai_result.get('away_shots_min', 0)
             result['predictions']['ai_shots_max'] = ai_result.get('home_shots_max', 0) + ai_result.get('away_shots_max', 0)
-            result['predictions']['ai_corners_min'] = ai_result.get('home_corners_min', 0) + ai_result.get('away_corners_min', 0)
-            result['predictions']['ai_corners_max'] = ai_result.get('home_corners_max', 0) + ai_result.get('away_corners_max', 0)
 
             result['predictions']['ai_confidence'] = ai_result.get('confidence', 0)
 
             print(f"    [OK] Raisonnement IA gnr ({len(ai_result.get('full_reasoning', ''))//100*100}+ caractres)")
             print(f"    IA suggre:")
-            print(f"      {home_team}: {ai_result.get('home_shots_min')}-{ai_result.get('home_shots_max')} tirs, {ai_result.get('home_corners_min')}-{ai_result.get('home_corners_max')} corners")
-            print(f"      {away_team}: {ai_result.get('away_shots_min')}-{ai_result.get('away_shots_max')} tirs, {ai_result.get('away_corners_min')}-{ai_result.get('away_corners_max')} corners")
+            print(f"      {home_team}: {ai_result.get('home_shots_min')}-{ai_result.get('home_shots_max')} tirs")
+            print(f"      {away_team}: {ai_result.get('away_shots_min')}-{ai_result.get('away_shots_max')} tirs")
             print(f"      Total: {result['predictions']['ai_shots_min']}-{result['predictions']['ai_shots_max']} tirs")
 
         except Exception as e:
             print(f"    [WARNING] chec gnration IA: {e}")
             result['predictions']['ai_reasoning_shots'] = None
-            result['predictions']['ai_reasoning_corners'] = None
 
         print(f"\n Prdiction termine!")
-        print(f"    {home_team}: {result['predictions']['home_shots']} tirs, {result['predictions']['home_corners']} corners")
-        print(f"    {away_team}: {result['predictions']['away_shots']} tirs, {result['predictions']['away_corners']} corners")
+        print(f"    {home_team}: {result['predictions']['home_shots']} tirs")
+        print(f"    {away_team}: {result['predictions']['away_shots']} tirs")
         print(f"\n     Mto (informatif): {weather_impact}")
         print(f"{'='*60}\n")
 
@@ -1573,34 +1460,6 @@ Analyse et ajuste maintenant:"""
             adjustment_factor = 0.7 + (0.3 * adjustment_factor)  # Ajustement partiel
 
         return home_shots * adjustment_factor, away_shots * adjustment_factor
-
-    def _normalize_total_corners(self, home_corners: float, away_corners: float,
-                                expected_total: float = 11.0) -> Tuple[float, float]:
-        """
-        Force le total de corners à être réaliste
-
-        Un match typique = 10-12 corners totaux
-
-        Args:
-            home_corners: Corners prédits pour domicile
-            away_corners: Corners prédits pour extérieur
-            expected_total: Total attendu pour un match typique
-
-        Returns:
-            (home_normalized, away_normalized) - total ≈ expected_total
-        """
-        current_total = home_corners + away_corners
-
-        if current_total <= 0:
-            return home_corners, away_corners
-
-        adjustment_factor = expected_total / current_total
-
-        # Limiter l'ajustement si dans fourchette acceptable (9-13)
-        if 9 <= current_total <= 13:
-            adjustment_factor = 0.7 + (0.3 * adjustment_factor)
-
-        return home_corners * adjustment_factor, away_corners * adjustment_factor
 
     def _get_league_csv_code(self, soccerstats_code: str) -> str:
         """Convertit le code soccerstats vers le code CSV"""

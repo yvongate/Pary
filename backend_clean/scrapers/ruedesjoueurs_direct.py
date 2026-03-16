@@ -15,7 +15,6 @@ RUE_DES_JOUEURS_LEAGUES = {
     'I1': 'https://www.ruedesjoueurs.com/pronostics/serie-a-899984.html',
     'F1': 'https://www.ruedesjoueurs.com/pronostics/ligue-1-900705.html',
     'F2': 'https://www.ruedesjoueurs.com/pronostics/ligue-2-900765.html',
-    'D1': 'https://www.ruedesjoueurs.com/pronostics/bundesliga-899867.html',
     'P1': 'https://www.ruedesjoueurs.com/pronostics/primeira-liga-nos-portugal-845530.html'
 }
 
@@ -24,8 +23,7 @@ LEAGUE_NAMES = {
     'E0': 'Premier League',
     'SP1': 'Liga',
     'I1': 'Serie A',
-    'F1': 'Ligue 1',
-    'D1': 'Bundesliga'
+    'F1': 'Ligue 1'
 }
 
 
@@ -67,7 +65,28 @@ def normalize_team_name(name: str) -> str:
         'vallecano': 'rayo vallecano',
         'deportivo alaves': 'alaves',
         'espanyol': 'espanyol',
-        'espanol': 'espanyol'
+        'espanol': 'espanyol',
+
+        # Serie A - RDJ utilise les noms francais
+        'inter': 'inter milan',
+        'inter milan': 'inter milan',
+        'milan': 'ac milan',
+        'ac milan': 'ac milan',
+        'napoli': 'naples',
+        'ssc napoli': 'naples',
+        'roma': 'rome',
+        'as roma': 'rome',
+        'juventus': 'juventus',
+        'lazio': 'lazio',
+        'atalanta': 'atalanta',
+        'fiorentina': 'fiorentina',
+        'torino': 'turin',
+        'bologna': 'bologne',
+        'parma': 'parme',
+        'udinese': 'udinese',
+        'genoa': 'genes',
+        'verona': 'verone',
+        'hellas verona': 'verone'
     }
 
     for old, new in replacements.items():

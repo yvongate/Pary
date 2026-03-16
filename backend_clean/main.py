@@ -25,14 +25,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 8 championnats
 # Championnats supportés pour les prédictions (avec scraping soccerstats.com)
 LEAGUES = {
     "E0": {"name": "Premier League", "country": "England"},
     "SP1": {"name": "La Liga", "country": "Spain"},
     "I1": {"name": "Serie A", "country": "Italy"},
     "F1": {"name": "Ligue 1", "country": "France"},
-    "D1": {"name": "Bundesliga", "country": "Germany"},
 }
 
 # Mapping vers codes soccerstats.com
@@ -41,7 +39,6 @@ SOCCERSTATS_CODES = {
     "F1": "france",
     "SP1": "spain",
     "I1": "italy",
-    "D1": "germany",
 }
 
 # Mapping 1: Nom frontend/API → Nom CSV
@@ -77,13 +74,6 @@ TEAM_NAME_MAPPING = {
     'PSG': 'Paris SG',
     'Olympique Marseille': 'Marseille',
     'Olympique Lyonnais': 'Lyon',
-
-    # Bundesliga (Allemagne)
-    'Bayern Munich': 'Bayern Munich',
-    'Bayern München': 'Bayern Munich',
-    'Borussia Dortmund': 'Dortmund',
-    'Borussia Mönchengladbach': "M'gladbach",
-    'VfB Stuttgart': 'Stuttgart',
 
     # Serie A (Italie)
     'Inter Milan': 'Inter',
@@ -136,13 +126,6 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Lyon': 'Lyon',
     'Monaco': 'Monaco',
     'Lille': 'Lille',
-
-    # Bundesliga (Allemagne)
-    'Bayern Munich': 'Bayern Munich',
-    'Dortmund': 'Dortmund',
-    "M'gladbach": 'Monchengladbach',
-    'Stuttgart': 'Stuttgart',
-    'Leipzig': 'RB Leipzig',
 
     # Serie A (Italie)
     'Inter': 'Inter Milan',

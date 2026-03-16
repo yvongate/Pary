@@ -35,8 +35,8 @@ class DeepReasoningAnalyzer:
                 'away_formation': str,
                 'home_players': List[str],
                 'away_players': List[str],
-                'home_stats': {'avg_shots': float, 'avg_corners': float},
-                'away_stats': {'avg_shots': float, 'avg_corners': float},
+                'home_stats': {'avg_shots': float},
+                'away_stats': {'avg_shots': float},
                 'league': str,
                 'match_date': str,
                 'bookmaker_propositions': str (optionnel, texte brut)
@@ -45,7 +45,6 @@ class DeepReasoningAnalyzer:
         Returns:
             {
                 'shots_range': {'min': int, 'max': int},
-                'corners_range': {'min': int, 'max': int},
                 'reasoning': str,
                 'best_value_bet': str (optionnel, si propositions fournies),
                 'best_balanced_bet': str (optionnel, si propositions fournies)
@@ -79,11 +78,9 @@ STATISTIQUES HISTORIQUES (BASELINE):
 
 {home_team}:
   - Moyenne tirs: {home_stats.get('avg_shots', 0):.1f} tirs/match
-  - Moyenne corners: {home_stats.get('avg_corners', 0):.1f} corners/match
 
 {away_team}:
   - Moyenne tirs: {away_stats.get('avg_shots', 0):.1f} tirs/match
-  - Moyenne corners: {away_stats.get('avg_corners', 0):.1f} corners/match
 
 """
 
@@ -145,11 +142,9 @@ RECOMMANDATIONS FINALES:
 
    A) TOTAL (Over/Under):
       - "+24.5 tirs @ 1.85" = Plus de 24.5 tirs TOTAL match
-      - "-10.5 corners @ 1.90" = Moins de 10.5 corners TOTAL match
 
-   B) HANDICAPS TIRS/CORNERS:
+   B) HANDICAPS TIRS:
       - "PSG handicap tirs -5.5 @ 1.90" = PSG doit faire 6 tirs DE PLUS que adversaire
-      - "Nantes handicap corners +2.5 @ 2.00" = Nantes peut avoir 3 corners DE MOINS
 
       CALCUL HANDICAP:
       - Handicap tirs PSG -5.5: PSG_tirs - Adversaire_tirs >= 6
@@ -257,10 +252,9 @@ Matchup tactique:
 - Qui sera plus agressif offensivement?
 - Style de jeu: Ouvert (beaucoup tirs) ou Fermé (bloc bas)?
 
-Impact sur les tirs et corners:
+Impact sur les tirs:
 - Formations offensives (4-3-3, 3-4-3) = plus de tirs attendus
 - Formations defensives (5-4-1, 4-5-1) = moins de tirs attendus
-- Bloc bas = plus de corners concedes
 - Possession élevée = plus de tirs
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -276,17 +270,13 @@ CALCULE (sans regarder les cotes bookmaker):
 
 {home_team} prévu:
 - Tirs: [X] (justifie avec formation + stats)
-- Corners: [Y] (justifie avec style de jeu)
 
 {away_team} prévu:
 - Tirs: [Z] (justifie avec formation + stats)
-- Corners: [W] (justifie avec style de jeu)
 
 TOTAL MATCH prévu:
 - Tirs total: [X + Z]
-- Corners total: [Y + W]
 - Écart tirs: {home_team} vs {away_team} = [X - Z]
-- Écart corners: {home_team} vs {away_team} = [Y - W]
 
 ⚠️ CHECKPOINT: As-tu fait TA propre prédiction AVANT de regarder les cotes? OUI/NON
 Si NON, recommence l'étape 2!
@@ -386,7 +376,7 @@ D) Si EV ≥ 50%:
 RÈGLE 2: VÉRIFIER LA COHÉRENCE INTERNE
 ═══════════════════════════════════════════════════════
 
-Vérification A - Total des tirs/corners:
+Vérification A - Total des tirs:
 
 Si tu prévois: {home_team} [X] tirs, {away_team} [Z] tirs
 Alors total = [X + Z] tirs
@@ -511,11 +501,11 @@ FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 ==================================================
 MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
 
-{home_team}: [X] tirs, [Y] corners
-{away_team}: [Z] tirs, [W] corners
+{home_team}: [X] tirs
+{away_team}: [Z] tirs
 
-TOTAL: [X+Z] tirs, [Y+W] corners
-ÉCART: {home_team} +[X-Z] tirs, +[Y-W] corners
+TOTAL: [X+Z] tirs
+ÉCART: {home_team} +[X-Z] tirs
 
 Base de calcul: Formations {home_formation} vs {away_formation}
 + Stats historiques + Analyse tactique
@@ -595,13 +585,6 @@ HANDICAPS TIRS OPTIMAUX:
 - {away_team} handicap tirs [valeur] @ [cote estimée]
   Ecart prevu: [calcul inverse]
 
-HANDICAPS CORNERS OPTIMAUX:
-- {home_team} handicap corners [valeur] @ [cote estimée]
-  Ecart prevu: {home_team} [X] corners - {away_team} [Y] corners = +[Z] corners
-
-- {away_team} handicap corners [valeur] @ [cote estimée]
-  Ecart prevu: [calcul inverse]
-
 NOTE: Ces handicaps sont calcules avec 70% de confiance.
       Si bookmaker propose handicap proche, FORTE VALUE potentielle!
 ==================================================
@@ -612,7 +595,6 @@ ETAPE 3: Prediction finale
 
 Donne une fourchette realiste:
 - Tirs min/max
-- Corners min/max
 """
 
         prompt += f"""
@@ -621,12 +603,9 @@ FORMAT DE REPONSE FINAL:
 
 PREDICTION BASELINE:
 Total tirs: [min-max]
-Total corners: [min-max]
 
 SHOTS_RANGE_MIN: [nombre]
 SHOTS_RANGE_MAX: [nombre]
-CORNERS_RANGE_MIN: [nombre]
-CORNERS_RANGE_MAX: [nombre]
 """
 
         # Appel à l'IA
@@ -656,11 +635,9 @@ CORNERS_RANGE_MAX: [nombre]
             print(f"[ERREUR IA DEEP REASONING] {e}")
             # Fallback
             total_shots = home_stats.get('avg_shots', 15) + away_stats.get('avg_shots', 10)
-            total_corners = home_stats.get('avg_corners', 6) + away_stats.get('avg_corners', 4)
 
             return {
                 'shots_range': {'min': int(total_shots - 5), 'max': int(total_shots + 5)},
-                'corners_range': {'min': int(total_corners - 3), 'max': int(total_corners + 3)},
                 'reasoning': f'Erreur IA: {e}. Utilisation baseline historique.'
             }
 
@@ -669,8 +646,7 @@ CORNERS_RANGE_MAX: [nombre]
         import re
 
         result = {
-            'shots_range': {'min': 20, 'max': 30},
-            'corners_range': {'min': 8, 'max': 12}
+            'shots_range': {'min': 20, 'max': 30}
         }
 
         # Extraire SHOTS_RANGE_MIN
@@ -682,16 +658,6 @@ CORNERS_RANGE_MAX: [nombre]
         match = re.search(r'SHOTS_RANGE_MAX:\s*(\d+)', text)
         if match:
             result['shots_range']['max'] = int(match.group(1))
-
-        # Extraire CORNERS_RANGE_MIN
-        match = re.search(r'CORNERS_RANGE_MIN:\s*(\d+)', text)
-        if match:
-            result['corners_range']['min'] = int(match.group(1))
-
-        # Extraire CORNERS_RANGE_MAX
-        match = re.search(r'CORNERS_RANGE_MAX:\s*(\d+)', text)
-        if match:
-            result['corners_range']['max'] = int(match.group(1))
 
         return result
 
@@ -727,8 +693,6 @@ def generate_deep_analysis_prediction(
         {
             'shots_min': int,
             'shots_max': int,
-            'corners_min': int,
-            'corners_max': int,
             'confidence': float,
             'reasoning': str (le raisonnement complet)
         }
@@ -746,7 +710,7 @@ def generate_deep_analysis_prediction(
     # CONSTRUIRE LE PROMPT ULTRA-DETAILLE
     # ================================================================
 
-    prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT. Tu dois predire le nombre de TIRS et CORNERS pour ce match.
+    prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT. Tu dois predire le nombre de TIRS pour ce match.
 
 IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE avec des "SI/ALORS" en cherchant des PATTERNS dans l'historique.
 
@@ -826,19 +790,17 @@ DETAILS DE CHAQUE MATCH:
         if 'date' in match_data:
             prompt += f" ({match_data['date']})"
         prompt += f"""
-   Tirs: {match_data['shots']} | Corners: {match_data['corners']}"""
+   Tirs: {match_data['shots']}"""
         if match_data.get('goals_for') is not None:
             prompt += f" | Score: {match_data['goals_for']}-{match_data['goals_against']}"
 
     # Stats agregees
     home_shots_avg = sum(m['shots'] for m in home_matches) / len(home_matches) if home_matches else 0
-    home_corners_avg = sum(m['corners'] for m in home_matches) / len(home_matches) if home_matches else 0
 
     prompt += f"""
 
 STATISTIQUES AGREGEES {home_team} DOMICILE:
   - Moyenne tirs: {home_shots_avg:.1f}
-  - Moyenne corners: {home_corners_avg:.1f}
 """
 
     # ================================================================
@@ -862,18 +824,16 @@ DETAILS DE CHAQUE MATCH:
         if 'date' in match_data:
             prompt += f" ({match_data['date']})"
         prompt += f"""
-   Tirs: {match_data['shots']} | Corners: {match_data['corners']}"""
+   Tirs: {match_data['shots']}"""
         if match_data.get('goals_for') is not None:
             prompt += f" | Score: {match_data['goals_for']}-{match_data['goals_against']}"
 
     away_shots_avg = sum(m['shots'] for m in away_matches) / len(away_matches) if away_matches else 0
-    away_corners_avg = sum(m['corners'] for m in away_matches) / len(away_matches) if away_matches else 0
 
     prompt += f"""
 
 STATISTIQUES AGREGEES {away_team} EXTERIEUR:
   - Moyenne tirs: {away_shots_avg:.1f}
-  - Moyenne corners: {away_corners_avg:.1f}
 """
 
     # ================================================================
@@ -1105,7 +1065,7 @@ ETAPE 3: Contexte {home_team}
 
 ETAPE 4: Prédiction {home_team}
   - Baseline formations (étape 2) ajusté avec contexte (étape 3)
-  - Combien de tirs et corners pour {home_team}?
+  - Combien de tirs pour {home_team}?
 
 
 PARTIE B: ANALYSE {away_team} (EXTERIEUR)
@@ -1128,14 +1088,14 @@ ETAPE 7: Contexte {away_team}
 
 ETAPE 8: Prédiction {away_team}
   - Baseline formations (étape 6) ajusté avec contexte (étape 7)
-  - Combien de tirs et corners pour {away_team}?
+  - Combien de tirs pour {away_team}?
 
 
 PARTIE C: SYNTHESE FINALE
 ──────────────────────────
 
 ETAPE 9: Vérification cohérence
-  - Le total est-il réaliste? (≈28 tirs, ≈11 corners total)
+  - Le total est-il réaliste? (≈28 tirs total)
   - Ajustements nécessaires?
 
 FORMAT DE REPONSE OBLIGATOIRE - TEXTE SIMPLE SANS MARKDOWN:
@@ -1164,14 +1124,14 @@ Forme: 3 victoires sur les 4 derniers matchs a domicile
 Motivation: Match important pour garder la 1re place
 
 ETAPE 4: Prediction Arsenal
-Baseline: 15-16 tirs, 5-6 corners
-Ajustements: +1 tir (bonne forme), +0 corner
-Prediction finale Arsenal: 15-17 tirs, 5-6 corners
+Baseline: 15-16 tirs
+Ajustements: +1 tir (bonne forme)
+Prediction finale Arsenal: 15-17 tirs
 
 [Meme structure pour PARTIE B avec l'equipe exterieur]
 
 PARTIE C: SYNTHESE FINALE
-Total predit: 27-33 tirs, 10-12 corners
+Total predit: 27-33 tirs
 Coherence: OUI, dans les normes d'un match de Premier League
 
 ==================================================
@@ -1180,14 +1140,10 @@ PREDICTION FINALE:
 EQUIPE DOMICILE ({home_team}):
 HOME_TIRS_MIN: [nombre]
 HOME_TIRS_MAX: [nombre]
-HOME_CORNERS_MIN: [nombre]
-HOME_CORNERS_MAX: [nombre]
 
 EQUIPE EXTERIEUR ({away_team}):
 AWAY_TIRS_MIN: [nombre]
 AWAY_TIRS_MAX: [nombre]
-AWAY_CORNERS_MIN: [nombre]
-AWAY_CORNERS_MAX: [nombre]
 
 CONFIANCE: [0-100]%
 """
@@ -1224,8 +1180,6 @@ CONFIANCE: [0-100]%
             'error': str(e),
             'shots_min': 0,
             'shots_max': 0,
-            'corners_min': 0,
-            'corners_max': 0,
             'confidence': 0,
             'reasoning': ''
         }
@@ -1320,12 +1274,8 @@ def _parse_ai_prediction(text: str) -> Dict:
     result = {
         'home_shots_min': 10,
         'home_shots_max': 18,
-        'home_corners_min': 3,
-        'home_corners_max': 7,
         'away_shots_min': 8,
         'away_shots_max': 16,
-        'away_corners_min': 2,
-        'away_corners_max': 6,
         'confidence': 50,
         'reasoning': text
     }
@@ -1340,16 +1290,6 @@ def _parse_ai_prediction(text: str) -> Dict:
     if match:
         result['home_shots_max'] = int(match.group(1))
 
-    # Extraire HOME_CORNERS_MIN
-    match = re.search(r'HOME_CORNERS_MIN:\s*(\d+)', text)
-    if match:
-        result['home_corners_min'] = int(match.group(1))
-
-    # Extraire HOME_CORNERS_MAX
-    match = re.search(r'HOME_CORNERS_MAX:\s*(\d+)', text)
-    if match:
-        result['home_corners_max'] = int(match.group(1))
-
     # Extraire AWAY_TIRS_MIN
     match = re.search(r'AWAY_TIRS_MIN:\s*(\d+)', text)
     if match:
@@ -1359,16 +1299,6 @@ def _parse_ai_prediction(text: str) -> Dict:
     match = re.search(r'AWAY_TIRS_MAX:\s*(\d+)', text)
     if match:
         result['away_shots_max'] = int(match.group(1))
-
-    # Extraire AWAY_CORNERS_MIN
-    match = re.search(r'AWAY_CORNERS_MIN:\s*(\d+)', text)
-    if match:
-        result['away_corners_min'] = int(match.group(1))
-
-    # Extraire AWAY_CORNERS_MAX
-    match = re.search(r'AWAY_CORNERS_MAX:\s*(\d+)', text)
-    if match:
-        result['away_corners_max'] = int(match.group(1))
 
     # Extraire CONFIANCE
     match = re.search(r'CONFIANCE:\s*(\d+)', text)
