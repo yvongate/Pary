@@ -1570,6 +1570,114 @@ def get_prediction_detail(match_id: str):
         }
 
 
+@app.get("/predictions/all")
+def get_all_predictions(
+    league: Optional[str] = Query(None, description="Filtrer par championnat (E0, SP1, I1, F1, P1, B1)"),
+    limit: int = Query(50, description="Nombre max de prédictions (max 200)"),
+    include_past: bool = Query(True, description="Inclure les prédictions passées")
+):
+    """
+    📋 Récupère TOUTES les prédictions (passées et futures)
+
+    Permet de consulter l'historique des prédictions pour:
+    - Vérifier les anciennes prédictions
+    - Comparer prédictions vs résultats réels
+    - Analyser la performance du modèle
+
+    Paramètres:
+    - league: Filtrer par championnat (optionnel)
+    - limit: Nombre max de résultats (défaut: 50, max: 200)
+    - include_past: Inclure les anciennes prédictions (défaut: true)
+
+    Exemples:
+    /predictions/all?league=E0&limit=20
+    /predictions/all?include_past=false (seulement futures)
+    /predictions/all?limit=100 (toutes ligues)
+    """
+    try:
+        # Limiter à 200 max
+        limit = min(limit, 200)
+
+        # Utiliser SQLite
+        sqlite_db = get_sqlite_db()
+
+        # Récupérer les prédictions
+        all_preds = sqlite_db.get_all_predictions(limit=limit)
+
+        # Filtrer par ligue si demandé
+        if league:
+            all_preds = [p for p in all_preds if p['league_code'] == league]
+
+        # Filtrer passées/futures si demandé
+        if not include_past:
+            from datetime import datetime
+            now = datetime.now()
+            all_preds = [
+                p for p in all_preds
+                if p.get('match_date') and (
+                    isinstance(p['match_date'], str) and p['match_date'] >= now.strftime('%Y-%m-%d')
+                    or hasattr(p['match_date'], 'isoformat') and p['match_date'] >= now
+                )
+            ]
+
+        # Formatter les résultats
+        formatted_predictions = []
+        for pred in all_preds:
+            # Helper pour formater les dates
+            match_date = pred.get('match_date')
+            if match_date and hasattr(match_date, 'isoformat'):
+                match_date = match_date.isoformat()
+
+            created_at = pred.get('created_at')
+            if created_at and hasattr(created_at, 'isoformat'):
+                created_at = created_at.isoformat()
+
+            formatted_predictions.append({
+                'match_id': pred['match_id'],
+                'home_team': pred['home_team'],
+                'away_team': pred['away_team'],
+                'league_code': pred['league_code'],
+                'league_name': LEAGUES.get(pred['league_code'], {}).get('name', pred['league_code']),
+                'match_date': match_date,
+
+                # Prédictions tirs (compatibilité ancien/nouveau format)
+                'home_shots': pred.get('home_shots'),
+                'away_shots': pred.get('away_shots'),
+                'total_shots': (pred.get('home_shots') or 0) + (pred.get('away_shots') or 0),
+
+                # Ranges
+                'shots_min': pred.get('shots_min'),
+                'shots_max': pred.get('shots_max'),
+
+                # Corners (anciennes prédictions)
+                'home_corners': pred.get('home_corners'),
+                'away_corners': pred.get('away_corners'),
+
+                # Métadonnées
+                'has_analysis': pred.get('analysis_shots') is not None,
+                'has_ai_reasoning': pred.get('ai_reasoning_shots') is not None,
+                'created_at': created_at
+            })
+
+        return {
+            'league': league,
+            'league_name': LEAGUES.get(league, {}).get('name', 'Toutes') if league else 'Toutes',
+            'predictions': formatted_predictions,
+            'count': len(formatted_predictions),
+            'total_in_db': len(all_preds),
+            'include_past': include_past,
+            'source': 'SQLite (historique complet)'
+        }
+
+    except Exception as e:
+        return {
+            'error': 'Erreur récupération prédictions',
+            'message': str(e),
+            'predictions': [],
+            'count': 0
+        }
+
+
 # =====================================================
 # GÉNÉRATION MANUELLE DE PRÉDICTIONS
 # =====================================================
