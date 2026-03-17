@@ -1222,13 +1222,24 @@ Analyse et ajuste maintenant:"""
                 'date': match_date.isoformat() if match_date else None
             },
             'predictions': {
-                'home_shots': round(home_shots, 1),
-                'away_shots': round(away_shots, 1),
-                'home_shots_min': home_shots_min,
-                'home_shots_max': home_shots_max,
-                'away_shots_min': away_shots_min,
-                'away_shots_max': away_shots_max,
+                # PREDICTIONS EXACTES PAR EQUIPE (valeurs principales)
+                'home_team_shots': round(home_shots, 1),
+                'away_team_shots': round(away_shots, 1),
                 'total_shots': round(home_shots + away_shots, 1),
+
+                # Intervalles de confiance (optionnel)
+                'home_shots_range': {
+                    'min': home_shots_min,
+                    'max': home_shots_max,
+                    'predicted': round(home_shots, 1)
+                },
+                'away_shots_range': {
+                    'min': away_shots_min,
+                    'max': away_shots_max,
+                    'predicted': round(away_shots, 1)
+                },
+
+                # Baseline Poisson (avant ajustements IA)
                 'baseline_home_shots': round(baseline_home_shots, 1),
                 'baseline_away_shots': round(baseline_away_shots, 1)
             },
@@ -1243,7 +1254,6 @@ Analyse et ajuste maintenant:"""
                     'matches_analyzed': poisson_model['stats']['home_matches_analyzed'],
                     'model': 'Poisson: λ = exp(β₀ + β₁×Attaque + β₂×Défense_adv + β₃×Forme)',
                     'avg_shots_historical': round(poisson_model['stats']['avg_shots_home'], 1),
-                    'avg_corners_historical': round(poisson_model['stats']['avg_corners_home'], 1),
                     'opponent_defence_rank': away_def_rank,
                     'match_history': [m for m in home_history if m['home'] == True][:30]
                 },
@@ -1251,7 +1261,6 @@ Analyse et ajuste maintenant:"""
                     'matches_analyzed': poisson_model['stats']['away_matches_analyzed'],
                     'model': 'Poisson: λ = exp(β₀ + β₁×Attaque + β₂×Défense_adv + β₃×Forme)',
                     'avg_shots_historical': round(poisson_model['stats']['avg_shots_away'], 1),
-                    'avg_corners_historical': round(poisson_model['stats']['avg_corners_away'], 1),
                     'opponent_defence_rank': home_def_rank,
                     'match_history': [m for m in away_history if m['home'] == False][:30]
                 }
@@ -1270,9 +1279,8 @@ Analyse et ajuste maintenant:"""
                     'possession_home': round(home_possession * 100, 1),
                     'possession_away': round(away_possession * 100, 1),
                     'total_shots_constraint': 28.0,
-                    'total_corners_constraint': 11.0,
                     'tactical_reasoning': tactical_reasoning,
-                    'note': 'Modèle de Poisson bidirectionnel avec contrainte sur le total (~28 tirs, ~11 corners). IA analyse blessures, lineups, derbies et météo pour ajuster intelligemment le résultat.'
+                    'note': 'Modèle de Poisson bidirectionnel avec contrainte sur le total (~28 tirs). IA analyse blessures, lineups, derbies et météo pour ajuster intelligemment le résultat.'
                 }
             },
             'rankings_used': {
@@ -1307,41 +1315,47 @@ Analyse et ajuste maintenant:"""
                 away_formation_stats=away_formation_stats  # Stats Understat formation extérieur
             )
 
-            # Ajouter le raisonnement IA au rsultat
-            result['predictions']['ai_reasoning_shots'] = ai_result.get('full_reasoning', '')
-            result['predictions']['ai_reasoning_corners'] = ai_result.get('full_reasoning', '')
+            # Ajouter le raisonnement IA au résultat
+            result['predictions']['ai_reasoning'] = ai_result.get('full_reasoning', '')
 
-            # Prédictions séparées par équipe
-            result['predictions']['ai_home_shots_min'] = ai_result.get('home_shots_min')
-            result['predictions']['ai_home_shots_max'] = ai_result.get('home_shots_max')
-            result['predictions']['ai_home_corners_min'] = ai_result.get('home_corners_min')
-            result['predictions']['ai_home_corners_max'] = ai_result.get('home_corners_max')
+            # Prédictions IA par équipe
+            result['predictions']['ai_analysis'] = {
+                'home_team': {
+                    'shots_min': ai_result.get('home_shots_min'),
+                    'shots_max': ai_result.get('home_shots_max'),
+                    'shots_predicted': round((ai_result.get('home_shots_min', 0) + ai_result.get('home_shots_max', 0)) / 2, 1)
+                },
+                'away_team': {
+                    'shots_min': ai_result.get('away_shots_min'),
+                    'shots_max': ai_result.get('away_shots_max'),
+                    'shots_predicted': round((ai_result.get('away_shots_min', 0) + ai_result.get('away_shots_max', 0)) / 2, 1)
+                },
+                'confidence': ai_result.get('confidence', 0),
+                'total_shots_range': {
+                    'min': ai_result.get('home_shots_min', 0) + ai_result.get('away_shots_min', 0),
+                    'max': ai_result.get('home_shots_max', 0) + ai_result.get('away_shots_max', 0)
+                }
+            }
 
-            result['predictions']['ai_away_shots_min'] = ai_result.get('away_shots_min')
-            result['predictions']['ai_away_shots_max'] = ai_result.get('away_shots_max')
-            result['predictions']['ai_away_corners_min'] = ai_result.get('away_corners_min')
-            result['predictions']['ai_away_corners_max'] = ai_result.get('away_corners_max')
-
-            # Total (pour compatibilité)
-            result['predictions']['ai_shots_min'] = ai_result.get('home_shots_min', 0) + ai_result.get('away_shots_min', 0)
-            result['predictions']['ai_shots_max'] = ai_result.get('home_shots_max', 0) + ai_result.get('away_shots_max', 0)
-
-            result['predictions']['ai_confidence'] = ai_result.get('confidence', 0)
-
-            print(f"    [OK] Raisonnement IA gnr ({len(ai_result.get('full_reasoning', ''))//100*100}+ caractres)")
-            print(f"    IA suggre:")
-            print(f"      {home_team}: {ai_result.get('home_shots_min')}-{ai_result.get('home_shots_max')} tirs")
-            print(f"      {away_team}: {ai_result.get('away_shots_min')}-{ai_result.get('away_shots_max')} tirs")
-            print(f"      Total: {result['predictions']['ai_shots_min']}-{result['predictions']['ai_shots_max']} tirs")
+            print(f"    [OK] Raisonnement IA généré ({len(ai_result.get('full_reasoning', ''))//100*100}+ caractères)")
+            print(f"    IA suggère:")
+            print(f"      {home_team}: {result['predictions']['ai_analysis']['home_team']['shots_predicted']} tirs ({ai_result.get('home_shots_min')}-{ai_result.get('home_shots_max')})")
+            print(f"      {away_team}: {result['predictions']['ai_analysis']['away_team']['shots_predicted']} tirs ({ai_result.get('away_shots_min')}-{ai_result.get('away_shots_max')})")
+            print(f"      Total: {result['predictions']['ai_analysis']['home_team']['shots_predicted'] + result['predictions']['ai_analysis']['away_team']['shots_predicted']:.1f} tirs")
 
         except Exception as e:
-            print(f"    [WARNING] chec gnration IA: {e}")
-            result['predictions']['ai_reasoning_shots'] = None
+            print(f"    [WARNING] Échec génération IA: {e}")
+            result['predictions']['ai_reasoning'] = None
 
-        print(f"\n Prdiction termine!")
-        print(f"    {home_team}: {result['predictions']['home_shots']} tirs")
-        print(f"    {away_team}: {result['predictions']['away_shots']} tirs")
-        print(f"\n     Mto (informatif): {weather_impact}")
+        print(f"\n✅ Prédiction terminée!")
+        print(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print(f"📊 PRÉDICTIONS PAR ÉQUIPE:")
+        print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print(f"   {home_team}: {result['predictions']['home_team_shots']} tirs")
+        print(f"   {away_team}: {result['predictions']['away_team_shots']} tirs")
+        print(f"   TOTAL: {result['predictions']['total_shots']} tirs")
+        print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print(f"\n🌤️  Météo (informatif): {weather_impact}")
         print(f"{'='*60}\n")
 
         return result
