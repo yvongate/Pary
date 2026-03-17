@@ -17,6 +17,29 @@ class SQLiteDatabaseService:
         self.conn = None
         self._create_tables()
 
+    def _parse_json_fields(self, prediction: Dict) -> Dict:
+        """
+        Parse les champs JSON d'une prédiction
+
+        Args:
+            prediction: Prédiction avec champs JSON en string
+
+        Returns:
+            Prédiction avec champs JSON parsés
+        """
+        # Champs à parser
+        json_fields = ['analysis_shots', 'analysis_corners', 'weather', 'rankings_used']
+
+        for field in json_fields:
+            if prediction.get(field) and isinstance(prediction[field], str):
+                try:
+                    prediction[field] = json.loads(prediction[field])
+                except:
+                    # Si le parsing échoue, laisser la valeur telle quelle
+                    pass
+
+        return prediction
+
     def _create_tables(self):
         """Crée les tables si elles n'existent pas"""
         conn = sqlite3.connect(self.db_path)
@@ -314,7 +337,15 @@ class SQLiteDatabaseService:
                 """, (limit,))
 
             rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+
+            # Parser les champs JSON pour chaque prédiction
+            predictions = []
+            for row in rows:
+                prediction = dict(row)
+                prediction = self._parse_json_fields(prediction)
+                predictions.append(prediction)
+
+            return predictions
 
         except Exception as e:
             print(f"[ERREUR] Récupération prédictions: {e}")
@@ -341,7 +372,14 @@ class SQLiteDatabaseService:
             """, (match_id,))
 
             row = cursor.fetchone()
-            return dict(row) if row else None
+            if not row:
+                return None
+
+            # Convertir en dict et parser les champs JSON
+            prediction = dict(row)
+            prediction = self._parse_json_fields(prediction)
+
+            return prediction
 
         except Exception as e:
             print(f"[ERREUR] Récupération prédiction: {e}")

@@ -158,12 +158,13 @@ def generate_prediction_for_match(match: Dict, predictor: DynamicPredictor, db: 
 
         # Extraire les prédictions
         predictions = result.get('predictions', {})
+        analysis = result.get('analysis', {})
         total_shots = predictions.get('total_shots', 0)
-        total_corners = predictions.get('total_corners', 0)
 
         print(f"  [OK] Prédiction générée:")
-        print(f"       Tirs: {total_shots}")
-        print(f"       Corners: {total_corners}")
+        print(f"       {home_team}: {predictions.get('home_team_shots')} tirs")
+        print(f"       {away_team}: {predictions.get('away_team_shots')} tirs")
+        print(f"       Total: {total_shots} tirs")
 
         # Sauvegarder dans la base de données
         match_id = f"{league_code}_{match_date.strftime('%Y%m%d')}_{home_team}_{away_team}".replace(' ', '_')
@@ -171,6 +172,7 @@ def generate_prediction_for_match(match: Dict, predictor: DynamicPredictor, db: 
         # Extraire les données de confiance et contexte
         confidence = result.get('confidence', {})
         context = result.get('context', {})
+        rankings_used = result.get('rankings_used', {})
 
         db.insert_prediction({
             'match_id': match_id,
@@ -180,30 +182,30 @@ def generate_prediction_for_match(match: Dict, predictor: DynamicPredictor, db: 
             'match_date': match_date,
             'shots_min': int(total_shots * 0.8),
             'shots_max': int(total_shots * 1.2),
-            'shots_confidence': confidence.get('overall', 0.0),
-            'corners_min': int(total_corners * 0.8),
-            'corners_max': int(total_corners * 1.2),
-            'corners_confidence': confidence.get('overall', 0.0),
-            'home_shots': predictions.get('home_shots'),
-            'away_shots': predictions.get('away_shots'),
-            'home_corners': predictions.get('home_corners'),
-            'away_corners': predictions.get('away_corners'),
-            'home_shots_min': predictions.get('home_shots_min'),
-            'home_shots_max': predictions.get('home_shots_max'),
-            'away_shots_min': predictions.get('away_shots_min'),
-            'away_shots_max': predictions.get('away_shots_max'),
-            'home_corners_min': predictions.get('home_corners_min'),
-            'home_corners_max': predictions.get('home_corners_max'),
-            'away_corners_min': predictions.get('away_corners_min'),
-            'away_corners_max': predictions.get('away_corners_max'),
-            'analysis_shots': predictions.get('shots_analysis'),
-            'analysis_corners': predictions.get('corners_analysis'),
-            'ai_reasoning_shots': predictions.get('ai_reasoning_shots'),
-            'ai_reasoning_corners': predictions.get('ai_reasoning_corners'),
-            'home_formation': context.get('home_formation'),
-            'away_formation': context.get('away_formation'),
+            'shots_confidence': confidence.get('shots_log_likelihood', 0.0),
+            'corners_min': 0,  # Plus utilisé
+            'corners_max': 0,  # Plus utilisé
+            'corners_confidence': 0.0,  # Plus utilisé
+            'home_shots': predictions.get('home_team_shots'),
+            'away_shots': predictions.get('away_team_shots'),
+            'home_corners': 0,  # Plus utilisé
+            'away_corners': 0,  # Plus utilisé
+            'home_shots_min': predictions.get('home_shots_range', {}).get('min'),
+            'home_shots_max': predictions.get('home_shots_range', {}).get('max'),
+            'away_shots_min': predictions.get('away_shots_range', {}).get('min'),
+            'away_shots_max': predictions.get('away_shots_range', {}).get('max'),
+            'home_corners_min': None,
+            'home_corners_max': None,
+            'away_corners_min': None,
+            'away_corners_max': None,
+            'analysis_shots': analysis,  # Toute l'analyse (Poisson + détails home/away)
+            'analysis_corners': None,  # Plus utilisé
+            'ai_reasoning_shots': predictions.get('ai_reasoning'),
+            'ai_reasoning_corners': None,  # Plus utilisé
+            'home_formation': context.get('adjustments', {}).get('home_formation') if context.get('adjustments') else None,
+            'away_formation': context.get('adjustments', {}).get('away_formation') if context.get('adjustments') else None,
             'weather': context.get('weather'),
-            'rankings_used': context.get('rankings')
+            'rankings_used': rankings_used
         })
 
         return {
