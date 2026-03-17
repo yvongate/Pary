@@ -223,6 +223,27 @@ export async function getFixturesByDate(
 }
 
 /**
+ * Récupère TOUTES les prédictions (historique + futures)
+ */
+export async function getAllPredictions(
+  league?: string,
+  limit: number = 50,
+  includePast: boolean = true
+): Promise<{ predictions: Prediction[]; count: number }> {
+  const params = new URLSearchParams();
+  if (league) params.append('league', league);
+  params.append('limit', limit.toString());
+  params.append('include_past', includePast.toString());
+
+  const response = await fetch(`${API_BASE_URL}/predictions/all?${params}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch all predictions: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Récupère les compositions (lineups) d'un match
  */
 export async function getLineups(
