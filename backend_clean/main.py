@@ -31,6 +31,8 @@ LEAGUES = {
     "SP1": {"name": "La Liga", "country": "Spain"},
     "I1": {"name": "Serie A", "country": "Italy"},
     "F1": {"name": "Ligue 1", "country": "France"},
+    "P1": {"name": "Primeira Liga", "country": "Portugal"},
+    "B1": {"name": "Jupiler Pro League", "country": "Belgium"},
 }
 
 # Mapping vers codes soccerstats.com
@@ -39,6 +41,8 @@ SOCCERSTATS_CODES = {
     "F1": "france",
     "SP1": "spain",
     "I1": "italy",
+    "P1": "portugal",
+    "B1": "belgium",
 }
 
 # Mapping 1: Nom frontend/API → Nom CSV
@@ -133,6 +137,44 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Roma': 'AS Roma',
     'Juventus': 'Juventus',
     'Napoli': 'Napoli',
+
+    # Primeira Liga (Portugal)
+    'Porto': 'FC Porto',
+    'Sp Braga': 'Sporting Braga',
+    'Sp Lisbon': 'Sporting CP',
+    'Estrela': 'Estrela Amadora',
+    'Benfica': 'Benfica',
+    'Guimaraes': 'Guimaraes',
+    'Casa Pia': 'Casa Pia',
+    'Arouca': 'Arouca',
+    'Estoril': 'Estoril',
+    'Famalicao': 'Famalicao',
+    'Gil Vicente': 'Gil Vicente',
+    'Moreirense': 'Moreirense',
+    'Nacional': 'Nacional',
+    'Rio Ave': 'Rio Ave',
+    'Santa Clara': 'Santa Clara',
+    'Tondela': 'Tondela',
+    'Alverca': 'Alverca',
+    'AVS': 'AVS',
+
+    # Jupiler Pro League (Belgique)
+    'St. Gilloise': 'Royale Union SG',
+    'St Truiden': 'Sint-Truiden',
+    'Standard': 'Standard Liege',
+    'Oud-Heverlee Leuven': 'OH Leuven',
+    'Genk': 'KRC Genk',
+    'Mechelen': 'KV Mechelen',
+    'RAAL La Louviere': 'La Louviere',
+    'Waregem': 'Zulte-Waregem',
+    'Anderlecht': 'Anderlecht',
+    'Antwerp': 'Antwerp',
+    'Cercle Brugge': 'Cercle Brugge',
+    'Charleroi': 'Charleroi',
+    'Club Brugge': 'Club Brugge',
+    'Dender': 'Dender',
+    'Gent': 'Gent',
+    'Westerlo': 'Westerlo',
 }
 
 def normalize_team_name(team_name: str) -> str:

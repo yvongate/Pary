@@ -15,7 +15,8 @@ RUE_DES_JOUEURS_LEAGUES = {
     'I1': 'https://www.ruedesjoueurs.com/pronostics/serie-a-899984.html',
     'F1': 'https://www.ruedesjoueurs.com/pronostics/ligue-1-900705.html',
     'F2': 'https://www.ruedesjoueurs.com/pronostics/ligue-2-900765.html',
-    'P1': 'https://www.ruedesjoueurs.com/pronostics/primeira-liga-nos-portugal-845530.html'
+    'P1': 'https://www.ruedesjoueurs.com/pronostics/primeira-liga-nos-portugal-845530.html',
+    'B1': 'https://www.ruedesjoueurs.com/pronostics/jupiler-pro-league-868627.html'
 }
 
 # Mapping noms de ligues
@@ -23,7 +24,9 @@ LEAGUE_NAMES = {
     'E0': 'Premier League',
     'SP1': 'Liga',
     'I1': 'Serie A',
-    'F1': 'Ligue 1'
+    'F1': 'Ligue 1',
+    'P1': 'Primeira Liga',
+    'B1': 'Jupiler Pro League'
 }
 
 
@@ -86,7 +89,64 @@ def normalize_team_name(name: str) -> str:
         'udinese': 'udinese',
         'genoa': 'genes',
         'verona': 'verone',
-        'hellas verona': 'verone'
+        'hellas verona': 'verone',
+
+        # Primeira Liga (Portugal)
+        'porto': 'porto',
+        'fc porto': 'porto',
+        'sp braga': 'braga',
+        'sporting braga': 'braga',
+        'sp lisbon': 'sporting',
+        'sporting cp': 'sporting',
+        'sporting lisbon': 'sporting',
+        'benfica': 'benfica',
+        'sl benfica': 'benfica',
+        'guimaraes': 'guimaraes',
+        'vitoria guimaraes': 'guimaraes',
+        'casa pia': 'casa pia',
+        'estrela': 'estrela amadora',
+        'estrela amadora': 'estrela amadora',
+        'gil vicente': 'gil vicente',
+        'arouca': 'arouca',
+        'estoril': 'estoril',
+        'famalicao': 'famalicao',
+        'moreirense': 'moreirense',
+        'nacional': 'nacional',
+        'rio ave': 'rio ave',
+        'santa clara': 'santa clara',
+        'tondela': 'tondela',
+        'alverca': 'alverca',
+        'avs': 'avs',
+
+        # Jupiler Pro League (Belgique)
+        'anderlecht': 'anderlecht',
+        'antwerp': 'antwerp',
+        'cercle brugge': 'cercle bruges',
+        'cercle bruges': 'cercle bruges',
+        'charleroi': 'charleroi',
+        'club brugge': 'club bruges',
+        'club bruges': 'club bruges',
+        'dender': 'dender',
+        'gent': 'gand',
+        'kaa gent': 'gand',
+        'genk': 'genk',
+        'krc genk': 'genk',
+        'mechelen': 'malines',
+        'kv mechelen': 'malines',
+        'oud-heverlee leuven': 'louvain',
+        'oh leuven': 'louvain',
+        'raal la louviere': 'la louviere',
+        'la louviere': 'la louviere',
+        'st truiden': 'saint-trond',
+        'sint-truiden': 'saint-trond',
+        'st. gilloise': 'union saint-gilloise',
+        'royale union sg': 'union saint-gilloise',
+        'union sg': 'union saint-gilloise',
+        'standard': 'standard liege',
+        'standard liege': 'standard liege',
+        'westerlo': 'westerlo',
+        'waregem': 'zulte waregem',
+        'zulte-waregem': 'zulte waregem'
     }
 
     for old, new in replacements.items():
