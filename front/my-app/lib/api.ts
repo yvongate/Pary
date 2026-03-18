@@ -82,6 +82,14 @@ export interface Fixture {
   status: string;
   home_score?: number;
   away_score?: number;
+  is_betting_match?: boolean;
+  betting_info?: {
+    is_betting_match: boolean;
+    big_team: string | null;
+    weak_team: string | null;
+    weak_team_location?: string;
+    reason: string | null;
+  };
 }
 
 export interface MatchDay {

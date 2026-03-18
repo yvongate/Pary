@@ -17,11 +17,7 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENWEATHER_API_KEY: str = os.getenv("OPENWEATHER_API_KEY", "")
     SERPAPI_KEY: str = os.getenv("SERPAPI_KEY", "")
-    FOOTBALL_DATA_API_TOKEN: str = os.getenv("FOOTBALL_DATA_API_TOKEN", "")
-    
-    # Base URLs
-    FOOTBALL_DATA_BASE_URL: str = os.getenv("FOOTBALL_DATA_BASE_URL", "https://api.football-data.org/v4")
-    
+
     # Database (Supabase)
     DATABASE_URL: str = (
         "postgresql://postgres:voicilemotdepassedepary"

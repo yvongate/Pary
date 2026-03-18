@@ -43,6 +43,7 @@ export default function MatchCalendar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<Fixture | null>(null);
+  const [showAllMatches, setShowAllMatches] = useState(false);
 
   // États pour modal de génération de prédiction
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
@@ -93,7 +94,10 @@ export default function MatchCalendar() {
     }
   };
 
-  const selectedMatches = matchDays.find(md => md.date === selectedDate)?.matches || [];
+  const allMatchesForDate = matchDays.find(md => md.date === selectedDate)?.matches || [];
+  const selectedMatches = showAllMatches
+    ? allMatchesForDate
+    : allMatchesForDate.filter(m => m.is_betting_match);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -180,7 +184,7 @@ export default function MatchCalendar() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {/* Filtre par championnat */}
           <select
             value={selectedLeague}
@@ -194,6 +198,18 @@ export default function MatchCalendar() {
               </option>
             ))}
           </select>
+
+          {/* Toggle matchs pertinents */}
+          <button
+            onClick={() => setShowAllMatches(!showAllMatches)}
+            className={`px-4 py-2 rounded-lg transition text-sm font-medium ${
+              showAllMatches
+                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+            }`}
+          >
+            {showAllMatches ? '📊 Voir matchs à parier' : '🎯 Matchs à parier uniquement'}
+          </button>
 
           <button
             onClick={loadFixtures}
@@ -209,6 +225,8 @@ export default function MatchCalendar() {
         {matchDays.map((matchDay) => {
           const past = isPast(matchDay.date);
           const today = isToday(matchDay.date);
+          const bettingMatchesCount = matchDay.matches.filter(m => m.is_betting_match).length;
+          const totalMatches = matchDay.matches.length;
 
           return (
             <button
@@ -229,8 +247,11 @@ export default function MatchCalendar() {
               )}
               <div className="text-xs uppercase tracking-wider">{formatDate(matchDay.date)}</div>
               <div className={`text-lg font-bold ${past ? 'text-gray-500' : ''}`}>
-                {matchDay.matches.length} matchs
+                {showAllMatches ? `${totalMatches} matchs` : `${bettingMatchesCount} à parier`}
               </div>
+              {!showAllMatches && bettingMatchesCount > 0 && (
+                <div className="text-[10px] text-purple-400">🎯 {bettingMatchesCount}/{totalMatches}</div>
+              )}
               {today && <div className="text-[10px] text-green-400">AUJOURD'HUI</div>}
               {past && !today && <div className="text-[10px] text-gray-600">PASSÉ</div>}
             </button>
@@ -248,55 +269,103 @@ export default function MatchCalendar() {
 
         {selectedMatches.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            Aucun match programmé ce jour
+            {showAllMatches
+              ? 'Aucun match programmé ce jour'
+              : (
+                <div>
+                  <p className="mb-2">Aucun match à parier ce jour</p>
+                  <button
+                    onClick={() => setShowAllMatches(true)}
+                    className="text-sm text-purple-400 hover:text-purple-300 underline"
+                  >
+                    Afficher tous les matchs
+                  </button>
+                </div>
+              )
+            }
           </div>
         ) : (
           <div className="divide-y divide-gray-800">
             {selectedMatches.map((match: Fixture) => (
-              <div
-                key={match.id}
-                onClick={() => handleMatchClick(match)}
-                className="p-4 hover:bg-gray-800/50 transition flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  {/* League Badge */}
-                  <div className={`${LEAGUE_COLORS[match.league] || 'bg-gray-500'} text-white text-xs px-2 py-1 rounded font-medium min-w-[100px] text-center`}>
-                    {match.league}
+              <div key={match.id} className={`${match.is_betting_match ? 'border-l-4 border-l-purple-500' : ''}`}>
+                <div
+                  onClick={() => handleMatchClick(match)}
+                  className="p-4 hover:bg-gray-800/50 transition flex items-center justify-between cursor-pointer"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    {/* League Badge */}
+                    <div className={`${LEAGUE_COLORS[match.league] || 'bg-gray-500'} text-white text-xs px-2 py-1 rounded font-medium min-w-[100px] text-center`}>
+                      {match.league}
+                    </div>
+
+                    {/* Betting Badge */}
+                    {match.is_betting_match && (
+                      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded font-bold">
+                        🎯 À PARIER
+                      </div>
+                    )}
+
+                    {/* Teams */}
+                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="font-medium">{match.home_team}</span>
+                        {match.betting_info?.big_team === match.home_team && (
+                          <span className="text-xs text-yellow-400">⭐</span>
+                        )}
+                        {match.betting_info?.weak_team === match.home_team && (
+                          <span className="text-xs text-purple-400">🎯</span>
+                        )}
+                      </div>
+
+                      <div className="text-center px-4">
+                        {match.status === 'FINISHED' && match.home_score !== null && match.away_score !== null ? (
+                          <span className="text-xl font-bold">
+                            {match.home_score} - {match.away_score}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">vs</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-1 justify-start sm:justify-end">
+                        <span className="font-medium">{match.away_team}</span>
+                        {match.betting_info?.big_team === match.away_team && (
+                          <span className="text-xs text-yellow-400">⭐</span>
+                        )}
+                        {match.betting_info?.weak_team === match.away_team && (
+                          <span className="text-xs text-purple-400">🎯</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Teams */}
-                  <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="font-medium">{match.home_team}</span>
-                    </div>
-
-                    <div className="text-center px-4">
-                      {match.status === 'FINISHED' && match.home_score !== null && match.away_score !== null ? (
-                        <span className="text-xl font-bold">
-                          {match.home_score} - {match.away_score}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500">vs</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-1 justify-start sm:justify-end">
-                      <span className="font-medium">{match.away_team}</span>
-                    </div>
+                  {/* Time / Status */}
+                  <div className="text-gray-400 text-sm ml-4 text-right">
+                    {match.status === 'FINISHED' ? (
+                      <span className="text-green-400 text-xs">Terminé</span>
+                    ) : (
+                      <div>
+                        <div>{formatTime(match.date, match.time)}</div>
+                        {match.time && <div className="text-xs text-gray-500">{match.time}</div>}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Time / Status */}
-                <div className="text-gray-400 text-sm ml-4 text-right">
-                  {match.status === 'FINISHED' ? (
-                    <span className="text-green-400 text-xs">Terminé</span>
-                  ) : (
-                    <div>
-                      <div>{formatTime(match.date, match.time)}</div>
-                      {match.time && <div className="text-xs text-gray-500">{match.time}</div>}
+                {/* Betting Info */}
+                {match.is_betting_match && match.betting_info && (
+                  <div className="px-4 pb-3 text-xs text-gray-400 bg-gray-900/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-400">⭐ Grand:</span>
+                      <span className="text-white">{match.betting_info.big_team}</span>
+                      <span className="mx-2 text-gray-600">|</span>
+                      <span className="text-purple-400">🎯 Équipe faible:</span>
+                      <span className="text-white">{match.betting_info.weak_team}</span>
+                      <span className="mx-2 text-gray-600">|</span>
+                      <span className="text-green-400">💡 Parier sur ≤8.5 tirs pour {match.betting_info.weak_team}</span>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

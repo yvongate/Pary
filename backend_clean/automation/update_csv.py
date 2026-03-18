@@ -19,6 +19,8 @@ CSV_URLS = {
     'F2': 'https://www.football-data.co.uk/mmz4281/2526/F2.csv',
     'D1': 'https://www.football-data.co.uk/mmz4281/2526/D1.csv',
     'P1': 'https://www.football-data.co.uk/mmz4281/2526/P1.csv',
+    'B1': 'https://www.football-data.co.uk/mmz4281/2526/B1.csv',  # Belgique
+    'T1': 'https://www.football-data.co.uk/mmz4281/2526/T1.csv',  # Turquie
     # Championnats supplémentaires
     'E2': 'https://www.football-data.co.uk/mmz4281/2526/E2.csv',
     'E3': 'https://www.football-data.co.uk/mmz4281/2526/E3.csv',

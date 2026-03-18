@@ -5,7 +5,6 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 from typing import Optional
-import utils.football_data_org as fd_api
 import scrapers.ruedesjoueurs_scraper
 import scrapers.ruedesjoueurs_finder
 import core.ai_preview_generator as ai_preview_generator
@@ -33,6 +32,7 @@ LEAGUES = {
     "F1": {"name": "Ligue 1", "country": "France"},
     "P1": {"name": "Primeira Liga", "country": "Portugal"},
     "B1": {"name": "Jupiler Pro League", "country": "Belgium"},
+    "T1": {"name": "Süper Lig", "country": "Turkey"},
 }
 
 # Mapping vers codes soccerstats.com
@@ -43,6 +43,7 @@ SOCCERSTATS_CODES = {
     "I1": "italy",
     "P1": "portugal",
     "B1": "belgium",
+    "T1": "turkey",
 }
 
 # Mapping 1: Nom frontend/API → Nom CSV
@@ -175,6 +176,26 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Dender': 'Dender',
     'Gent': 'Gent',
     'Westerlo': 'Westerlo',
+
+    # Süper Lig (Turquie)
+    'Goztep': 'Goztepe',
+    'Karagumruk': 'F. Karagumruk',
+    'Buyuksehyr': 'Basaksehir',
+    'Galatasaray': 'Galatasaray',
+    'Fenerbahce': 'Fenerbahce',
+    'Trabzonspor': 'Trabzonspor',
+    'Besiktas': 'Besiktas',
+    'Samsunspor': 'Samsunspor',
+    'Kocaelispor': 'Kocaelispor',
+    'Gaziantep': 'Gaziantep',
+    'Rizespor': 'Rizespor',
+    'Alanyaspor': 'Alanyaspor',
+    'Konyaspor': 'Konyaspor',
+    'Genclerbirligi': 'Genclerbirligi',
+    'Antalyaspor': 'Antalyaspor',
+    'Kasimpasa': 'Kasimpasa',
+    'Eyupspor': 'Eyupspor',
+    'Kayserispor': 'Kayserispor',
 }
 
 def normalize_team_name(team_name: str) -> str:
@@ -229,6 +250,62 @@ def load_fixtures() -> Optional[pd.DataFrame]:
     except Exception as e:
         print(f"Erreur lecture fixtures: {e}")
         return None
+
+def get_future_matches_from_csv(days_future: int = 14, league_code: Optional[str] = None):
+    """
+    Récupère les matchs à venir depuis fixtures.csv (football-data.co.uk)
+
+    Args:
+        days_future: Nombre de jours à venir
+        league_code: Code championnat (E0, SP1, etc.) ou None pour tous
+
+    Returns:
+        Liste de matchs au format standard
+    """
+    df = load_fixtures()
+    if df is None:
+        return []
+
+    today = datetime.now()
+    end_date = today + timedelta(days=days_future)
+
+    # Filtrer par date
+    mask = (df['Date'] >= today) & (df['Date'] <= end_date)
+    future_df = df[mask].copy()
+
+    # Filtrer par championnat si spécifié
+    if league_code:
+        future_df = future_df[future_df['Div'] == league_code]
+
+    # Convertir au format standard
+    matches = []
+    for _, row in future_df.iterrows():
+        league = row['Div']
+        league_name = LEAGUES.get(league, {}).get('name', league)
+
+        match_date = row['Date']
+        date_str = match_date.strftime('%Y-%m-%d') if pd.notna(match_date) else None
+        time_str = row.get('Time', None)
+
+        home_team = row['HomeTeam']
+        away_team = row['AwayTeam']
+
+        match_id = f"{league}_{match_date.strftime('%Y%m%d')}_{str(home_team).replace(' ', '')}"
+
+        matches.append({
+            "id": match_id,
+            "league_code": league,
+            "league": league_name,
+            "date": date_str,
+            "time": time_str,
+            "home_team": home_team,
+            "away_team": away_team,
+            "status": "SCHEDULED",
+            "home_score": None,
+            "away_score": None,
+        })
+
+    return matches
 
 def load_results(league_code: str) -> Optional[pd.DataFrame]:
     """Charge les rsultats d'un championnat"""
@@ -310,7 +387,7 @@ def get_fixtures(
     csv_matches = []
     df = load_fixtures()
     if df is not None:
-        SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1']
+        SUPPORTED_LEAGUES = ['E0', 'SP1', 'I1', 'F1', 'D1', 'P1', 'B1', 'T1']
         df = df[df['Div'].isin(SUPPORTED_LEAGUES)]
 
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -432,8 +509,8 @@ def get_calendar(
                 "status": "FINISHED",
             })
 
-    # Rcuprer les fixtures futurs (de l'API)
-    future_matches = fd_api.get_all_fixtures(days_future=days_future, league_code=league)
+    # Rcuprer les fixtures futurs (depuis fixtures.csv)
+    future_matches = get_future_matches_from_csv(days_future=days_future, league_code=league)
 
     # Combiner
     all_matches = past_matches + future_matches
@@ -460,6 +537,8 @@ def get_calendar_days(
     days_future: int = Query(7, description="Jours futurs  afficher"),
 ):
     """Calendrier group par jour - pour l'affichage du frontend"""
+    from services.betting_matcher import is_betting_match
+
     today = datetime.now()
 
     # Rcuprer les rsultats passs
@@ -477,21 +556,40 @@ def get_calendar_days(
         recent = df[mask].copy()
 
         for _, row in recent.iterrows():
+            home_team = row.get('HomeTeam')
+            away_team = row.get('AwayTeam')
+
+            # Vérifier si c'est un match pertinent pour les paris
+            betting_info = is_betting_match(home_team, away_team, league_code)
+
             past_matches.append({
-                "id": f"{league_code}_{row['Date'].strftime('%Y%m%d')}_{str(row.get('HomeTeam')).replace(' ', '')}",
+                "id": f"{league_code}_{row['Date'].strftime('%Y%m%d')}_{str(home_team).replace(' ', '')}",
                 "league_code": league_code,
                 "league": LEAGUES.get(league_code, {}).get('name', league_code),
                 "date": row['Date'].strftime('%Y-%m-%d') if pd.notna(row['Date']) else None,
                 "time": row.get('Time'),
-                "home_team": row.get('HomeTeam'),
-                "away_team": row.get('AwayTeam'),
+                "home_team": home_team,
+                "away_team": away_team,
                 "home_score": int(row['FTHG']) if pd.notna(row.get('FTHG')) else None,
                 "away_score": int(row['FTAG']) if pd.notna(row.get('FTAG')) else None,
                 "status": "FINISHED",
+                "is_betting_match": betting_info['is_betting_match'],
+                "betting_info": betting_info if betting_info['is_betting_match'] else None
             })
 
-    # Rcuprer les fixtures futurs
-    future_matches = fd_api.get_all_fixtures(days_future=days_future, league_code=league)
+    # Rcuprer les fixtures futurs (depuis fixtures.csv)
+    future_matches = get_future_matches_from_csv(days_future=days_future, league_code=league)
+
+    # Ajouter l'info de pari aux matchs futurs
+    for match in future_matches:
+        if match.get('league_code') and match.get('home_team') and match.get('away_team'):
+            betting_info = is_betting_match(
+                match['home_team'],
+                match['away_team'],
+                match['league_code']
+            )
+            match['is_betting_match'] = betting_info['is_betting_match']
+            match['betting_info'] = betting_info if betting_info['is_betting_match'] else None
 
     # Combiner
     all_matches = past_matches + future_matches
@@ -1214,8 +1312,8 @@ def predict_batch_matches(
     soccerstats_code = SOCCERSTATS_CODES.get(league, "england")
 
     try:
-        # Get upcoming fixtures
-        fixtures = fd_api.get_all_fixtures(days_future=days, league_code=league)
+        # Get upcoming fixtures (depuis fixtures.csv)
+        fixtures = get_future_matches_from_csv(days_future=days, league_code=league)
 
         if not fixtures:
             return {
@@ -2265,6 +2363,33 @@ def automation_status():
         }
 
     return status
+
+
+@app.get("/analysis/low-shots")
+def get_low_shots_analysis():
+    """
+    📊 ANALYSE - Tirs faibles contre les grands clubs
+
+    Analyse complète de tous les championnats:
+    - Stats globales (% équipes faibles qui font ≤10 tirs)
+    - Grands clubs les plus fiables (empêchent les tirs)
+    - 5 derniers du classement avec prédictions par grand
+    - Équipes très défensives (≤8.5 tirs)
+
+    Returns:
+        Analyse complète avec données pour chaque championnat
+    """
+    try:
+        from services.low_shots_analyzer import get_full_analysis
+
+        analysis = get_full_analysis()
+        return analysis
+
+    except Exception as e:
+        return {
+            'error': str(e),
+            'message': 'Erreur lors de l\'analyse des tirs faibles'
+        }
 
 
 if __name__ == "__main__":

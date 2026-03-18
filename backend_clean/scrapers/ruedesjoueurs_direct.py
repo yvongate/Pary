@@ -16,7 +16,8 @@ RUE_DES_JOUEURS_LEAGUES = {
     'F1': 'https://www.ruedesjoueurs.com/pronostics/ligue-1-900705.html',
     'F2': 'https://www.ruedesjoueurs.com/pronostics/ligue-2-900765.html',
     'P1': 'https://www.ruedesjoueurs.com/pronostics/primeira-liga-nos-portugal-845530.html',
-    'B1': 'https://www.ruedesjoueurs.com/pronostics/jupiler-pro-league-868627.html'
+    'B1': 'https://www.ruedesjoueurs.com/pronostics/jupiler-pro-league-868627.html',
+    'T1': 'https://www.ruedesjoueurs.com/pronostics/super-lig-turquie-856448.html'
 }
 
 # Mapping noms de ligues
@@ -26,7 +27,8 @@ LEAGUE_NAMES = {
     'I1': 'Serie A',
     'F1': 'Ligue 1',
     'P1': 'Primeira Liga',
-    'B1': 'Jupiler Pro League'
+    'B1': 'Jupiler Pro League',
+    'T1': 'Süper Lig'
 }
 
 
@@ -146,7 +148,32 @@ def normalize_team_name(name: str) -> str:
         'standard liege': 'standard liege',
         'westerlo': 'westerlo',
         'waregem': 'zulte waregem',
-        'zulte-waregem': 'zulte waregem'
+        'zulte-waregem': 'zulte waregem',
+
+        # Süper Lig (Turquie)
+        'galatasaray': 'galatasaray',
+        'fenerbahce': 'fenerbahce',
+        'trabzonspor': 'trabzonspor',
+        'besiktas': 'besiktas',
+        'goztep': 'goztepe',
+        'goztepe': 'goztepe',
+        'buyuksehyr': 'basaksehir',
+        'basaksehir': 'basaksehir',
+        'istanbul basaksehir': 'basaksehir',
+        'samsunspor': 'samsunspor',
+        'kocaelispor': 'kocaelispor',
+        'gaziantep': 'gaziantep',
+        'rizespor': 'rizespor',
+        'alanyaspor': 'alanyaspor',
+        'konyaspor': 'konyaspor',
+        'genclerbirligi': 'genclerbirligi',
+        'antalyaspor': 'antalyaspor',
+        'kasimpasa': 'kasimpasa',
+        'eyupspor': 'eyupspor',
+        'kayserispor': 'kayserispor',
+        'karagumruk': 'karagumruk',
+        'f. karagumruk': 'karagumruk',
+        'fatih karagumruk': 'karagumruk'
     }
 
     for old, new in replacements.items():
