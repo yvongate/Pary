@@ -306,8 +306,7 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       <div className="prose prose-sm max-w-none text-gray-700">
                         <ReactMarkdown>
                           {prediction?.ai_reasoning ||
-                            prediction?.ai_reasoning_fouls ||
-                            "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs et 11-14 fautes, Man City plus défensif avec 10-13 tirs et 10-13 fautes."}
+                            "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs, Man City plus défensif avec 10-13 tirs."}
                         </ReactMarkdown>
                       </div>
                     </div>
