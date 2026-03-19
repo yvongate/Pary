@@ -92,12 +92,15 @@ export default function GeneratePredictionModal({
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Erreur lors de la génération');
-      }
-
       const data = await response.json();
+
+      // Debug: Afficher la réponse complète du backend
+      console.log('Réponse backend /api/generate-prediction:', data);
+
+      if (!response.ok || data.error) {
+        console.error('Erreur backend:', data);
+        throw new Error(data.detail || data.error || 'Erreur lors de la génération');
+      }
 
       // Succès - Fermer le modal et notifier (passer les noms d'équipes)
       onSuccess(data.prediction_id, homeTeam.trim(), awayTeam.trim());
