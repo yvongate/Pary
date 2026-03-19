@@ -863,7 +863,7 @@ Analyse et ajuste maintenant:"""
             'max_rank': max_rank
         }
 
-    def predict_match(self, home_team: str, away_team: str, league_code: str = "england",
+    def predict_match(self, home_team: str, away_team: str, league_code: str = "E0",
                      match_date: Optional[datetime] = None) -> Dict:
         """
         PRDICTION DYNAMIQUE - Calcule tout en temps rel pour ce match spcifique
@@ -871,7 +871,7 @@ Analyse et ajuste maintenant:"""
         Args:
             home_team: quipe  domicile
             away_team: quipe  l'extrieur
-            league_code: england, spain, italy, france, germany
+            league_code: Code CSV (E0, SP1, T1, etc.) ou ancien format (england, spain, turkey, etc.)
             match_date: Date du match (pour la mto)
 
         Returns:
@@ -1477,16 +1477,35 @@ Analyse et ajuste maintenant:"""
 
         return home_shots * adjustment_factor, away_shots * adjustment_factor
 
-    def _get_league_csv_code(self, soccerstats_code: str) -> str:
-        """Convertit le code soccerstats vers le code CSV"""
+    def _get_league_csv_code(self, league_code: str) -> str:
+        """
+        Convertit ou valide le code ligue vers le code CSV
+
+        Accepte:
+        - Anciens codes soccerstats: "england", "spain", "turkey", etc.
+        - Nouveaux codes CSV: "E0", "SP1", "T1", etc.
+
+        Retourne toujours le code CSV correspondant
+        """
+        # Mapping des anciens codes vers CSV (backward compatibility)
         mapping = {
             'england': 'E0',
             'spain': 'SP1',
             'italy': 'I1',
             'france': 'F1',
-            'germany': 'D1'
+            'germany': 'D1',
+            'portugal': 'P1',
+            'belgium': 'B1',
+            'turkey': 'T1'
         }
-        return mapping.get(soccerstats_code, 'E0')
+
+        # Si c'est déjà un code CSV valide, le retourner tel quel
+        valid_csv_codes = ['E0', 'E1', 'E2', 'E3', 'SP1', 'I1', 'F1', 'F2', 'D1', 'P1', 'B1', 'T1']
+        if league_code in valid_csv_codes:
+            return league_code
+
+        # Sinon, essayer de le convertir depuis l'ancien format
+        return mapping.get(league_code.lower(), 'E0')
 
 
 # === EXEMPLE D'UTILISATION ===
