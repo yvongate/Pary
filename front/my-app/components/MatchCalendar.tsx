@@ -148,7 +148,7 @@ export default function MatchCalendar() {
 
     // Message console pour l'utilisateur
     console.log(`Prédiction générée ! ID: ${predictionId}`);
-    console.log(`Consulte-la sur http://localhost:3000/predictions`);
+    console.log(`Consulte-la sur ${window.location.origin}/predictions`);
   };
 
   if (loading) {
