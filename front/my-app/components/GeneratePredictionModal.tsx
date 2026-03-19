@@ -284,21 +284,15 @@ export default function GeneratePredictionModal({
                 onChange={(e) => setBookmakerProps(e.target.value)}
                 placeholder={`Exemples de propositions bookmaker:
 
-TOTAL TIRS/FAUTES:
+TOTAL TIRS:
 +24.5 tirs cote 1.85
 -24.5 tirs cote 2.10
-+22.5 fautes cote 1.95
--22.5 fautes cote 1.90
 
 HANDICAPS TIRS:
 PSG handicap tirs -5.5 cote 1.90
 Nantes handicap tirs +5.5 cote 1.95
 
-HANDICAPS FAUTES:
-Liverpool handicap fautes -2.5 cote 2.00
-Everton handicap fautes +2.5 cote 1.85
-
-Format court: +24.5t 1.85 ou PSG -5.5f @ 1.90`}
+Format court: +24.5t 1.85 ou PSG -5.5t @ 1.90`}
                 disabled={loading}
                 rows={10}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 font-mono text-sm text-gray-900 bg-white"

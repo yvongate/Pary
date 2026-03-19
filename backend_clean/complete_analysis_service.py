@@ -83,12 +83,6 @@ class CompleteAnalysisService:
             home_team, away_team, prediction_result, rdj_data
         )
 
-        # 4b. Analyser FAUTES (2 équipes + conclusion)
-        print("\n[ETAPE 4b] Analyse detaillee FAUTES...")
-        fouls_analysis = self._analyze_fouls(
-            home_team, away_team, prediction_result, rdj_data
-        )
-
         # 5. Calculer intervalles de confiance
         print("\n[ETAPE 5] Calcul des intervalles...")
         shots_interval = self._calculate_confidence_interval(
@@ -102,14 +96,6 @@ class CompleteAnalysisService:
             prediction_result['predictions'].get('away_corners', 0),
             prediction_result.get('confidence', {}).get('overall', 50) / 100
         )
-
-        # Calculer intervalle pour FAUTES (si disponible)
-        fouls_interval = None
-        if prediction_result['predictions'].get('total_fouls') is not None:
-            fouls_interval = self._calculate_confidence_interval(
-                prediction_result['predictions']['total_fouls'],
-                prediction_result.get('confidence', {}).get('shots_log_likelihood', 50) / 100
-            )
 
         # NOUVELLE ETAPE: VERIFICATION IA DEEP REASONING
         print("\n[ETAPE 6] Verification IA - Raisonnement profond...")
@@ -178,9 +164,6 @@ class CompleteAnalysisService:
             # Analyse CORNERS complte
             'corners_analysis': corners_analysis,
 
-            # Analyse FAUTES complète
-            'fouls_analysis': fouls_analysis if fouls_interval else None,
-
             # Prdictions finales
             'predictions': {
                 'shots': {
@@ -194,13 +177,7 @@ class CompleteAnalysisService:
                     'max': corners_interval['max'],
                     'confidence': prediction_result.get('confidence', {}).get('overall', 50) / 100,
                     'predicted_value': prediction_result['predictions'].get('total_corners', 0)
-                },
-                'fouls': {
-                    'min': fouls_interval['min'] if fouls_interval else None,
-                    'max': fouls_interval['max'] if fouls_interval else None,
-                    'confidence': prediction_result.get('confidence', {}).get('shots_log_likelihood', 50) / 100 if fouls_interval else None,
-                    'predicted_value': prediction_result['predictions'].get('total_fouls')
-                } if fouls_interval else None
+                }
             },
 
             # Verification IA avec raisonnement profond
@@ -537,135 +514,6 @@ class CompleteAnalysisService:
             f"Confiances: {home_analysis['confidence']:.1%} (dom.) et {away_analysis['confidence']:.1%} (ext.)."
         )
 
-    def _analyze_fouls(self, home_team: str, away_team: str, prediction: Dict, rdj_data: Dict = None) -> Dict:
-        """
-        Analyse FAUTES - 2 équipes + conclusion
-
-        Returns:
-            {
-                'home_team_analysis': {...},
-                'away_team_analysis': {...},
-                'conclusion': str
-            }
-        """
-        # Vérifier si les prédictions de fautes sont disponibles
-        if prediction['predictions'].get('home_team_fouls') is None:
-            return None
-
-        home_analysis = self._analyze_team_fouls(
-            home_team,
-            prediction.get('analysis', {}).get('home_team', {}),
-            prediction['predictions']['home_team_fouls'],
-            prediction.get('confidence', {}).get('shots_log_likelihood', 50) / 100,
-            is_home=True
-        )
-
-        away_analysis = self._analyze_team_fouls(
-            away_team,
-            prediction.get('analysis', {}).get('away_team', {}),
-            prediction['predictions']['away_team_fouls'],
-            prediction.get('confidence', {}).get('shots_log_likelihood', 50) / 100,
-            is_home=False
-        )
-
-        # Conclusion globale
-        total_fouls = prediction['predictions']['total_fouls']
-        conclusion = self._generate_fouls_conclusion(
-            home_team, away_team, home_analysis, away_analysis, total_fouls
-        )
-
-        return {
-            'home_team_analysis': home_analysis,
-            'away_team_analysis': away_analysis,
-            'conclusion': conclusion
-        }
-
-    def _analyze_team_fouls(self, team_name: str, team_analysis: Dict,
-                           predicted_fouls: float, confidence: float,
-                           is_home: bool) -> Dict:
-        """
-        Analyse FAUTES pour UNE équipe
-
-        Returns:
-            {
-                'team': str,
-                'predicted_fouls': float,
-                'confidence': float,
-                'steps': [...],
-                'conclusion': str
-            }
-        """
-        matches_count = team_analysis.get('matches_analyzed', 0) if team_analysis else 0
-
-        steps = [
-            {
-                'step': 1,
-                'action': f"Chargement historique {team_name}",
-                'result': f"{matches_count} matchs analysés"
-            },
-            {
-                'step': 2,
-                'action': "Analyse corrélation fautes/défense adverse",
-                'result': "Modèle de Poisson bidirectionnel"
-            },
-            {
-                'step': 3,
-                'action': "Récupération rang défensif adversaire",
-                'result': "Analyse des classements actuels"
-            },
-            {
-                'step': 4,
-                'action': "Calcul prédiction brute",
-                'result': f"~{predicted_fouls:.1f} fautes prédites"
-            },
-            {
-                'step': 5,
-                'action': "Évaluation confiance",
-                'result': f"Confiance: {confidence:.1%}"
-            }
-        ]
-
-        location = " à domicile" if is_home else " à l'extérieur"
-
-        # Créer une analyse DÉTAILLÉE match-par-match
-        history = team_analysis.get('match_history', [])
-        detailed_analysis = self._create_detailed_match_analysis(history, 'fouls') if history else "Historique non disponible"
-
-        conclusion = (
-            f"{team_name} {location} - Analyse détaillée:\n"
-            f"{detailed_analysis}\n"
-            f"Prédiction finale: {predicted_fouls:.1f} fautes (confiance {confidence:.1%})"
-        )
-
-        return {
-            'team': team_name,
-            'predicted_fouls': round(predicted_fouls, 1),
-            'confidence': round(confidence, 3),
-            'location': location,
-            'steps': steps,
-            'conclusion': conclusion
-        }
-
-    def _generate_fouls_conclusion(self, home_team: str, away_team: str,
-                                   home_analysis: Dict, away_analysis: Dict,
-                                   total_fouls: float) -> str:
-        """Génère la conclusion globale pour les FAUTES"""
-        home_fouls = home_analysis['predicted_fouls']
-        away_fouls = away_analysis['predicted_fouls']
-
-        if total_fouls > 26:
-            intensity = "Match très engagé physiquement"
-        elif total_fouls > 22:
-            intensity = "Nombre normal de fautes"
-        else:
-            intensity = "Match plutôt propre"
-
-        return (
-            f"Au total, environ {total_fouls:.0f} fautes sont attendues dans ce match. "
-            f"{intensity}: {home_fouls:.1f} pour {home_team} et {away_fouls:.1f} pour {away_team}. "
-            f"Confiances: {home_analysis['confidence']:.1%} (dom.) et {away_analysis['confidence']:.1%} (ext.)."
-        )
-
     def _calculate_confidence_interval(self, predicted_value: float, confidence: float) -> Dict:
         """
         Calcule l'intervalle de confiance (min/max)
@@ -784,12 +632,5 @@ if __name__ == "__main__":
         print(f"  Min: {result['predictions']['corners']['min']}")
         print(f"  Max: {result['predictions']['corners']['max']}")
         print(f"  Confiance: {result['predictions']['corners']['confidence']:.1%}")
-
-        # Afficher résultats fautes
-        if result['predictions'].get('fouls'):
-            print("\n[FAUTES]")
-            print(f"  Min: {result['predictions']['fouls']['min']}")
-            print(f"  Max: {result['predictions']['fouls']['max']}")
-            print(f"  Confiance: {result['predictions']['fouls']['confidence']:.1%}")
 
         print("\n" + "=" * 70)

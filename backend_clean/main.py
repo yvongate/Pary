@@ -1526,20 +1526,8 @@ def get_upcoming_predictions(
                     'away_team_message': f"{pred['away_team']}: {pred.get('away_shots', 'N/A')} tirs" if pred.get('away_shots') else None,
                 },
 
-                # Prdictions FAUTES
-                'fouls': {
-                    'min': pred.get('fouls_min'),
-                    'max': pred.get('fouls_max'),
-                    'confidence': float(pred.get('fouls_confidence', 0)) if pred.get('fouls_confidence') else None,
-                    'message_min': f"Il y aura PLUS de {pred.get('fouls_min')} fautes" if pred.get('fouls_min') else None,
-                    'message_max': f"Il y aura MOINS de {pred.get('fouls_max')} fautes" if pred.get('fouls_max') else None,
-                    # Messages par équipe (Méthode 1 - Poisson + IA Tactique)
-                    'home_team_message': f"{pred['home_team']}: {pred.get('home_fouls', 'N/A')} fautes" if pred.get('home_fouls') else None,
-                    'away_team_message': f"{pred['away_team']}: {pred.get('away_fouls', 'N/A')} fautes" if pred.get('away_fouls') else None,
-                } if pred.get('fouls_min') else None,
-
-                # Analyses IA (prendre seulement ai_reasoning_shots pour éviter duplication)
-                'ai_reasoning': pred.get('ai_reasoning_shots') or pred.get('ai_reasoning_fouls'),
+                # Analyses IA
+                'ai_reasoning': pred.get('ai_reasoning_shots'),
 
                 # Formations
                 'formations': {
@@ -1616,21 +1604,15 @@ def get_prediction_detail(match_id: str):
             'league_name': LEAGUES.get(prediction['league_code'], {}).get('name', prediction['league_code']),
             'match_date': match_date,
 
-            # Tirs/Fautes par équipe (NOUVEAU - pour le modal)
+            # Tirs par équipe (NOUVEAU - pour le modal)
             'home_shots': prediction.get('home_shots'),
             'away_shots': prediction.get('away_shots'),
-            'home_fouls': prediction.get('home_fouls'),
-            'away_fouls': prediction.get('away_fouls'),
 
             # Fourchettes par équipe (NOUVEAU - pour IA Deep Reasoning)
             'home_shots_min': prediction.get('home_shots_min'),
             'home_shots_max': prediction.get('home_shots_max'),
             'away_shots_min': prediction.get('away_shots_min'),
             'away_shots_max': prediction.get('away_shots_max'),
-            'home_fouls_min': prediction.get('home_fouls_min'),
-            'home_fouls_max': prediction.get('home_fouls_max'),
-            'away_fouls_min': prediction.get('away_fouls_min'),
-            'away_fouls_max': prediction.get('away_fouls_max'),
 
             # Prdictions TIRS (totaux)
             'shots': {
@@ -1643,19 +1625,8 @@ def get_prediction_detail(match_id: str):
                 'ai_reasoning': prediction.get('ai_reasoning_shots')
             },
 
-            # Prdictions FAUTES (totaux)
-            'fouls': {
-                'min': prediction.get('fouls_min'),
-                'max': prediction.get('fouls_max'),
-                'confidence': float(prediction.get('fouls_confidence', 0)) if prediction.get('fouls_confidence') else None,
-                'message_min': f"Il y aura PLUS de {prediction.get('fouls_min')} fautes" if prediction.get('fouls_min') else None,
-                'message_max': f"Il y aura MOINS de {prediction.get('fouls_max')} fautes" if prediction.get('fouls_max') else None,
-                'analysis': prediction.get('analysis_fouls'),  # Dtails complets
-                'ai_reasoning': prediction.get('ai_reasoning_fouls')
-            } if prediction.get('fouls_min') else None,
-
             # Analyse IA globale (pour génération manuelle)
-            'ai_reasoning': prediction.get('ai_reasoning_shots') or prediction.get('ai_reasoning_fouls'),
+            'ai_reasoning': prediction.get('ai_reasoning_shots'),
 
             # Contexte
             'formations': {

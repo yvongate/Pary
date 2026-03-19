@@ -101,49 +101,6 @@ export default function PredictionCard({ prediction, onClick }: PredictionCardPr
 
       </div>
 
-      {/* Prédictions FAUTES */}
-      <div className="bg-yellow-50 rounded-lg p-4 mb-4">
-        <div className="flex items-center mb-2">
-          <span className="text-2xl mr-2">🟡</span>
-          <h3 className="font-bold text-yellow-900">FAUTES</h3>
-        </div>
-
-        <div className="space-y-2 text-sm">
-          {/* Par équipe */}
-          {prediction.fouls.home_team_message && (
-            <div className="text-gray-700 font-medium">
-              {prediction.fouls.home_team_message}
-            </div>
-          )}
-          {prediction.fouls.away_team_message && (
-            <div className="text-gray-700 font-medium">
-              {prediction.fouls.away_team_message}
-            </div>
-          )}
-
-          {/* Total */}
-          <div className="pt-2 border-t border-yellow-200 space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-700">{prediction.fouls.message_min}</span>
-              <span className="font-semibold text-green-600">{prediction.fouls.min}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-700">{prediction.fouls.message_max}</span>
-              <span className="font-semibold text-red-600">{prediction.fouls.max}</span>
-            </div>
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-yellow-200">
-            <span className="text-xs text-gray-600">
-              Confiance: <span className="font-semibold text-yellow-700">
-                {(prediction.fouls.confidence * 100).toFixed(0)}%
-              </span>
-            </span>
-          </div>
-        </div>
-
-      </div>
-
       {/* Analyse IA Deep Reasoning (affichée UNE SEULE fois) */}
       {prediction.ai_reasoning && (
         <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-purple-500">

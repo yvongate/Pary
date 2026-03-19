@@ -28,7 +28,7 @@ class SQLiteDatabaseService:
             Prédiction avec champs JSON parsés
         """
         # Champs à parser
-        json_fields = ['analysis_shots', 'analysis_corners', 'analysis_fouls', 'weather', 'rankings_used']
+        json_fields = ['analysis_shots', 'analysis_corners', 'weather', 'rankings_used']
 
         for field in json_fields:
             if prediction.get(field) and isinstance(prediction[field], str):
@@ -99,17 +99,6 @@ class SQLiteDatabaseService:
             ("home_corners_max", "INTEGER"),
             ("away_corners_min", "INTEGER"),
             ("away_corners_max", "INTEGER"),
-            ("home_fouls", "REAL"),
-            ("away_fouls", "REAL"),
-            ("home_fouls_min", "INTEGER"),
-            ("home_fouls_max", "INTEGER"),
-            ("away_fouls_min", "INTEGER"),
-            ("away_fouls_max", "INTEGER"),
-            ("fouls_min", "INTEGER"),
-            ("fouls_max", "INTEGER"),
-            ("fouls_confidence", "REAL"),
-            ("analysis_fouls", "TEXT"),
-            ("ai_reasoning_fouls", "TEXT"),
         ]
 
         for column_name, column_type in new_columns:
@@ -228,23 +217,19 @@ class SQLiteDatabaseService:
             rankings_str = json.dumps(prediction.get('rankings_used')) if prediction.get('rankings_used') else None
             analysis_shots_str = json.dumps(prediction.get('analysis_shots')) if prediction.get('analysis_shots') else None
             analysis_corners_str = json.dumps(prediction.get('analysis_corners')) if prediction.get('analysis_corners') else None
-            analysis_fouls_str = json.dumps(prediction.get('analysis_fouls')) if prediction.get('analysis_fouls') else None
 
             cursor.execute("""
                 INSERT INTO match_predictions (
                     match_id, home_team, away_team, league_code, match_date,
                     shots_min, shots_max, shots_confidence,
                     corners_min, corners_max, corners_confidence,
-                    fouls_min, fouls_max, fouls_confidence,
                     home_shots, away_shots, home_corners, away_corners,
-                    home_fouls, away_fouls,
                     home_shots_min, home_shots_max, away_shots_min, away_shots_max,
                     home_corners_min, home_corners_max, away_corners_min, away_corners_max,
-                    home_fouls_min, home_fouls_max, away_fouls_min, away_fouls_max,
-                    analysis_shots, analysis_corners, analysis_fouls,
-                    ai_reasoning_shots, ai_reasoning_corners, ai_reasoning_fouls,
+                    analysis_shots, analysis_corners,
+                    ai_reasoning_shots, ai_reasoning_corners,
                     home_formation, away_formation, weather, rankings_used
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(match_id) DO UPDATE SET
                     home_team = excluded.home_team,
                     away_team = excluded.away_team,
@@ -256,15 +241,10 @@ class SQLiteDatabaseService:
                     corners_min = excluded.corners_min,
                     corners_max = excluded.corners_max,
                     corners_confidence = excluded.corners_confidence,
-                    fouls_min = excluded.fouls_min,
-                    fouls_max = excluded.fouls_max,
-                    fouls_confidence = excluded.fouls_confidence,
                     home_shots = excluded.home_shots,
                     away_shots = excluded.away_shots,
                     home_corners = excluded.home_corners,
                     away_corners = excluded.away_corners,
-                    home_fouls = excluded.home_fouls,
-                    away_fouls = excluded.away_fouls,
                     home_shots_min = excluded.home_shots_min,
                     home_shots_max = excluded.home_shots_max,
                     away_shots_min = excluded.away_shots_min,
@@ -273,16 +253,10 @@ class SQLiteDatabaseService:
                     home_corners_max = excluded.home_corners_max,
                     away_corners_min = excluded.away_corners_min,
                     away_corners_max = excluded.away_corners_max,
-                    home_fouls_min = excluded.home_fouls_min,
-                    home_fouls_max = excluded.home_fouls_max,
-                    away_fouls_min = excluded.away_fouls_min,
-                    away_fouls_max = excluded.away_fouls_max,
                     analysis_shots = excluded.analysis_shots,
                     analysis_corners = excluded.analysis_corners,
-                    analysis_fouls = excluded.analysis_fouls,
                     ai_reasoning_shots = excluded.ai_reasoning_shots,
                     ai_reasoning_corners = excluded.ai_reasoning_corners,
-                    ai_reasoning_fouls = excluded.ai_reasoning_fouls,
                     home_formation = excluded.home_formation,
                     away_formation = excluded.away_formation,
                     weather = excluded.weather,
@@ -300,15 +274,10 @@ class SQLiteDatabaseService:
                 prediction['corners_min'],
                 prediction['corners_max'],
                 prediction['corners_confidence'],
-                prediction.get('fouls_min'),
-                prediction.get('fouls_max'),
-                prediction.get('fouls_confidence'),
                 prediction.get('home_shots'),
                 prediction.get('away_shots'),
                 prediction.get('home_corners'),
                 prediction.get('away_corners'),
-                prediction.get('home_fouls'),
-                prediction.get('away_fouls'),
                 prediction.get('home_shots_min'),
                 prediction.get('home_shots_max'),
                 prediction.get('away_shots_min'),
@@ -317,16 +286,10 @@ class SQLiteDatabaseService:
                 prediction.get('home_corners_max'),
                 prediction.get('away_corners_min'),
                 prediction.get('away_corners_max'),
-                prediction.get('home_fouls_min'),
-                prediction.get('home_fouls_max'),
-                prediction.get('away_fouls_min'),
-                prediction.get('away_fouls_max'),
                 analysis_shots_str,
                 analysis_corners_str,
-                analysis_fouls_str,
                 prediction.get('ai_reasoning_shots'),
                 prediction.get('ai_reasoning_corners'),
-                prediction.get('ai_reasoning_fouls'),
                 prediction.get('home_formation'),
                 prediction.get('away_formation'),
                 weather_str,

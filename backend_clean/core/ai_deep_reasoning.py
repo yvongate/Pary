@@ -35,8 +35,8 @@ class DeepReasoningAnalyzer:
                 'away_formation': str,
                 'home_players': List[str],
                 'away_players': List[str],
-                'home_stats': {'avg_shots': float, 'avg_fouls': float},
-                'away_stats': {'avg_shots': float, 'avg_fouls': float},
+                'home_stats': {'avg_shots': float},
+                'away_stats': {'avg_shots': float},
                 'league': str,
                 'match_date': str,
                 'bookmaker_propositions': str (optionnel, texte brut)
@@ -45,7 +45,6 @@ class DeepReasoningAnalyzer:
         Returns:
             {
                 'shots_range': {'min': int, 'max': int},
-                'fouls_range': {'min': int, 'max': int},
                 'reasoning': str,
                 'best_value_bet': str (optionnel, si propositions fournies),
                 'best_balanced_bet': str (optionnel, si propositions fournies)
@@ -79,11 +78,9 @@ STATISTIQUES HISTORIQUES (BASELINE):
 
 {home_team}:
   - Moyenne tirs: {home_stats.get('avg_shots', 0):.1f} tirs/match
-  - Moyenne fautes: {home_stats.get('avg_fouls', 0):.1f} fautes/match
 
 {away_team}:
   - Moyenne tirs: {away_stats.get('avg_shots', 0):.1f} tirs/match
-  - Moyenne fautes: {away_stats.get('avg_fouls', 0):.1f} fautes/match
 
 """
 
@@ -139,37 +136,7 @@ RECOMMANDATIONS FINALES TIRS:
 🔥 Value Bet: Handicap "PSG tirs -7.5 @ 2.80" (EV +35%)
 ⚖️ Balanced Bet: Total "+25.5 tirs @ 1.85" (prob 78%, cote décente)
 
-=== FAUTES ===
-
-TOTAUX FAUTES:
-Proposition F: "+23.5 fautes @ 2.10"
-→ EV: +25%, Probabilité: 72%, Cote: 2.10
-→ Type: VALUE BET candidat
-
-Proposition G: "+21.5 fautes @ 1.75"
-→ EV: +12%, Probabilité: 80%, Cote: 1.75
-→ Type: BALANCED BET candidat ✅
-
-Proposition H: "+19.5 fautes @ 1.45"
-→ EV: -5%, Probabilité: 88%, Cote: 1.45
-→ Type: REJETE (cote trop faible <1.60) ❌
-
-HANDICAPS FAUTES:
-Proposition I: "PSG handicap fautes -2.5 @ 2.20"
-→ EV: +28%, Probabilité: 68%, Cote: 2.20
-→ Type: MEILLEUR VALUE BET (EV maximal) 🔥
-
-Proposition J: "PSG handicap fautes -1.5 @ 1.80"
-→ EV: +15%, Probabilité: 75%, Cote: 1.80
-→ Type: Autre BALANCED BET candidat
-
-RECOMMANDATIONS FINALES FAUTES:
-🔥 Value Bet: Handicap "PSG fautes -2.5 @ 2.20" (EV +28%)
-⚖️ Balanced Bet: Total "+21.5 fautes @ 1.75" (prob 80%, cote décente)
-
-→ Les 2 recommandations peuvent être de types différents!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. TYPES DE PROPOSITIONS A ANALYSER:
 
@@ -183,17 +150,6 @@ RECOMMANDATIONS FINALES FAUTES:
       - Handicap tirs PSG -5.5: PSG_tirs - Adversaire_tirs >= 6
       - Exemple: PSG 18 tirs, Nantes 7 tirs → Ecart +11 ✅ Gagne handicap -5.5
       - Exemple: PSG 15 tirs, Nantes 10 tirs → Ecart +5 ❌ Perd handicap -5.5
-
-   C) TOTAUX FAUTES (Over/Under):
-      - "+22.5 fautes @ 1.80" = Plus de 22.5 fautes TOTAL match
-
-   D) HANDICAPS FAUTES:
-      - "PSG handicap fautes -2.5 @ 2.00" = PSG doit faire 3 fautes DE PLUS que adversaire
-
-      CALCUL HANDICAP FAUTES:
-      - Handicap fautes PSG -2.5: PSG_fautes - Adversaire_fautes >= 3
-      - Exemple: PSG 14 fautes, Nantes 9 fautes → Ecart +5 ✅ Gagne handicap -2.5
-      - Exemple: PSG 12 fautes, Nantes 10 fautes → Ecart +2 ❌ Perd handicap -2.5
 
 2. Pour CHAQUE proposition, calcule:
 
@@ -209,15 +165,6 @@ RECOMMANDATIONS FINALES FAUTES:
       - Exemple: "PSG -9.5 tirs" → ta prédiction = PSG 20 tirs, Nantes 8 tirs
         → Écart prévu = +12 tirs → Dépasse -9.5 de peu → probabilité 55%
 
-      POUR TOTAUX FAUTES:
-      - Exemple: "+22.5 fautes" → ta prédiction = 25 fautes total → probabilité 75%
-
-      POUR HANDICAPS FAUTES:
-      - Exemple: "PSG -2.5 fautes" → ta prédiction = PSG 13 fautes, Nantes 10 fautes
-        → Écart prévu = +3 fautes → Dépasse -2.5 → probabilité 70%
-      - Exemple: "PSG -4.5 fautes" → ta prédiction = PSG 13 fautes, Nantes 10 fautes
-        → Écart prévu = +3 fautes → Ne dépasse pas -4.5 → probabilité 40%
-
    B) PROBABILITÉ IMPLICITE (marché):
       - Probabilite implicite = 1 / cote
       - Exemple: cote 1.85 = 1/1.85 = 54%
@@ -228,13 +175,12 @@ RECOMMANDATIONS FINALES FAUTES:
       - EV 10-25%: VALUE MODEREE
       - EV < 10%: PAS DE VALUE
 
-3. Identifie les 2 MEILLEURS PARIS pour CHAQUE catégorie (TIRS + FAUTES):
+3. Identifie les 2 MEILLEURS PARIS pour les TIRS:
 
    ⚠️ IMPORTANT: Tu dois analyser et recommander des paris pour:
    - TIRS (totaux + handicaps)
-   - FAUTES (totaux + handicaps)
 
-   Pour chaque catégorie (TIRS et FAUTES), identifie 2 paris:
+   Pour TIRS, identifie 2 paris:
    1. MEILLEUR VALUE BET (EV maximal)
    2. BEST BALANCED BET (sweet spot)
 
@@ -243,27 +189,19 @@ RECOMMANDATIONS FINALES FAUTES:
    - 1 total tirs + 1 handicap tirs
    - 2 handicaps tirs différents
 
-   Tes recommandations pour FAUTES peuvent être:
-   - 2 totaux fautes différents
-   - 1 total fautes + 1 handicap fautes
-   - 2 handicaps fautes différents
+   Choisis le MEILLEUR pari de chaque type!
 
-   Choisis le MEILLEUR pari de chaque type pour chaque catégorie!
-
-   A) MEILLEUR VALUE BET (pour TIRS et FAUTES séparément):
-      - Cherche le plus grand EV positif (parmi totaux ET handicaps de chaque catégorie)
+   A) MEILLEUR VALUE BET pour TIRS:
+      - Cherche le plus grand EV positif (parmi totaux ET handicaps)
       - Focus: Rentabilité long terme
       - Accepte probabilité moyenne (60-70%) si excellente cote
       - Exemples TIRS:
         * Total: "+27.5 tirs @ 2.50" (EV +30%, proba 65%)
         * Handicap: "PSG tirs -6.5 @ 2.20" (EV +28%, proba 68%)
-      - Exemples FAUTES:
-        * Total: "+23.5 fautes @ 2.30" (EV +26%, proba 67%)
-        * Handicap: "PSG fautes -2.5 @ 2.10" (EV +24%, proba 70%)
-      → Choisis celui avec le MEILLEUR EV pour TIRS, et le MEILLEUR EV pour FAUTES!
+      → Choisis celui avec le MEILLEUR EV pour TIRS!
 
-   B) BEST BALANCED BET (Sweet Spot - pour TIRS et FAUTES séparément):
-      - Cherche le MEILLEUR COMPROMIS (parmi totaux ET handicaps de chaque catégorie)
+   B) BEST BALANCED BET (Sweet Spot) pour TIRS:
+      - Cherche le MEILLEUR COMPROMIS (parmi totaux ET handicaps)
       - Critères OBLIGATOIRES:
         * Probabilité > 70% (bonne sécurité)
         * Cote > 1.60 (rentabilité décente)
@@ -272,10 +210,7 @@ RECOMMANDATIONS FINALES FAUTES:
       - Exemples TIRS:
         * Total: "+25.5 tirs @ 1.85" (EV +15%, proba 78%)
         * Handicap: "PSG tirs -4.5 @ 1.75" (EV +12%, proba 76%)
-      - Exemples FAUTES:
-        * Total: "+21.5 fautes @ 1.75" (EV +12%, proba 80%)
-        * Handicap: "PSG fautes -1.5 @ 1.70" (EV +10%, proba 78%)
-      → Choisis celui avec le MEILLEUR compromis pour TIRS, et le MEILLEUR compromis pour FAUTES!
+      → Choisis celui avec le MEILLEUR compromis pour TIRS!
 
       NOTE IMPORTANTE: NE PAS recommander de cotes trop faibles (<1.60)!
       Si toutes les propositions probables ont cotes <1.60, indique:
@@ -334,8 +269,8 @@ ETAPE 2: PREDICTION COMPLETE (TA propre analyse, INDEPENDANTE du marché!)
 
 Basé sur:
 1. Stats historiques:
-   - {home_team}: {home_stats.get('avg_shots', 0):.1f} tirs, {home_stats.get('avg_fouls', 0):.1f} fautes
-   - {away_team}: {away_stats.get('avg_shots', 0):.1f} tirs, {away_stats.get('avg_fouls', 0):.1f} fautes
+   - {home_team}: {home_stats.get('avg_shots', 0):.1f} tirs
+   - {away_team}: {away_stats.get('avg_shots', 0):.1f} tirs
 2. Analyse tactique formations (étape 1)
 3. Contexte du match
 
@@ -343,17 +278,13 @@ CALCULE (sans regarder les cotes bookmaker):
 
 {home_team} prévu:
 - Tirs: [X] (justifie avec formation + stats)
-- Fautes: [A] (justifie avec style de jeu + historique)
 
 {away_team} prévu:
 - Tirs: [Z] (justifie avec formation + stats)
-- Fautes: [B] (justifie avec style de jeu + historique)
 
 TOTAUX MATCH prévus:
 - Tirs total: [X + Z]
 - Écart tirs: {home_team} vs {away_team} = [X - Z]
-- Fautes total: [A + B]
-- Écart fautes: {home_team} vs {away_team} = [A - B]
 
 ⚠️ CHECKPOINT: As-tu fait TA propre prédiction AVANT de regarder les cotes? OUI/NON
 Si NON, recommence l'étape 2!
@@ -380,8 +311,6 @@ A) Convertis la cote → probabilite implicite
 B) Calcule TA probabilite (basée sur TON analyse étape 2, PAS sur les cotes!)
    - Si proposition "+24.5 tirs" et ta prédiction est 28 tirs total
    - Ta probabilité réelle = Très élevée (ex: 75%)
-   - Si proposition "+22.5 fautes" et ta prédiction est 25 fautes total
-   - Ta probabilité réelle = Élevée (ex: 72%)
 
 C) Compare les 2 probabilités:
    - Proba implicite marché: 54% (1/1.85)
@@ -411,20 +340,6 @@ Pourquoi le marché se trompe?
 → "Le bookmaker n'a pas vu que PSG joue en 4-3-3 ultra-offensif
    avec Mbappé-Neymar-Dembélé contre un bloc bas 5-4-1.
    Les compositions confirment une domination PSG massive."
-
-FAUTES:
-Proposition: "+22.5 fautes @ 1.80"
-- Proba implicite marché: 1/1.80 = 56%
-- TA prédiction (étape 2): 25 fautes total
-- TA proba réelle "+22.5": 72% (25 > 22.5 probable)
-- EV: (72/56) - 1 = +29% 🔥 FORTE VALUE!
-
-JUSTIFICATION DE L'ÉCART FAUTES:
-Pourquoi le marché se trompe?
-→ "Le bookmaker sous-estime l'intensité du derby. PSG à domicile
-   sera agressif avec une équipe engagée physiquement, tandis que
-   Nantes devra défendre avec beaucoup de contacts pour compenser
-   la différence technique."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -552,13 +467,12 @@ Recommandation: NE PAS PARIER sur ce match."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ETAPE 4: Recommandations finales (TIRS + FAUTES)
+ETAPE 4: Recommandations finales (TIRS)
 
-⚠️ CRITIQUE: Tu dois analyser et recommander pour 2 CATÉGORIES:
+⚠️ CRITIQUE: Tu dois analyser et recommander pour:
 1. TIRS (totaux + handicaps)
-2. FAUTES (totaux + handicaps)
 
-Pour CHAQUE catégorie, identifie 2 TYPES de paris distincts:
+Identifie 2 TYPES de paris distincts:
 
 A) MEILLEUR VALUE BET:
    - Cherche le plus grand EV positif (> 10%) dans cette catégorie
@@ -589,12 +503,7 @@ TIRS:
 - Value: Handicap "PSG tirs -7.5 @ 2.80", Balanced: Total "+25.5 tirs @ 1.85"
 - Value: Handicap "PSG tirs -7.5 @ 2.80", Balanced: Handicap "PSG tirs -5.5 @ 1.90"
 
-FAUTES:
-- Value: Total "+23.5 fautes @ 2.30", Balanced: Total "+21.5 fautes @ 1.75"
-- Value: Handicap "PSG fautes -2.5 @ 2.20", Balanced: Total "+21.5 fautes @ 1.75"
-- Value: Handicap "PSG fautes -2.5 @ 2.20", Balanced: Handicap "PSG fautes -1.5 @ 1.70"
-
-IMPORTANT: Pour chaque catégorie, ces 2 paris sont souvent DIFFÉRENTS!
+IMPORTANT: Ces 2 paris sont souvent DIFFÉRENTS!
 - Value bet = EV maximal (peut être risqué, total OU handicap)
 - Balanced bet = Sweet spot sécurité/rentabilité (total OU handicap)
 
@@ -603,11 +512,11 @@ FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 ==================================================
 MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
 
-{home_team}: [X] tirs, [A] fautes
-{away_team}: [Z] tirs, [B] fautes
+{home_team}: [X] tirs
+{away_team}: [Z] tirs
 
-TOTAUX: [X+Z] tirs, [A+B] fautes
-ÉCARTS: {home_team} +[X-Z] tirs, {home_team} +[A-B] fautes
+TOTAUX: [X+Z] tirs
+ÉCARTS: {home_team} +[X-Z] tirs
 
 Base de calcul: Formations {home_formation} vs {away_formation}
 + Stats historiques + Analyse tactique
@@ -654,54 +563,10 @@ Si aucun trouvé:
 "AUCUN PARI EQUILIBRE TROUVE - Raison: [...]"
 
 ==================================================
-=== RECOMMANDATIONS FAUTES ===
-==================================================
+AUTRES PROPOSITIONS ANALYSEES (TIRS)
 
-🔥 MEILLEUR VALUE BET FAUTES (EV Maximal - Rentabilité long terme)
-
-[Type: TOTAL FAUTES ou HANDICAP FAUTES] [Proposition] @ [cote]
-
-Exemples:
-- TOTAL: "+23.5 fautes @ 2.30"
-- HANDICAP: "PSG handicap fautes -2.5 @ 2.20"
-
-- Expected Value: +X%
-- MA probabilité réelle: X%
-- Probabilité implicite marché: X% (1/cote)
-- ÉCART: +Y points de %
-- Type: FORTE VALUE / VALUE MODEREE / PAS DE VALUE
-
-POURQUOI LE MARCHE SE TROMPE:
-[Explique pourquoi le bookmaker sous-estime l'intensité physique, le style de jeu, etc.]
-Exemple: "Le bookmaker sous-estime l'intensité du derby et l'agressivité
-défensive de Nantes qui devra multiplier les contacts pour compenser
-la différence technique."
-
-JUSTIFICATION TACTIQUE:
-[Analyse style de jeu, engagement physique, arbitrage attendu]
-
---------------------------------------------------
-⚖️ BEST BALANCED BET FAUTES (Sweet Spot - Compromis optimal)
-
-[Type: TOTAL FAUTES ou HANDICAP FAUTES] [Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
-
-Si trouvé:
-- MA probabilité de réussite: X% (doit être >70%)
-- Cote: X.XX (doit être >1.60)
-- Expected Value: +X% (doit être >5%)
-- Balance: EXCELLENTE / BONNE
-
-POURQUOI C'EST LE MEILLEUR COMPROMIS:
-[Explique le balance entre sécurité et rentabilité]
-
-Si aucun trouvé:
-"AUCUN PARI EQUILIBRE TROUVE - Raison: [...]"
-
-==================================================
-AUTRES PROPOSITIONS ANALYSEES (TIRS + FAUTES)
-
-[Pour chaque autre proposition tirs/fautes:]
-- Type: TIRS / FAUTES
+[Pour chaque autre proposition tirs:]
+- Type: TIRS
 - Proposition: [...]
 - Probabilité réelle: X%
 - EV: +/-X%
@@ -713,10 +578,6 @@ HANDICAPS OPTIMAUX (calculés automatiquement)
 HANDICAPS TIRS:
 - {home_team} handicap tirs [valeur] @ [cote estimée]
   Ecart prevu: +[X-Z] tirs
-
-HANDICAPS FAUTES:
-- {home_team} handicap fautes [valeur] @ [cote estimée]
-  Ecart prevu: +[A-B] fautes
 
 NOTE: Ces handicaps sont calcules avec 70% de confiance.
       Si bookmaker propose handicap proche, FORTE VALUE potentielle!
@@ -771,11 +632,9 @@ FOULS_RANGE_MAX: [nombre]
             print(f"[ERREUR IA DEEP REASONING] {e}")
             # Fallback
             total_shots = home_stats.get('avg_shots', 15) + away_stats.get('avg_shots', 10)
-            total_fouls = home_stats.get('avg_fouls', 12) + away_stats.get('avg_fouls', 12)
 
             return {
                 'shots_range': {'min': int(total_shots - 5), 'max': int(total_shots + 5)},
-                'fouls_range': {'min': int(total_fouls - 3), 'max': int(total_fouls + 3)},
                 'reasoning': f'Erreur IA: {e}. Utilisation baseline historique.'
             }
 
@@ -784,8 +643,7 @@ FOULS_RANGE_MAX: [nombre]
         import re
 
         result = {
-            'shots_range': {'min': 20, 'max': 30},
-            'fouls_range': {'min': 20, 'max': 26}
+            'shots_range': {'min': 20, 'max': 30}
         }
 
         # Extraire SHOTS_RANGE_MIN
@@ -797,16 +655,6 @@ FOULS_RANGE_MAX: [nombre]
         match = re.search(r'SHOTS_RANGE_MAX:\s*(\d+)', text)
         if match:
             result['shots_range']['max'] = int(match.group(1))
-
-        # Extraire FOULS_RANGE_MIN
-        match = re.search(r'FOULS_RANGE_MIN:\s*(\d+)', text)
-        if match:
-            result['fouls_range']['min'] = int(match.group(1))
-
-        # Extraire FOULS_RANGE_MAX
-        match = re.search(r'FOULS_RANGE_MAX:\s*(\d+)', text)
-        if match:
-            result['fouls_range']['max'] = int(match.group(1))
 
         return result
 
@@ -940,21 +788,16 @@ DETAILS DE CHAQUE MATCH:
             prompt += f" ({match_data['date']})"
         prompt += f"""
    Tirs: {match_data['shots']}"""
-        if match_data.get('fouls') is not None:
-            prompt += f" | Fautes: {match_data['fouls']}"
         if match_data.get('goals_for') is not None:
             prompt += f" | Score: {match_data['goals_for']}-{match_data['goals_against']}"
 
     # Stats agregees
     home_shots_avg = sum(m['shots'] for m in home_matches) / len(home_matches) if home_matches else 0
-    home_fouls_list = [m['fouls'] for m in home_matches if m.get('fouls') is not None]
-    home_fouls_avg = sum(home_fouls_list) / len(home_fouls_list) if home_fouls_list else 0
 
     prompt += f"""
 
 STATISTIQUES AGREGEES {home_team} DOMICILE:
   - Moyenne tirs: {home_shots_avg:.1f}
-  - Moyenne fautes: {home_fouls_avg:.1f}
 """
 
     # ================================================================
@@ -979,20 +822,15 @@ DETAILS DE CHAQUE MATCH:
             prompt += f" ({match_data['date']})"
         prompt += f"""
    Tirs: {match_data['shots']}"""
-        if match_data.get('fouls') is not None:
-            prompt += f" | Fautes: {match_data['fouls']}"
         if match_data.get('goals_for') is not None:
             prompt += f" | Score: {match_data['goals_for']}-{match_data['goals_against']}"
 
     away_shots_avg = sum(m['shots'] for m in away_matches) / len(away_matches) if away_matches else 0
-    away_fouls_list = [m['fouls'] for m in away_matches if m.get('fouls') is not None]
-    away_fouls_avg = sum(away_fouls_list) / len(away_fouls_list) if away_fouls_list else 0
 
     prompt += f"""
 
 STATISTIQUES AGREGEES {away_team} EXTERIEUR:
   - Moyenne tirs: {away_shots_avg:.1f}
-  - Moyenne fautes: {away_fouls_avg:.1f}
 """
 
     # ================================================================
@@ -1225,9 +1063,6 @@ ETAPE 3: Contexte {home_team}
 ETAPE 4: Prédiction {home_team}
   - Baseline formations (étape 2) ajusté avec contexte (étape 3)
   - Combien de tirs pour {home_team}?
-  - Combien de fautes pour {home_team}?
-    * Historique: {home_fouls_avg:.1f} fautes/match à domicile
-    * Ajustements: Derby (+2-3), équipe défensive (+1-2), match important (+1-2)
 
 
 PARTIE B: ANALYSE {away_team} (EXTERIEUR)
@@ -1251,9 +1086,6 @@ ETAPE 7: Contexte {away_team}
 ETAPE 8: Prédiction {away_team}
   - Baseline formations (étape 6) ajusté avec contexte (étape 7)
   - Combien de tirs pour {away_team}?
-  - Combien de fautes pour {away_team}?
-    * Historique: {away_fouls_avg:.1f} fautes/match à l'extérieur
-    * Ajustements: Derby (+2-3), équipe défensive (+1-2), match important (+1-2)
 
 
 PARTIE C: SYNTHESE FINALE
@@ -1296,7 +1128,7 @@ Prediction finale Arsenal: 15-17 tirs
 [Meme structure pour PARTIE B avec l'equipe exterieur]
 
 PARTIE C: SYNTHESE FINALE
-Total predit: 27-33 tirs et 20-28 fautes
+Total predit: 27-33 tirs
 Coherence: OUI, dans les normes d'un match de Premier League
 
 ==================================================
@@ -1305,14 +1137,10 @@ PREDICTION FINALE:
 EQUIPE DOMICILE ({home_team}):
 HOME_TIRS_MIN: [nombre]
 HOME_TIRS_MAX: [nombre]
-HOME_FAUTES_MIN: [nombre]
-HOME_FAUTES_MAX: [nombre]
 
 EQUIPE EXTERIEUR ({away_team}):
 AWAY_TIRS_MIN: [nombre]
 AWAY_TIRS_MAX: [nombre]
-AWAY_FAUTES_MIN: [nombre]
-AWAY_FAUTES_MAX: [nombre]
 
 CONFIANCE: [0-100]%
 """
@@ -1437,7 +1265,7 @@ def _generate_weather_sentence(weather: Dict) -> str:
 
 
 def _parse_ai_prediction(text: str) -> Dict:
-    """Parse la reponse de l'IA pour extraire les predictions des DEUX équipes (tirs + fautes)"""
+    """Parse la reponse de l'IA pour extraire les predictions des DEUX équipes (tirs)"""
     import re
 
     result = {
@@ -1445,10 +1273,6 @@ def _parse_ai_prediction(text: str) -> Dict:
         'home_shots_max': 18,
         'away_shots_min': 8,
         'away_shots_max': 16,
-        'home_fouls_min': 10,
-        'home_fouls_max': 14,
-        'away_fouls_min': 10,
-        'away_fouls_max': 14,
         'confidence': 50,
         'reasoning': text
     }
@@ -1472,26 +1296,6 @@ def _parse_ai_prediction(text: str) -> Dict:
     match = re.search(r'AWAY_TIRS_MAX:\s*(\d+)', text)
     if match:
         result['away_shots_max'] = int(match.group(1))
-
-    # Extraire HOME_FAUTES_MIN
-    match = re.search(r'HOME_FAUTES_MIN:\s*(\d+)', text)
-    if match:
-        result['home_fouls_min'] = int(match.group(1))
-
-    # Extraire HOME_FAUTES_MAX
-    match = re.search(r'HOME_FAUTES_MAX:\s*(\d+)', text)
-    if match:
-        result['home_fouls_max'] = int(match.group(1))
-
-    # Extraire AWAY_FAUTES_MIN
-    match = re.search(r'AWAY_FAUTES_MIN:\s*(\d+)', text)
-    if match:
-        result['away_fouls_min'] = int(match.group(1))
-
-    # Extraire AWAY_FAUTES_MAX
-    match = re.search(r'AWAY_FAUTES_MAX:\s*(\d+)', text)
-    if match:
-        result['away_fouls_max'] = int(match.group(1))
 
     # Extraire CONFIANCE
     match = re.search(r'CONFIANCE:\s*(\d+)', text)

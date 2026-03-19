@@ -20,15 +20,6 @@ export interface Prediction {
     message_min: string;
     message_max: string;
   };
-  fouls: {
-    min: number;
-    max: number;
-    confidence: number;
-    home_team_message?: string;
-    away_team_message?: string;
-    message_min: string;
-    message_max: string;
-  };
   ai_reasoning?: string;  // Analyse IA Deep Reasoning (unique, pas dupliquée)
   formations?: {
     home: string;
@@ -38,29 +29,21 @@ export interface Prediction {
 }
 
 export interface PredictionDetail extends Prediction {
-  // Tirs/Fautes par équipe (Méthode 1 - Poisson + IA Tactique)
+  // Tirs par équipe (Méthode 1 - Poisson + IA Tactique)
   home_shots?: number;
   away_shots?: number;
-  home_fouls?: number;
-  away_fouls?: number;
 
   // Fourchettes par équipe (Méthode 2 - IA Deep Reasoning)
   home_shots_min?: number;
   home_shots_max?: number;
   away_shots_min?: number;
   away_shots_max?: number;
-  home_fouls_min?: number;
-  home_fouls_max?: number;
-  away_fouls_min?: number;
-  away_fouls_max?: number;
 
   // Analyses IA (pour génération manuelle et auto)
   ai_reasoning_shots?: string;  // IA Tactique (méthode 1)
-  ai_reasoning_fouls?: string;  // IA Deep Reasoning (méthode 2)
 
   // Contexte
   shots_analysis?: any;
-  fouls_analysis?: any;
   weather?: any;
   rankings_used?: any;
 }
