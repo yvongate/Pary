@@ -33,6 +33,8 @@ const LEAGUE_EMOJIS: { [key: string]: string } = {
   'Germany': '🇩🇪',
   'France': '🇫🇷',
   'Portugal': '🇵🇹',
+  'Belgium': '🇧🇪',
+  'Turkey': '🇹🇷',
 };
 
 export default function MatchCalendar() {

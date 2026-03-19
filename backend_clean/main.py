@@ -124,6 +124,9 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Liverpool': 'Liverpool',
     'Arsenal': 'Arsenal',
     'Chelsea': 'Chelsea',
+    'Burnley': 'Burnley',
+    'Leeds': 'Leeds United',
+    'Sunderland': 'Sunderland',
 
     # Ligue 1 (France)
     'Paris SG': 'Paris SG',
@@ -131,6 +134,9 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Lyon': 'Lyon',
     'Monaco': 'Monaco',
     'Lille': 'Lille',
+    'Lorient': 'Lorient',
+    'Metz': 'Metz',
+    'Paris FC': 'Paris FC',
 
     # Serie A (Italie)
     'Inter': 'Inter Milan',
@@ -138,6 +144,9 @@ CSV_TO_SOCCERSTATS_MAPPING = {
     'Roma': 'AS Roma',
     'Juventus': 'Juventus',
     'Napoli': 'Napoli',
+    'Cremonese': 'Cremonese',
+    'Pisa': 'Pisa',
+    'Sassuolo': 'Sassuolo',
 
     # Primeira Liga (Portugal)
     'Porto': 'FC Porto',
@@ -1517,20 +1526,20 @@ def get_upcoming_predictions(
                     'away_team_message': f"{pred['away_team']}: {pred.get('away_shots', 'N/A')} tirs" if pred.get('away_shots') else None,
                 },
 
-                # Prdictions CORNERS
-                'corners': {
-                    'min': pred['corners_min'],
-                    'max': pred['corners_max'],
-                    'confidence': float(pred['corners_confidence']),
-                    'message_min': f"Il y aura PLUS de {pred['corners_min']} corners",
-                    'message_max': f"Il y aura MOINS de {pred['corners_max']} corners",
+                # Prdictions FAUTES
+                'fouls': {
+                    'min': pred.get('fouls_min'),
+                    'max': pred.get('fouls_max'),
+                    'confidence': float(pred.get('fouls_confidence', 0)) if pred.get('fouls_confidence') else None,
+                    'message_min': f"Il y aura PLUS de {pred.get('fouls_min')} fautes" if pred.get('fouls_min') else None,
+                    'message_max': f"Il y aura MOINS de {pred.get('fouls_max')} fautes" if pred.get('fouls_max') else None,
                     # Messages par équipe (Méthode 1 - Poisson + IA Tactique)
-                    'home_team_message': f"{pred['home_team']}: {pred.get('home_corners', 'N/A')} corners" if pred.get('home_corners') else None,
-                    'away_team_message': f"{pred['away_team']}: {pred.get('away_corners', 'N/A')} corners" if pred.get('away_corners') else None,
-                },
+                    'home_team_message': f"{pred['home_team']}: {pred.get('home_fouls', 'N/A')} fautes" if pred.get('home_fouls') else None,
+                    'away_team_message': f"{pred['away_team']}: {pred.get('away_fouls', 'N/A')} fautes" if pred.get('away_fouls') else None,
+                } if pred.get('fouls_min') else None,
 
                 # Analyses IA (prendre seulement ai_reasoning_shots pour éviter duplication)
-                'ai_reasoning': pred.get('ai_reasoning_shots') or pred.get('ai_reasoning_corners'),
+                'ai_reasoning': pred.get('ai_reasoning_shots') or pred.get('ai_reasoning_fouls'),
 
                 # Formations
                 'formations': {
@@ -1607,21 +1616,21 @@ def get_prediction_detail(match_id: str):
             'league_name': LEAGUES.get(prediction['league_code'], {}).get('name', prediction['league_code']),
             'match_date': match_date,
 
-            # Tirs/Corners par équipe (NOUVEAU - pour le modal)
+            # Tirs/Fautes par équipe (NOUVEAU - pour le modal)
             'home_shots': prediction.get('home_shots'),
             'away_shots': prediction.get('away_shots'),
-            'home_corners': prediction.get('home_corners'),
-            'away_corners': prediction.get('away_corners'),
+            'home_fouls': prediction.get('home_fouls'),
+            'away_fouls': prediction.get('away_fouls'),
 
             # Fourchettes par équipe (NOUVEAU - pour IA Deep Reasoning)
             'home_shots_min': prediction.get('home_shots_min'),
             'home_shots_max': prediction.get('home_shots_max'),
             'away_shots_min': prediction.get('away_shots_min'),
             'away_shots_max': prediction.get('away_shots_max'),
-            'home_corners_min': prediction.get('home_corners_min'),
-            'home_corners_max': prediction.get('home_corners_max'),
-            'away_corners_min': prediction.get('away_corners_min'),
-            'away_corners_max': prediction.get('away_corners_max'),
+            'home_fouls_min': prediction.get('home_fouls_min'),
+            'home_fouls_max': prediction.get('home_fouls_max'),
+            'away_fouls_min': prediction.get('away_fouls_min'),
+            'away_fouls_max': prediction.get('away_fouls_max'),
 
             # Prdictions TIRS (totaux)
             'shots': {
@@ -1634,19 +1643,19 @@ def get_prediction_detail(match_id: str):
                 'ai_reasoning': prediction.get('ai_reasoning_shots')
             },
 
-            # Prdictions CORNERS (totaux)
-            'corners': {
-                'min': prediction['corners_min'],
-                'max': prediction['corners_max'],
-                'confidence': float(prediction['corners_confidence']),
-                'message_min': f"Il y aura PLUS de {prediction['corners_min']} corners",
-                'message_max': f"Il y aura MOINS de {prediction['corners_max']} corners",
-                'analysis': prediction.get('analysis_corners'),  # Dtails complets
-                'ai_reasoning': prediction.get('ai_reasoning_corners')
-            },
+            # Prdictions FAUTES (totaux)
+            'fouls': {
+                'min': prediction.get('fouls_min'),
+                'max': prediction.get('fouls_max'),
+                'confidence': float(prediction.get('fouls_confidence', 0)) if prediction.get('fouls_confidence') else None,
+                'message_min': f"Il y aura PLUS de {prediction.get('fouls_min')} fautes" if prediction.get('fouls_min') else None,
+                'message_max': f"Il y aura MOINS de {prediction.get('fouls_max')} fautes" if prediction.get('fouls_max') else None,
+                'analysis': prediction.get('analysis_fouls'),  # Dtails complets
+                'ai_reasoning': prediction.get('ai_reasoning_fouls')
+            } if prediction.get('fouls_min') else None,
 
             # Analyse IA globale (pour génération manuelle)
-            'ai_reasoning': prediction.get('ai_reasoning_shots') or prediction.get('ai_reasoning_corners'),
+            'ai_reasoning': prediction.get('ai_reasoning_shots') or prediction.get('ai_reasoning_fouls'),
 
             # Contexte
             'formations': {
@@ -1843,7 +1852,7 @@ async def generate_prediction_manual(
                 match_id, home_team, away_team, league_code, match_date,
                 home_formation, away_formation,
                 shots_min, shots_max, shots_confidence,
-                corners_min, corners_max, corners_confidence,
+                fouls_min, fouls_max, fouls_confidence,
                 status, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -1854,8 +1863,8 @@ async def generate_prediction_manual(
             datetime.now().isoformat(),
             request.home_formation,
             request.away_formation,
-            0, 0, 0.0,  # Valeurs temporaires
-            0, 0, 0.0,
+            0, 0, 0.0,  # Valeurs temporaires shots
+            0, 0, 0.0,  # Valeurs temporaires fouls
             "en_cours",  # STATUS
             datetime.now().isoformat()
         ))
@@ -1986,14 +1995,14 @@ async def process_full_prediction(
                 # Fallback sur valeurs par défaut
                 home_shots = 15.0
                 away_shots = 10.0
-                home_corners = 6.0
-                away_corners = 4.0
+                home_fouls = 12.0
+                away_fouls = 12.0
             else:
                 # Extraire les résultats du predictor
-                home_shots = prediction_result.get('predictions', {}).get('home', {}).get('shots', 15.0)
-                away_shots = prediction_result.get('predictions', {}).get('away', {}).get('shots', 10.0)
-                home_corners = prediction_result.get('predictions', {}).get('home', {}).get('corners', 6.0)
-                away_corners = prediction_result.get('predictions', {}).get('away', {}).get('corners', 4.0)
+                home_shots = prediction_result.get('predictions', {}).get('home_team_shots', 15.0)
+                away_shots = prediction_result.get('predictions', {}).get('away_team_shots', 10.0)
+                home_fouls = prediction_result.get('predictions', {}).get('home_team_fouls', 12.0)
+                away_fouls = prediction_result.get('predictions', {}).get('away_team_fouls', 12.0)
 
                 # Vérifier si le predictor a généré une analyse IA complète
                 ai_reasoning = prediction_result.get('predictions', {}).get('ai_reasoning_shots', '')
@@ -2008,8 +2017,8 @@ async def process_full_prediction(
             # Fallback sur valeurs par défaut
             home_shots = 15.0
             away_shots = 10.0
-            home_corners = 6.0
-            away_corners = 4.0
+            home_fouls = 12.0
+            away_fouls = 12.0
             has_full_ai_analysis = False
 
         # ÉTAPE 3: IA Deep Reasoning (analyse complète)
@@ -2022,12 +2031,12 @@ async def process_full_prediction(
 
             # Extraire les fourchettes depuis le predictor
             shots_range = {
-                'min': prediction_result['predictions'].get('shots_min', int(home_shots + away_shots - 5)),
-                'max': prediction_result['predictions'].get('shots_max', int(home_shots + away_shots + 5))
+                'min': prediction_result['predictions'].get('home_shots_range', {}).get('min', int(home_shots * 0.85)),
+                'max': prediction_result['predictions'].get('home_shots_range', {}).get('max', int(home_shots * 1.15))
             }
-            corners_range = {
-                'min': prediction_result['predictions'].get('corners_min', int(home_corners + away_corners - 3)),
-                'max': prediction_result['predictions'].get('corners_max', int(home_corners + away_corners + 3))
+            fouls_range = {
+                'min': prediction_result['predictions'].get('home_fouls_range', {}).get('min', int(home_fouls * 0.85)) if home_fouls else None,
+                'max': prediction_result['predictions'].get('home_fouls_range', {}).get('max', int(home_fouls * 1.15)) if home_fouls else None
             }
 
             # Si l'utilisateur a fourni des propositions bookmaker, enrichir l'analyse
@@ -2044,8 +2053,8 @@ async def process_full_prediction(
                     'away_formation': away_formation,
                     'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
                     'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
-                    'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
-                    'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
+                    'home_stats': {'avg_shots': home_shots, 'avg_fouls': home_fouls},
+                    'away_stats': {'avg_shots': away_shots, 'avg_fouls': away_fouls},
                     'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                     'match_date': datetime.now().isoformat(),
                     'bookmaker_propositions': bookmaker_props_text
@@ -2069,8 +2078,8 @@ async def process_full_prediction(
                 'away_formation': away_formation,
                 'home_players': [p.strip() for p in home_players.split(',')] if home_players else [],
                 'away_players': [p.strip() for p in away_players.split(',')] if away_players else [],
-                'home_stats': {'avg_shots': home_shots, 'avg_corners': home_corners},
-                'away_stats': {'avg_shots': away_shots, 'avg_corners': away_corners},
+                'home_stats': {'avg_shots': home_shots, 'avg_fouls': home_fouls},
+                'away_stats': {'avg_shots': away_shots, 'avg_fouls': away_fouls},
                 'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                 'match_date': datetime.now().isoformat(),
                 'bookmaker_propositions': bookmaker_props_text  # Texte brut des propositions
@@ -2080,10 +2089,10 @@ async def process_full_prediction(
 
             # Extraire résultats
             shots_range = ai_analysis.get('shots_range', {'min': int(home_shots + away_shots - 5), 'max': int(home_shots + away_shots + 5)})
-            corners_range = ai_analysis.get('corners_range', {'min': int(home_corners + away_corners - 3), 'max': int(home_corners + away_corners + 3)})
+            fouls_range = ai_analysis.get('fouls_range', {'min': int(home_fouls + away_fouls - 4), 'max': int(home_fouls + away_fouls + 4)})
             reasoning_text = ai_analysis.get('reasoning', f'Analyse de {home_team} vs {away_team}...')
 
-        print(f"[PREDICTION {prediction_id}] IA Deep: Total tirs {shots_range}, corners {corners_range}")
+        print(f"[PREDICTION {prediction_id}] IA Deep: Total tirs {shots_range}, fautes {fouls_range}")
 
         # ÉTAPE 4: Sauvegarder en base
         print(f"[PREDICTION {prediction_id}] Sauvegarde en DB...")
@@ -2097,23 +2106,23 @@ async def process_full_prediction(
                 shots_min = ?,
                 shots_max = ?,
                 shots_confidence = ?,
-                corners_min = ?,
-                corners_max = ?,
-                corners_confidence = ?,
+                fouls_min = ?,
+                fouls_max = ?,
+                fouls_confidence = ?,
                 home_shots = ?,
                 away_shots = ?,
-                home_corners = ?,
-                away_corners = ?,
+                home_fouls = ?,
+                away_fouls = ?,
                 home_shots_min = ?,
                 home_shots_max = ?,
                 away_shots_min = ?,
                 away_shots_max = ?,
-                home_corners_min = ?,
-                home_corners_max = ?,
-                away_corners_min = ?,
-                away_corners_max = ?,
+                home_fouls_min = ?,
+                home_fouls_max = ?,
+                away_fouls_min = ?,
+                away_fouls_max = ?,
                 ai_reasoning_shots = ?,
-                ai_reasoning_corners = ?,
+                ai_reasoning_fouls = ?,
                 status = ?,
                 updated_at = ?
             WHERE id = ?
@@ -2121,21 +2130,21 @@ async def process_full_prediction(
             shots_range['min'],
             shots_range['max'],
             0.75,  # Confiance
-            corners_range['min'],
-            corners_range['max'],
+            fouls_range['min'] if fouls_range and fouls_range['min'] else 0,
+            fouls_range['max'] if fouls_range and fouls_range['max'] else 0,
             0.75,
             home_shots,
             away_shots,
-            home_corners,
-            away_corners,
+            home_fouls if home_fouls else None,
+            away_fouls if away_fouls else None,
             int(home_shots * 0.8),  # Fourchette -20%
             int(home_shots * 1.2),  # Fourchette +20%
             int(away_shots * 0.8),
             int(away_shots * 1.2),
-            int(home_corners * 0.8),
-            int(home_corners * 1.2),
-            int(away_corners * 0.8),
-            int(away_corners * 1.2),
+            int(home_fouls * 0.85) if home_fouls else None,
+            int(home_fouls * 1.15) if home_fouls else None,
+            int(away_fouls * 0.85) if away_fouls else None,
+            int(away_fouls * 1.15) if away_fouls else None,
             reasoning_text,
             reasoning_text,  # Même texte pour tirs et corners
             'completed',  # STATUS COMPLÉTÉ

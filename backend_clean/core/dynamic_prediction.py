@@ -84,6 +84,7 @@ class DynamicPredictor:
                             'home': True,
                             'shots': int(row['HS']),
                             'corners': int(row['HC']),
+                            'fouls': int(row['HF']) if pd.notna(row.get('HF')) else None,
                             'goals_for': int(row['FTHG']) if pd.notna(row.get('FTHG')) else None,
                             'goals_against': int(row['FTAG']) if pd.notna(row.get('FTAG')) else None,
                             'date': row.get('Date'),
@@ -100,6 +101,7 @@ class DynamicPredictor:
                             'home': False,
                             'shots': int(row['AS']),
                             'corners': int(row['AC']),
+                            'fouls': int(row['AF']) if pd.notna(row.get('AF')) else None,
                             'goals_for': int(row['FTAG']) if pd.notna(row.get('FTAG')) else None,
                             'goals_against': int(row['FTHG']) if pd.notna(row.get('FTHG')) else None,
                             'date': row.get('Date'),
@@ -863,6 +865,141 @@ Analyse et ajuste maintenant:"""
             'max_rank': max_rank
         }
 
+    def analyze_poisson_bidirectional_fouls(self, home_history: List[Dict], away_history: List[Dict],
+                                           current_rankings: Dict, home_team: str, away_team: str) -> Dict:
+        """
+        Modèle de Poisson BIDIRECTIONNEL pour prédire les FAUTES
+
+        Similaire à la prédiction de tirs, mais pour les fautes:
+        - λ_home (taux de fautes pour home)
+        - λ_away (taux de fautes pour away)
+
+        Avec la contrainte que λ_home + λ_away ≈ total réaliste (24 fautes)
+
+        Modèle :
+        λ_home = exp(β₀ + β₁×attaque_home + β₂×défense_away + β₃×forme_home)
+        λ_away = exp(β₀ + β₁×attaque_away + β₂×défense_home + β₃×forme_away)
+
+        Args:
+            home_history: Historique matchs domicile
+            away_history: Historique matchs extérieur
+            current_rankings: Classements actuels
+            home_team: Nom équipe domicile
+            away_team: Nom équipe extérieur
+
+        Returns:
+            Dict avec paramètres Poisson pour home et away (fautes)
+        """
+
+        # Préparer les données HOME
+        home_matches = [m for m in home_history if m['home'] == True and m.get('fouls') is not None]
+
+        if len(home_matches) < 5:
+            return {'error': 'Pas assez de matchs historiques avec données de fautes pour home', 'min_required': 5}
+
+        # Préparer les données AWAY
+        away_matches = [m for m in away_history if m['home'] == False and m.get('fouls') is not None]
+
+        if len(away_matches) < 5:
+            return {'error': 'Pas assez de matchs historiques avec données de fautes pour away', 'min_required': 5}
+
+        max_rank = 20
+
+        # Collecter données HOME
+        X_home = []
+        y_fouls_home = []
+
+        for match in home_matches:
+            opponent = match['opponent']
+            team_off_rank = self._get_team_rank(home_team, 'offence_home', current_rankings)
+            opp_def_rank = self._get_team_rank(opponent, 'defence_away', current_rankings)
+            team_form_rank = self._get_team_rank(home_team, 'form_last_8', current_rankings)
+
+            if team_off_rank > 0 and opp_def_rank > 0 and team_form_rank > 0:
+                # Inverser (1 = meilleur → valeur haute)
+                off_inv = (max_rank + 1) - team_off_rank
+                def_inv = (max_rank + 1) - opp_def_rank
+                form_inv = (max_rank + 1) - team_form_rank
+
+                X_home.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
+                y_fouls_home.append(match['fouls'])
+
+        # Collecter données AWAY
+        X_away = []
+        y_fouls_away = []
+
+        for match in away_matches:
+            opponent = match['opponent']
+            team_off_rank = self._get_team_rank(away_team, 'offence_away', current_rankings)
+            opp_def_rank = self._get_team_rank(opponent, 'defence_home', current_rankings)
+            team_form_rank = self._get_team_rank(away_team, 'form_last_8', current_rankings)
+
+            if team_off_rank > 0 and opp_def_rank > 0 and team_form_rank > 0:
+                off_inv = (max_rank + 1) - team_off_rank
+                def_inv = (max_rank + 1) - opp_def_rank
+                form_inv = (max_rank + 1) - team_form_rank
+
+                X_away.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
+                y_fouls_away.append(match['fouls'])
+
+        X_home = np.array(X_home)
+        y_fouls_home = np.array(y_fouls_home)
+        X_away = np.array(X_away)
+        y_fouls_away = np.array(y_fouls_away)
+
+        # Fonction de log-vraisemblance Poisson pour FAUTES (bidirectionnel)
+        def poisson_log_likelihood_fouls(params):
+            """
+            Params = [β₀_home, β₁_home, β₂_home, β₃_home, β₀_away, β₁_away, β₂_away, β₃_away]
+            """
+            # Paramètres HOME
+            beta_home = params[0:4]
+            # Paramètres AWAY
+            beta_away = params[4:8]
+
+            # Prédictions λ (taux Poisson)
+            lambda_home = np.exp(X_home @ beta_home)
+            lambda_away = np.exp(X_away @ beta_away)
+
+            # Log-vraisemblance Poisson : y*log(λ) - λ - log(y!)
+            # On ignore log(y!) car constant
+            ll_home = np.sum(y_fouls_home * np.log(lambda_home + 1e-10) - lambda_home)
+            ll_away = np.sum(y_fouls_away * np.log(lambda_away + 1e-10) - lambda_away)
+
+            # Contrainte : on veut que la moyenne de (λ_home + λ_away) ≈ 24 fautes
+            avg_total = np.mean(lambda_home) + np.mean(lambda_away)
+            penalty = 10 * (avg_total - 24)**2  # Pénalité si total != 24
+
+            # Maximiser log-vraisemblance = minimiser négatif
+            return -(ll_home + ll_away) + penalty
+
+        # Valeurs initiales (régression linéaire simple comme point de départ)
+        initial_params = np.array([0.5, 0.1, 0.1, 0.05, 0.5, 0.1, 0.1, 0.05])
+
+        # Optimisation FAUTES
+        result_fouls = minimize(
+            poisson_log_likelihood_fouls,
+            initial_params,
+            method='L-BFGS-B',
+            options={'maxiter': 1000}
+        )
+
+        return {
+            'fouls': {
+                'beta_home': result_fouls.x[0:4].tolist(),
+                'beta_away': result_fouls.x[4:8].tolist(),
+                'success': result_fouls.success,
+                'log_likelihood': -result_fouls.fun
+            },
+            'stats': {
+                'home_matches_analyzed': len(X_home),
+                'away_matches_analyzed': len(X_away),
+                'avg_fouls_home': float(np.mean(y_fouls_home)),
+                'avg_fouls_away': float(np.mean(y_fouls_away))
+            },
+            'max_rank': max_rank
+        }
+
     def predict_match(self, home_team: str, away_team: str, league_code: str = "england",
                      match_date: Optional[datetime] = None) -> Dict:
         """
@@ -961,8 +1098,8 @@ Analyse et ajuste maintenant:"""
         except Exception as e:
             print(f"    [WARNING] Erreur stats dtailles: {e}")
 
-        # 3. NOUVEAU - Modle de Poisson BIDIRECTIONNEL
-        print(f"\n tape 3: Modlisation Poisson bidirectionnelle...")
+        # 3. NOUVEAU - Modle de Poisson BIDIRECTIONNEL (TIRS)
+        print(f"\n tape 3: Modlisation Poisson bidirectionnelle (tirs)...")
         poisson_model = self.analyze_poisson_bidirectional(
             home_history, away_history, current_rankings, home_team, away_team
         )
@@ -970,9 +1107,24 @@ Analyse et ajuste maintenant:"""
         if 'error' in poisson_model:
             return poisson_model
 
-        print(f"    [OK] Modle Poisson entran")
+        print(f"    [OK] Modle Poisson tirs entran")
         print(f"    Home matchs analyss: {poisson_model['stats']['home_matches_analyzed']}")
         print(f"    Away matchs analyss: {poisson_model['stats']['away_matches_analyzed']}")
+
+        # 3b. NOUVEAU - Modle de Poisson BIDIRECTIONNEL (FAUTES)
+        print(f"\n tape 3b: Modlisation Poisson bidirectionnelle (fautes)...")
+        poisson_model_fouls = self.analyze_poisson_bidirectional_fouls(
+            home_history, away_history, current_rankings, home_team, away_team
+        )
+
+        if 'error' in poisson_model_fouls:
+            print(f"    [WARNING] Impossible de prdire les fautes: {poisson_model_fouls.get('error')}")
+            print(f"    Continuer sans prdiction de fautes...")
+            poisson_model_fouls = None
+        else:
+            print(f"    [OK] Modle Poisson fautes entran")
+            print(f"    Home matchs analyss: {poisson_model_fouls['stats']['home_matches_analyzed']}")
+            print(f"    Away matchs analyss: {poisson_model_fouls['stats']['away_matches_analyzed']}")
 
         # 4. Rcuprer les rangs ACTUELS pour prdire CE match
         print(f"\n tape 4: Rcupration des rangs actuels...")
@@ -1021,10 +1173,31 @@ Analyse et ajuste maintenant:"""
         home_shots_raw = float(lambda_shots_home)
         away_shots_raw = float(lambda_shots_away)
 
-        print(f"    {home_team}: lambda_tirs={home_shots_raw:.1f}")
-        print(f"    {away_team}: lambda_tirs={away_shots_raw:.1f}")
-        print(f"    Total prdictions (base): {home_shots_raw + away_shots_raw:.1f} tirs")
-        print(f"    NOTE: Le total est contraint  ~28 tirs via le modle de Poisson")
+        print(f"    TIRS:")
+        print(f"      {home_team}: lambda={home_shots_raw:.1f}")
+        print(f"      {away_team}: lambda={away_shots_raw:.1f}")
+        print(f"      Total: {home_shots_raw + away_shots_raw:.1f} tirs")
+        print(f"      NOTE: Le total est contraint  ~28 tirs via le modle de Poisson")
+
+        # Prdictions FAUTES (si modle disponible)
+        home_fouls_raw = None
+        away_fouls_raw = None
+
+        if poisson_model_fouls:
+            beta_fouls_home = np.array(poisson_model_fouls['fouls']['beta_home'])
+            beta_fouls_away = np.array(poisson_model_fouls['fouls']['beta_away'])
+
+            lambda_fouls_home = np.exp(np.dot(beta_fouls_home, X_home_match))
+            lambda_fouls_away = np.exp(np.dot(beta_fouls_away, X_away_match))
+
+            home_fouls_raw = float(lambda_fouls_home)
+            away_fouls_raw = float(lambda_fouls_away)
+
+            print(f"\n    FAUTES:")
+            print(f"      {home_team}: lambda={home_fouls_raw:.1f}")
+            print(f"      {away_team}: lambda={away_fouls_raw:.1f}")
+            print(f"      Total: {home_fouls_raw + away_fouls_raw:.1f} fautes")
+            print(f"      NOTE: Le total est contraint  ~24 fautes via le modle de Poisson")
 
         # 5b. NOUVEAU - Rcuprer mto pour ajustements contextuels
         print(f"\n tape 5b: Rcupration mto et analyse contexte...")
@@ -1213,6 +1386,24 @@ Analyse et ajuste maintenant:"""
         away_shots_min = int(max(0, away_shots * (1 - variance_shots)))
         away_shots_max = int(away_shots * (1 + variance_shots))
 
+        # Prédictions FAUTES (si disponibles)
+        home_fouls = None
+        away_fouls = None
+        home_fouls_min = None
+        home_fouls_max = None
+        away_fouls_min = None
+        away_fouls_max = None
+
+        if home_fouls_raw is not None and away_fouls_raw is not None:
+            home_fouls = max(0, home_fouls_raw)
+            away_fouls = max(0, away_fouls_raw)
+
+            variance_fouls = 0.15  # 15% de variance
+            home_fouls_min = int(max(0, home_fouls * (1 - variance_fouls)))
+            home_fouls_max = int(home_fouls * (1 + variance_fouls))
+            away_fouls_min = int(max(0, away_fouls * (1 - variance_fouls)))
+            away_fouls_max = int(away_fouls * (1 + variance_fouls))
+
         # 8. Construire le rsultat
         result = {
             'match': {
@@ -1241,7 +1432,24 @@ Analyse et ajuste maintenant:"""
 
                 # Baseline Poisson (avant ajustements IA)
                 'baseline_home_shots': round(baseline_home_shots, 1),
-                'baseline_away_shots': round(baseline_away_shots, 1)
+                'baseline_away_shots': round(baseline_away_shots, 1),
+
+                # PREDICTIONS FAUTES
+                'home_team_fouls': round(home_fouls, 1) if home_fouls is not None else None,
+                'away_team_fouls': round(away_fouls, 1) if away_fouls is not None else None,
+                'total_fouls': round(home_fouls + away_fouls, 1) if home_fouls is not None and away_fouls is not None else None,
+
+                # Intervalles de confiance FAUTES
+                'home_fouls_range': {
+                    'min': home_fouls_min,
+                    'max': home_fouls_max,
+                    'predicted': round(home_fouls, 1)
+                } if home_fouls is not None else None,
+                'away_fouls_range': {
+                    'min': away_fouls_min,
+                    'max': away_fouls_max,
+                    'predicted': round(away_fouls, 1)
+                } if away_fouls is not None else None
             },
             'confidence': {
                 'model_type': 'Poisson bidirectionnel',
@@ -1351,9 +1559,15 @@ Analyse et ajuste maintenant:"""
         print(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print(f"📊 PRÉDICTIONS PAR ÉQUIPE:")
         print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print(f"   {home_team}: {result['predictions']['home_team_shots']} tirs")
-        print(f"   {away_team}: {result['predictions']['away_team_shots']} tirs")
-        print(f"   TOTAL: {result['predictions']['total_shots']} tirs")
+        print(f"   TIRS:")
+        print(f"     {home_team}: {result['predictions']['home_team_shots']} tirs")
+        print(f"     {away_team}: {result['predictions']['away_team_shots']} tirs")
+        print(f"     TOTAL: {result['predictions']['total_shots']} tirs")
+        if result['predictions']['total_fouls'] is not None:
+            print(f"\n   FAUTES:")
+            print(f"     {home_team}: {result['predictions']['home_team_fouls']} fautes")
+            print(f"     {away_team}: {result['predictions']['away_team_fouls']} fautes")
+            print(f"     TOTAL: {result['predictions']['total_fouls']} fautes")
         print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print(f"\n🌤️  Météo (informatif): {weather_impact}")
         print(f"{'='*60}\n")

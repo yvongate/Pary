@@ -168,11 +168,11 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Corners totaux:</span>
-                          <span className="font-semibold text-green-600">
-                            {prediction?.corners?.min && prediction?.corners?.max
-                              ? prediction.corners.min + prediction.corners.max
-                              : '11.0'}
+                          <span className="text-gray-600">Fautes totaux:</span>
+                          <span className="font-semibold text-yellow-600">
+                            {prediction?.fouls?.min && prediction?.fouls?.max
+                              ? prediction.fouls.min + prediction.fouls.max
+                              : '24.0'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -199,19 +199,19 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Corners totaux:</span>
-                          <span className="font-semibold text-green-600">
-                            {prediction?.corners?.min && prediction?.corners?.max
-                              ? `${prediction.corners.min}-${prediction.corners.max}`
-                              : '9-12'}
+                          <span className="text-gray-600">Fautes totaux:</span>
+                          <span className="font-semibold text-yellow-600">
+                            {prediction?.fouls?.min && prediction?.fouls?.max
+                              ? `${prediction.fouls.min}-${prediction.fouls.max}`
+                              : '20-26'}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Confiance:</span>
                           <span className="font-semibold text-purple-600">
-                            {prediction?.corners?.confidence
-                              ? `${(prediction.corners.confidence * 100).toFixed(0)}%`
-                              : '88%'}
+                            {prediction?.fouls?.confidence
+                              ? `${(prediction.fouls.confidence * 100).toFixed(0)}%`
+                              : '75%'}
                           </span>
                         </div>
                       </div>
@@ -261,20 +261,20 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       </div>
                     </div>
 
-                    {/* Corners par équipe */}
+                    {/* Fautes par équipe */}
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Corners Prédits</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">Fautes Prédites</h4>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
                           <span className="font-medium text-gray-900">{prediction?.home_team || 'Équipe domicile'}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
-                              <div className="bg-green-600 h-2 rounded-full" style={{
-                                width: `${((prediction?.home_corners || 0) / ((prediction?.home_corners || 0) + (prediction?.away_corners || 0))) * 100}%`
+                              <div className="bg-yellow-600 h-2 rounded-full" style={{
+                                width: `${((prediction?.home_fouls || 0) / ((prediction?.home_fouls || 0) + (prediction?.away_fouls || 0))) * 100}%`
                               }}></div>
                             </div>
-                            <span className="font-bold text-green-600 w-12 text-right">
-                              {prediction?.home_corners ? prediction.home_corners.toFixed(1) : 'N/A'}
+                            <span className="font-bold text-yellow-600 w-12 text-right">
+                              {prediction?.home_fouls ? prediction.home_fouls.toFixed(1) : 'N/A'}
                             </span>
                           </div>
                         </div>
@@ -283,11 +283,11 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                           <div className="flex items-center gap-2">
                             <div className="w-64 bg-gray-200 rounded-full h-2">
                               <div className="bg-orange-600 h-2 rounded-full" style={{
-                                width: `${((prediction?.away_corners || 0) / ((prediction?.home_corners || 0) + (prediction?.away_corners || 0))) * 100}%`
+                                width: `${((prediction?.away_fouls || 0) / ((prediction?.home_fouls || 0) + (prediction?.away_fouls || 0))) * 100}%`
                               }}></div>
                             </div>
                             <span className="font-bold text-orange-600 w-12 text-right">
-                              {prediction?.away_corners ? prediction.away_corners.toFixed(1) : 'N/A'}
+                              {prediction?.away_fouls ? prediction.away_fouls.toFixed(1) : 'N/A'}
                             </span>
                           </div>
                         </div>
@@ -296,11 +296,22 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
 
                     {/* Raisonnement IA Tactique */}
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                      <h4 className="font-semibold text-blue-900 mb-2">Raisonnement IA Tactique</h4>
+                      <h4 className="font-semibold text-blue-900 mb-2">Raisonnement IA Tactique (Tirs)</h4>
                       <div className="prose prose-sm max-w-none text-gray-700">
                         <ReactMarkdown>
                           {prediction?.ai_reasoning_shots ||
                             "Liverpool en 4-3-3 offensive (18.5 tirs/90) face à Man City défensive en 4-2-3-1 (12.3 tirs concédés/90). Baseline symétrique: (18.5 + 12.3) / 2 = 15.4 tirs. Ajusté -1 tir pour absence de Salah. Résultat: 15.8 tirs pour Liverpool."}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+
+                    {/* Raisonnement IA Tactique Fautes */}
+                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                      <h4 className="font-semibold text-yellow-900 mb-2">Raisonnement IA Tactique (Fautes)</h4>
+                      <div className="prose prose-sm max-w-none text-gray-700">
+                        <ReactMarkdown>
+                          {prediction?.ai_reasoning_fouls ||
+                            "Liverpool avec une approche offensive commettront environ 12.3 fautes. Man City dans un rôle défensif augmentera l'engagement physique avec 11.8 fautes prévues. Total: 24.1 fautes attendues pour ce match."}
                         </ReactMarkdown>
                       </div>
                     </div>
@@ -332,10 +343,10 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Corners:</span>
-                              <span className="font-semibold text-green-600">
-                                {prediction?.home_corners_min && prediction?.home_corners_max
-                                  ? `${prediction.home_corners_min}-${prediction.home_corners_max}`
+                              <span className="text-gray-600">Fautes:</span>
+                              <span className="font-semibold text-yellow-600">
+                                {prediction?.home_fouls_min && prediction?.home_fouls_max
+                                  ? `${prediction.home_fouls_min}-${prediction.home_fouls_max}`
                                   : 'N/A'}
                               </span>
                             </div>
@@ -353,10 +364,10 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Corners:</span>
-                              <span className="font-semibold text-green-600">
-                                {prediction?.away_corners_min && prediction?.away_corners_max
-                                  ? `${prediction.away_corners_min}-${prediction.away_corners_max}`
+                              <span className="text-gray-600">Fautes:</span>
+                              <span className="font-semibold text-yellow-600">
+                                {prediction?.away_fouls_min && prediction?.away_fouls_max
+                                  ? `${prediction.away_fouls_min}-${prediction.away_fouls_max}`
                                   : 'N/A'}
                               </span>
                             </div>
@@ -371,8 +382,8 @@ export default function PredictionModal({ isOpen, onClose, matchId }: Prediction
                       <div className="prose prose-sm max-w-none text-gray-700">
                         <ReactMarkdown>
                           {prediction?.ai_reasoning ||
-                            prediction?.ai_reasoning_corners ||
-                            "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs, Man City plus défensif avec 10-13 tirs."}
+                            prediction?.ai_reasoning_fouls ||
+                            "L'IA analyse tous les contextes: formations Understat (Liverpool 4-3-3 très offensive), classements (Liverpool 2e, Man City 3e), météo (conditions normales), blessures (Salah absent). Prédiction: Liverpool dominera avec 14-17 tirs et 11-14 fautes, Man City plus défensif avec 10-13 tirs et 10-13 fautes."}
                         </ReactMarkdown>
                       </div>
                     </div>

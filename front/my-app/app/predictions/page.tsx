@@ -84,7 +84,7 @@ export default function PredictionsPage() {
                 ⚽ Prédictions Football
               </h1>
               <p className="mt-2 text-sm text-gray-600">
-                Prédictions automatiques de tirs et corners basées sur l'IA
+                Prédictions automatiques de tirs et fautes basées sur l'IA
               </p>
             </div>
             <div className="flex gap-3">
