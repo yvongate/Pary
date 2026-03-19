@@ -130,21 +130,12 @@ def generate_prediction_for_match(match: Dict, predictor: DynamicPredictor, db: 
 
     try:
         # Mapping league code pour soccerstats
-        soccerstats_codes = {
-            'E0': 'england',
-            'SP1': 'spain',
-            'I1': 'italy',
-            'F1': 'france',
-            'D1': 'germany'
-        }
-
-        soccerstats_code = soccerstats_codes.get(league_code, 'england')
-
         # Générer la prédiction
+        # IMPORTANT: Passer league_code (E0, SP1, T1, etc.) pas soccerstats_code (england, spain, etc.)
         result = predictor.predict_match(
             home_team=home_team,
             away_team=away_team,
-            league_code=soccerstats_code,
+            league_code=league_code,
             match_date=match_date
         )
 

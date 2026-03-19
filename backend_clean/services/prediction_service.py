@@ -69,12 +69,12 @@ class PredictionService:
 
         # 3. Analyse complète
         print("\n[ANALYSE] Lancement analyse complète...")
-        soccerstats_code = settings.SOCCERSTATS_CODES.get(match['league_code'], 'england')
 
+        # IMPORTANT: Passer league_code directement (E0, SP1, T1, etc.)
         analysis_result = self.analysis.analyze_match(
             home_team=match['home_team'],
             away_team=match['away_team'],
-            league_code=soccerstats_code,
+            league_code=match['league_code'],
             match_date=match['match_date']
         )
 

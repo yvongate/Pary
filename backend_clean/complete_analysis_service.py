@@ -38,7 +38,7 @@ class CompleteAnalysisService:
         Args:
             home_team: quipe  domicile
             away_team: quipe  l'extrieur
-            league_code: Code championnat (england, spain, etc.)
+            league_code: Code championnat (E0, SP1, T1, etc.)
             match_date: Date du match
 
         Returns:

@@ -1261,14 +1261,12 @@ def predict_match(
     Exemple:
     /predict/match?home_team=Tottenham&away_team=Arsenal&league=E0
     """
-    # Map league code to soccerstats code
-    soccerstats_code = SOCCERSTATS_CODES.get(league, "england")
-
     try:
+        # IMPORTANT: Passer league directement (E0, SP1, T1, etc.)
         result = predictor.predict_match(
             home_team=home_team,
             away_team=away_team,
-            league_code=soccerstats_code,
+            league_code=league,
             match_date=datetime.now()
         )
 
@@ -1318,8 +1316,6 @@ def predict_batch_matches(
     Exemple:
     /predict/batch?league=E0&days=7&limit=5
     """
-    soccerstats_code = SOCCERSTATS_CODES.get(league, "england")
-
     try:
         # Get upcoming fixtures (depuis fixtures.csv)
         fixtures = get_future_matches_from_csv(days_future=days, league_code=league)
@@ -1339,10 +1335,11 @@ def predict_batch_matches(
         for i, fixture in enumerate(fixtures):
             print(f"\n[{i+1}/{len(fixtures)}] Prdiction: {fixture['home_team']} vs {fixture['away_team']}")
 
+            # IMPORTANT: Passer league directement (E0, SP1, T1, etc.)
             result = predictor.predict_match(
                 home_team=fixture['home_team'],
                 away_team=fixture['away_team'],
-                league_code=soccerstats_code,
+                league_code=league,
                 match_date=datetime.fromisoformat(fixture['date']) if fixture.get('date') else None
             )
 
@@ -1920,7 +1917,6 @@ async def process_full_prediction(
         # ÉTAPE 1: Déterminer la ligue (essayer de deviner depuis les noms)
         print(f"[PREDICTION {prediction_id}] Détection de la ligue...")
         league_code = "MANUAL"  # Par défaut
-        soccerstats_code = "england"  # Par défaut
 
         # Essayer de détecter la ligue en cherchant les équipes dans les CSV
         season = get_current_season()  # Ex: "2526"
@@ -1932,7 +1928,6 @@ async def process_full_prediction(
                     df = pd.read_csv(csv_path)
                     if home_team in df['HomeTeam'].values or away_team in df['AwayTeam'].values:
                         league_code = lcode
-                        soccerstats_code = SOCCERSTATS_CODES.get(lcode, "england")
                         print(f"[PREDICTION {prediction_id}] Ligue détectée: {linfo['name']} ({lcode}) depuis {csv_path}")
                         break
             except Exception as e:
@@ -1940,7 +1935,7 @@ async def process_full_prediction(
                 pass
 
         if league_code == "MANUAL":
-            print(f"[PREDICTION {prediction_id}] ⚠️ Ligue non détectée, utilisation par défaut: england")
+            print(f"[PREDICTION {prediction_id}] ⚠️ Ligue non détectée, utilisation codes par défaut")
 
         # ÉTAPE 2: Utiliser le predictor existant (Poisson + IA Tactique)
         print(f"[PREDICTION {prediction_id}] Calcul Poisson + IA Tactique...")

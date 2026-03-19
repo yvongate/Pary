@@ -112,15 +112,6 @@ def fetch_lineups_for_upcoming_matches(time_window_minutes: int = 60, buffer_min
     lineup_service = get_lineup_service()
     predictor = DynamicPredictor()
 
-    # Mapping codes soccerstats
-    soccerstats_codes = {
-        'E0': 'england',
-        'SP1': 'spain',
-        'I1': 'italy',
-        'F1': 'france',
-        'D1': 'germany'
-    }
-
     # 1. Récupérer les matchs depuis fixtures.csv
     print(f"\n[ETAPE 1] Lecture de fixtures.csv...")
     upcoming_matches = get_upcoming_matches_from_fixtures(time_window_minutes, buffer_minutes)
@@ -208,12 +199,12 @@ def fetch_lineups_for_upcoming_matches(time_window_minutes: int = 60, buffer_min
             else:
                 # Pas encore générée → Générer maintenant
                 print(f"\n[PREDICTION] Génération immédiate...")
-                soccerstats_code = soccerstats_codes.get(league_code, 'england')
 
+                # IMPORTANT: Passer league_code (E0, SP1, T1, etc.) pas soccerstats_code
                 prediction_result = predictor.predict_match(
                     home_team=home_team,
                     away_team=away_team,
-                    league_code=soccerstats_code,
+                    league_code=league_code,
                     match_date=match_date
                 )
 
