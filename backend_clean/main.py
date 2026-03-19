@@ -1823,8 +1823,9 @@ async def generate_prediction_manual(
                 match_id, home_team, away_team, league_code, match_date,
                 home_formation, away_formation,
                 shots_min, shots_max, shots_confidence,
+                corners_min, corners_max, corners_confidence,
                 status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             match_id,
             request.home_team,
@@ -1834,6 +1835,7 @@ async def generate_prediction_manual(
             request.home_formation,
             request.away_formation,
             0, 0, 0.0,  # Valeurs temporaires shots
+            0, 0, 0.0,  # Valeurs temporaires corners (colonnes NOT NULL dans la DB)
             "en_cours",  # STATUS
             datetime.now().isoformat()
         ))

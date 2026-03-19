@@ -95,11 +95,13 @@ export default function GeneratePredictionModal({
       const data = await response.json();
 
       // Debug: Afficher la réponse complète du backend
-      console.log('Réponse backend /api/generate-prediction:', data);
+      console.log('Réponse backend /api/generate-prediction:', JSON.stringify(data, null, 2));
 
       if (!response.ok || data.error) {
-        console.error('Erreur backend:', data);
-        throw new Error(data.detail || data.error || 'Erreur lors de la génération');
+        console.error('Erreur backend complète:', JSON.stringify(data, null, 2));
+        const errorMessage = data.detail || data.error || 'Erreur lors de la génération';
+        const traceback = data.traceback ? `\n\nTraceback:\n${data.traceback}` : '';
+        throw new Error(errorMessage + traceback);
       }
 
       // Succès - Fermer le modal et notifier (passer les noms d'équipes)
