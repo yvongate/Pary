@@ -45,45 +45,113 @@ class SQLiteDatabaseService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS match_predictions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                match_id TEXT UNIQUE NOT NULL,
-                home_team TEXT NOT NULL,
-                away_team TEXT NOT NULL,
-                league_code TEXT NOT NULL,
-                match_date TEXT NOT NULL,
-                shots_min INTEGER NOT NULL,
-                shots_max INTEGER NOT NULL,
-                shots_confidence REAL NOT NULL,
-                corners_min INTEGER NOT NULL,
-                corners_max INTEGER NOT NULL,
-                corners_confidence REAL NOT NULL,
-                home_shots REAL,
-                away_shots REAL,
-                home_corners REAL,
-                away_corners REAL,
-                home_shots_min INTEGER,
-                home_shots_max INTEGER,
-                away_shots_min INTEGER,
-                away_shots_max INTEGER,
-                home_corners_min INTEGER,
-                home_corners_max INTEGER,
-                away_corners_min INTEGER,
-                away_corners_max INTEGER,
-                analysis_shots TEXT,
-                analysis_corners TEXT,
-                ai_reasoning_shots TEXT,
-                ai_reasoning_corners TEXT,
-                home_formation TEXT,
-                away_formation TEXT,
-                weather TEXT,
-                rankings_used TEXT,
-                status TEXT DEFAULT 'completed',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        # Vérifier si la table existe et a besoin d'être migrée
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='match_predictions'")
+        table_exists = cursor.fetchone() is not None
+
+        if table_exists:
+            # Migration : Recréer la table sans les contraintes NOT NULL sur corners
+            print("Migration de la base de données : suppression des contraintes NOT NULL sur corners...")
+
+            # 1. Créer table temporaire avec nouveau schéma
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS match_predictions_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id TEXT UNIQUE NOT NULL,
+                    home_team TEXT NOT NULL,
+                    away_team TEXT NOT NULL,
+                    league_code TEXT NOT NULL,
+                    match_date TEXT NOT NULL,
+                    shots_min INTEGER NOT NULL,
+                    shots_max INTEGER NOT NULL,
+                    shots_confidence REAL NOT NULL,
+                    corners_min INTEGER,
+                    corners_max INTEGER,
+                    corners_confidence REAL,
+                    home_shots REAL,
+                    away_shots REAL,
+                    home_corners REAL,
+                    away_corners REAL,
+                    home_shots_min INTEGER,
+                    home_shots_max INTEGER,
+                    away_shots_min INTEGER,
+                    away_shots_max INTEGER,
+                    home_corners_min INTEGER,
+                    home_corners_max INTEGER,
+                    away_corners_min INTEGER,
+                    away_corners_max INTEGER,
+                    analysis_shots TEXT,
+                    analysis_corners TEXT,
+                    ai_reasoning_shots TEXT,
+                    ai_reasoning_corners TEXT,
+                    home_formation TEXT,
+                    away_formation TEXT,
+                    weather TEXT,
+                    rankings_used TEXT,
+                    status TEXT DEFAULT 'completed',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # 2. Copier les données
+            try:
+                cursor.execute("""
+                    INSERT INTO match_predictions_new
+                    SELECT * FROM match_predictions
+                """)
+
+                # 3. Supprimer l'ancienne table
+                cursor.execute("DROP TABLE match_predictions")
+
+                # 4. Renommer la nouvelle table
+                cursor.execute("ALTER TABLE match_predictions_new RENAME TO match_predictions")
+
+                print("✅ Migration réussie : corners sont maintenant optionnels")
+            except Exception as e:
+                print(f"⚠️ Migration ignorée (peut-être déjà faite) : {e}")
+                cursor.execute("DROP TABLE IF EXISTS match_predictions_new")
+        else:
+            # Première création : table propre sans contraintes NOT NULL sur corners
+            cursor.execute("""
+                CREATE TABLE match_predictions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id TEXT UNIQUE NOT NULL,
+                    home_team TEXT NOT NULL,
+                    away_team TEXT NOT NULL,
+                    league_code TEXT NOT NULL,
+                    match_date TEXT NOT NULL,
+                    shots_min INTEGER NOT NULL,
+                    shots_max INTEGER NOT NULL,
+                    shots_confidence REAL NOT NULL,
+                    corners_min INTEGER,
+                    corners_max INTEGER,
+                    corners_confidence REAL,
+                    home_shots REAL,
+                    away_shots REAL,
+                    home_corners REAL,
+                    away_corners REAL,
+                    home_shots_min INTEGER,
+                    home_shots_max INTEGER,
+                    away_shots_min INTEGER,
+                    away_shots_max INTEGER,
+                    home_corners_min INTEGER,
+                    home_corners_max INTEGER,
+                    away_corners_min INTEGER,
+                    away_corners_max INTEGER,
+                    analysis_shots TEXT,
+                    analysis_corners TEXT,
+                    ai_reasoning_shots TEXT,
+                    ai_reasoning_corners TEXT,
+                    home_formation TEXT,
+                    away_formation TEXT,
+                    weather TEXT,
+                    rankings_used TEXT,
+                    status TEXT DEFAULT 'completed',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
         # Ajouter les colonnes manquantes si elles n'existent pas (migration)
         new_columns = [
