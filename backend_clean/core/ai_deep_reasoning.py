@@ -227,67 +227,75 @@ IMPORTANT:
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INSTRUCTIONS DE RAISONNEMENT (ORDRE CRUCIAL !)
+INSTRUCTIONS DE RAISONNEMENT - FORMAT A 9 ETAPES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ IMPORTANT CRITIQUE:
-TU DOIS FAIRE TA PROPRE ANALYSE EN PREMIER, **AVANT** DE REGARDER LES COTES.
-NE LAISSE PAS LES COTES INFLUENCER TON ANALYSE TACTIQUE.
+Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert et prédire LES DEUX ÉQUIPES:
 
-Les bookmakers ont des modèles sophistiqués MAIS:
-- Ils n'ont pas les COMPOSITIONS confirmées en temps réel
-- Ils ne font pas d'analyse TACTIQUE approfondie formations
-- Les cotes intègrent la masse des parieurs (pas forcément rationnel)
+PARTIE A: ANALYSE {home_team} (DOMICILE)
+──────────────────────────────────────
 
-TON AVANTAGE: Analyse tactique + compositions confirmées
+ETAPE 1: Profil de {home_team}
+  - Position au classement, forme récente
+  - Force offensive et défensive à domicile
+  - Classements: général, domicile, attaque, défense
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ETAPE 2: Baseline historique {home_team}
+  - Moyenne tirs des derniers matchs à domicile
+  - Contre quels types d'équipes? (forts/faibles)
+  - Analyse des formations (si disponibles):
+    * {home_team} en {home_formation} fait historiquement [X] tirs/90
+    * {away_team} en {away_formation} concède [Y] tirs/90
+    * Moyenne baseline: (X + Y) / 2
 
-ETAPE 1: ANALYSE TACTIQUE INDEPENDANTE (SANS regarder les cotes!)
+ETAPE 3: Contexte et ajustements {home_team}
+  - Blessures/suspensions impactantes?
+  - Forme récente (3-4 derniers matchs)?
+  - Motivation (importance du match, derby, lutte pour titre/maintien)?
+  - Cohérence avec classements actuels?
 
-Analyse les formations:
-- {home_formation}: Formation offensive, equilibree ou defensive?
-- {away_formation}: Formation offensive, equilibree ou defensive?
+ETAPE 4: Prédiction {home_team}
+  - Baseline (étape 2) + ajustements contextuels (étape 3)
+  - Justification: "[baseline] moyenne + [ajustements formation/domicile/contexte]"
+  - Combien de tirs pour {home_team}?
 
-Style de jeu probable:
-- {home_team} avec {home_formation}: Plutot possession? Contre-attaque? Direct?
-- {away_team} avec {away_formation}: Plutot possession? Contre-attaque? Direct?
 
-Matchup tactique:
-- Qui dominera la possession?
-- Qui sera plus agressif offensivement?
-- Style de jeu: Ouvert (beaucoup tirs) ou Fermé (bloc bas)?
+PARTIE B: ANALYSE {away_team} (EXTERIEUR)
+──────────────────────────────────────
 
-Impact sur les tirs:
-- Formations offensives (4-3-3, 3-4-3) = plus de tirs attendus
-- Formations defensives (5-4-1, 4-5-1) = moins de tirs attendus
-- Possession élevée = plus de tirs
+ETAPE 5: Profil de {away_team}
+  - Position au classement, forme récente
+  - Force offensive et défensive à l'extérieur
+  - Classements: général, extérieur, attaque, défense
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ETAPE 6: Baseline historique {away_team}
+  - Moyenne tirs des derniers matchs à l'extérieur
+  - Contre quels types d'équipes?
+  - Analyse des formations (si disponibles):
+    * {away_team} en {away_formation} fait historiquement [X] tirs/90
+    * {home_team} en {home_formation} concède [Y] tirs/90
+    * Moyenne baseline: (X + Y) / 2
 
-ETAPE 2: PREDICTION COMPLETE (TA propre analyse, INDEPENDANTE du marché!)
+ETAPE 7: Contexte et ajustements {away_team}
+  - Blessures/suspensions impactantes?
+  - Forme récente?
+  - Motivation?
+  - Cohérence avec classements?
 
-Basé sur:
-1. Stats historiques:
-   - {home_team}: {home_stats.get('avg_shots', 0):.1f} tirs
-   - {away_team}: {away_stats.get('avg_shots', 0):.1f} tirs
-2. Analyse tactique formations (étape 1)
-3. Contexte du match
+ETAPE 8: Prédiction {away_team}
+  - Baseline (étape 6) + ajustements contextuels (étape 7)
+  - Justification: "[baseline] moyenne + [ajustements formation/extérieur/contexte]"
+  - Combien de tirs pour {away_team}?
 
-CALCULE (sans regarder les cotes bookmaker):
 
-{home_team} prévu:
-- Tirs: [X] (justifie avec formation + stats)
+PARTIE C: SYNTHESE FINALE
+──────────────────────────
 
-{away_team} prévu:
-- Tirs: [Z] (justifie avec formation + stats)
-
-TOTAUX MATCH prévus:
-- Tirs total: [X + Z]
-- Écart tirs: {home_team} vs {away_team} = [X - Z]
-
-⚠️ CHECKPOINT: As-tu fait TA propre prédiction AVANT de regarder les cotes? OUI/NON
-Si NON, recommence l'étape 2!
+ETAPE 9: Vérification cohérence
+  - Total tirs réaliste? (~28 tirs pour un match moyen)
+  - Écart entre les équipes cohérent avec classements/forme?
+  - Ajustements finaux nécessaires?
+  - Validation des fourchettes
 
 """
 
@@ -297,7 +305,7 @@ Si NON, recommence l'étape 2!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ETAPE 3: DETECTION DE VALUE (Compare TA prédiction avec le marché)
+ETAPE SUPPLEMENTAIRE: DETECTION DE VALUE (Compare TA prédiction avec le marché)
 
 MAINTENANT (et seulement maintenant), compare TA prédiction (étape 2) avec les cotes bookmaker.
 
@@ -510,42 +518,81 @@ IMPORTANT: Ces 2 paris sont souvent DIFFÉRENTS!
 FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 
 ==================================================
-MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
+RAISONNEMENT DETAILLE - {home_team} vs {away_team}
+==================================================
 
-ANALYSE TACTIQUE DES FORMATIONS:
+PARTIE A: ANALYSE {home_team} (DOMICILE)
 
-{home_team} ({home_formation}):
-[Description détaillée de la formation: nombre de défenseurs, milieux, attaquants]
-[Style de jeu: offensive/défensive/équilibrée]
-[Forces: ex. pistons offensifs, double pivot solide, trio d'attaque mobile]
-[Faiblesses éventuelles]
-[Formation favorisant la possession/contre-attaque/jeu direct]
+ETAPE 1: Profil de {home_team}
+[Position au classement, forme récente, force offensive/défensive à domicile]
+[Analyse des classements: général, domicile, attaque, défense]
 
-{away_team} ({away_formation}):
-[Description détaillée de la formation]
-[Style de jeu: offensive/défensive/équilibrée]
-[Forces et caractéristiques tactiques]
-[Faiblesses éventuelles]
-[Approche de jeu probable]
+ETAPE 2: Baseline historique
+En analysant les derniers matchs à domicile:
+  - Moyenne: [X] tirs/match
+  - Contre équipes fortes: [X] tirs en moyenne
+  - Contre équipes faibles: [X] tirs en moyenne
+[Si formations disponibles:]
+  - {home_team} en {home_formation}: [X] tirs/90 historiquement
+  - {away_team} en {away_formation}: concède [Y] tirs/90
+  - Baseline formations: ([X] + [Y]) / 2 = [Z] tirs
 
-IMPACT TACTIQUE:
+ETAPE 3: Contexte et ajustements
+Blessures/suspensions: [Liste des absents impactants ou "Aucune absence majeure"]
+Forme récente: [Victoires/défaites récentes]
+Motivation: [Importance du match, enjeux]
+Cohérence: [Validation avec classements]
 
-[Qui dominera la possession?]
-[Quel style de match attendu? (ouvert/fermé)]
-[Équilibre offensif/défensif des deux équipes]
-[Prévisions: match à sens unique? équilibré? déséquilibré?]
-[Impact sur le nombre de tentatives de chaque équipe]
+ETAPE 4: Prédiction {home_team}
+Baseline: [X] tirs
+Ajustements: +[Y] tirs (formation offensive) +[Z] tirs (domicile) -[W] tirs (blessures)
+Prédiction finale {home_team}: [Total] tirs
 
-MES PREDICTIONS:
 
-{home_team}: [X] tirs ([baseline] moyenne + [ajustements formation/domicile/contexte])
-{away_team}: [Z] tirs ([baseline] moyenne + [ajustements formation/extérieur/contexte])
+PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 
-TOTAUX: [X+Z] tirs
-ÉCARTS: {home_team} +[X-Z] tirs
+ETAPE 5: Profil de {away_team}
+[Position au classement, forme récente, force offensive/défensive à l'extérieur]
 
-Base de calcul: Formation {home_formation} vs {away_formation}
-+ Stats historiques + Avantage domicile/contexte
+ETAPE 6: Baseline historique
+En analysant les derniers matchs à l'extérieur:
+  - Moyenne: [X] tirs/match
+  - Contre équipes fortes: [X] tirs
+  - Contre équipes faibles: [X] tirs
+[Si formations disponibles:]
+  - {away_team} en {away_formation}: [X] tirs/90
+  - {home_team} en {home_formation}: concède [Y] tirs/90
+  - Baseline: ([X] + [Y]) / 2 = [Z] tirs
+
+ETAPE 7: Contexte et ajustements
+Blessures/suspensions: [...]
+Forme récente: [...]
+Motivation: [...]
+
+ETAPE 8: Prédiction {away_team}
+Baseline: [X] tirs
+Ajustements: [détails des ajustements]
+Prédiction finale {away_team}: [Total] tirs
+
+
+PARTIE C: SYNTHESE FINALE
+
+ETAPE 9: Vérification cohérence
+Total prédit: [X+Y] tirs
+Cohérence: OUI/NON [justification]
+Écart entre équipes: {home_team} +[X-Y] tirs
+Ajustements finaux: [si nécessaire]
+
+==================================================
+MA PREDICTION INDEPENDANTE (AVANT analyse cotes)
+
+{home_team}: [X] tirs
+{away_team}: [Y] tirs
+
+TOTAUX: [X+Y] tirs
+ÉCARTS: {home_team} +[X-Y] tirs
+
+Base de calcul: Analyse 9 étapes ci-dessus
 
 ==================================================
 === RECOMMANDATIONS TIRS ===
@@ -612,46 +659,61 @@ NOTE: Ces handicaps sont calcules avec 70% de confiance.
         else:
             prompt += f"""
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ETAPE 3: SYNTHESE ET PREDICTION FINALE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Donne une fourchette realiste pour le total du match:
-- Tirs min/max
-
-FORMAT DE REPONSE OBLIGATOIRE (sans propositions):
+FORMAT DE REPONSE OBLIGATOIRE (sans propositions bookmaker):
 
 ==================================================
-ANALYSE TACTIQUE DES FORMATIONS:
+RAISONNEMENT DETAILLE - {home_team} vs {away_team}
+==================================================
 
-{home_team} ({home_formation}):
-[Description détaillée de la formation: nombre de défenseurs, milieux, attaquants]
-[Style de jeu: offensive/défensive/équilibrée]
-[Forces: ex. pistons offensifs, double pivot solide, trio d'attaque mobile]
-[Formation favorisant la possession/contre-attaque/jeu direct]
+PARTIE A: ANALYSE {home_team} (DOMICILE)
 
-{away_team} ({away_formation}):
-[Description détaillée de la formation]
-[Style de jeu: offensive/défensive/équilibrée]
-[Forces et caractéristiques tactiques]
-[Approche de jeu probable]
+ETAPE 1: Profil de {home_team}
+[Position, forme, force offensive/défensive à domicile]
 
-IMPACT TACTIQUE:
+ETAPE 2: Baseline historique
+[Moyenne tirs à domicile, contre quels types d'équipes]
+[Si formations disponibles: analyse formations]
 
-[Qui dominera la possession?]
-[Quel style de match attendu? (ouvert/fermé)]
-[Équilibre offensif/défensif des deux équipes]
-[Impact sur le nombre de tentatives de chaque équipe]
+ETAPE 3: Contexte et ajustements
+[Blessures, forme, motivation]
 
-MES PREDICTIONS:
+ETAPE 4: Prédiction {home_team}
+Baseline: [X] tirs
+Ajustements: [détails]
+Prédiction finale: [Total] tirs
 
-{home_team}: [X] tirs ([baseline] moyenne + [ajustements])
-{away_team}: [Z] tirs ([baseline] moyenne + [ajustements])
 
-TOTAUX: [X+Z] tirs
-ÉCARTS: {home_team} +[X-Z] tirs
+PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 
-Base de calcul: Formation {home_formation} vs {away_formation} + Stats historiques
+ETAPE 5: Profil de {away_team}
+[Position, forme, force à l'extérieur]
+
+ETAPE 6: Baseline historique
+[Moyenne tirs à l'extérieur]
+
+ETAPE 7: Contexte et ajustements
+[Blessures, forme, motivation]
+
+ETAPE 8: Prédiction {away_team}
+Baseline: [X] tirs
+Ajustements: [détails]
+Prédiction finale: [Total] tirs
+
+
+PARTIE C: SYNTHESE FINALE
+
+ETAPE 9: Vérification cohérence
+Total prédit: [X+Y] tirs
+Cohérence: OUI/NON
+Ajustements finaux: [si nécessaire]
+
+==================================================
+PREDICTIONS FINALES:
+
+{home_team}: [X] tirs
+{away_team}: [Y] tirs
+TOTAUX: [X+Y] tirs
+ÉCARTS: {home_team} +[X-Y] tirs
 
 ==================================================
 """
