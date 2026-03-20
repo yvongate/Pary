@@ -512,14 +512,40 @@ FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 ==================================================
 MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
 
-{home_team}: [X] tirs
-{away_team}: [Z] tirs
+ANALYSE TACTIQUE DES FORMATIONS:
+
+{home_team} ({home_formation}):
+[Description détaillée de la formation: nombre de défenseurs, milieux, attaquants]
+[Style de jeu: offensive/défensive/équilibrée]
+[Forces: ex. pistons offensifs, double pivot solide, trio d'attaque mobile]
+[Faiblesses éventuelles]
+[Formation favorisant la possession/contre-attaque/jeu direct]
+
+{away_team} ({away_formation}):
+[Description détaillée de la formation]
+[Style de jeu: offensive/défensive/équilibrée]
+[Forces et caractéristiques tactiques]
+[Faiblesses éventuelles]
+[Approche de jeu probable]
+
+IMPACT TACTIQUE:
+
+[Qui dominera la possession?]
+[Quel style de match attendu? (ouvert/fermé)]
+[Équilibre offensif/défensif des deux équipes]
+[Prévisions: match à sens unique? équilibré? déséquilibré?]
+[Impact sur le nombre de tentatives de chaque équipe]
+
+MES PREDICTIONS:
+
+{home_team}: [X] tirs ([baseline] moyenne + [ajustements formation/domicile/contexte])
+{away_team}: [Z] tirs ([baseline] moyenne + [ajustements formation/extérieur/contexte])
 
 TOTAUX: [X+Z] tirs
 ÉCARTS: {home_team} +[X-Z] tirs
 
-Base de calcul: Formations {home_formation} vs {away_formation}
-+ Stats historiques + Analyse tactique
+Base de calcul: Formation {home_formation} vs {away_formation}
++ Stats historiques + Avantage domicile/contexte
 
 ==================================================
 === RECOMMANDATIONS TIRS ===
@@ -585,10 +611,49 @@ NOTE: Ces handicaps sont calcules avec 70% de confiance.
 """
         else:
             prompt += f"""
-ETAPE 3: Prediction finale
 
-Donne une fourchette realiste:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ETAPE 3: SYNTHESE ET PREDICTION FINALE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Donne une fourchette realiste pour le total du match:
 - Tirs min/max
+
+FORMAT DE REPONSE OBLIGATOIRE (sans propositions):
+
+==================================================
+ANALYSE TACTIQUE DES FORMATIONS:
+
+{home_team} ({home_formation}):
+[Description détaillée de la formation: nombre de défenseurs, milieux, attaquants]
+[Style de jeu: offensive/défensive/équilibrée]
+[Forces: ex. pistons offensifs, double pivot solide, trio d'attaque mobile]
+[Formation favorisant la possession/contre-attaque/jeu direct]
+
+{away_team} ({away_formation}):
+[Description détaillée de la formation]
+[Style de jeu: offensive/défensive/équilibrée]
+[Forces et caractéristiques tactiques]
+[Approche de jeu probable]
+
+IMPACT TACTIQUE:
+
+[Qui dominera la possession?]
+[Quel style de match attendu? (ouvert/fermé)]
+[Équilibre offensif/défensif des deux équipes]
+[Impact sur le nombre de tentatives de chaque équipe]
+
+MES PREDICTIONS:
+
+{home_team}: [X] tirs ([baseline] moyenne + [ajustements])
+{away_team}: [Z] tirs ([baseline] moyenne + [ajustements])
+
+TOTAUX: [X+Z] tirs
+ÉCARTS: {home_team} +[X-Z] tirs
+
+Base de calcul: Formation {home_formation} vs {away_formation} + Stats historiques
+
+==================================================
 """
 
         prompt += f"""
