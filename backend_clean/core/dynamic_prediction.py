@@ -1302,10 +1302,18 @@ Analyse et ajuste maintenant:"""
                 }
             },
             'rankings_used': {
+                # Classement général
+                'home_standings_rank': self._get_team_rank(home_team, 'standings', current_rankings),
+                'away_standings_rank': self._get_team_rank(away_team, 'standings', current_rankings),
+                # Attaque
                 'home_attack_rank': self._get_team_rank(home_team, 'offence_home', current_rankings),
                 'away_attack_rank': self._get_team_rank(away_team, 'offence_away', current_rankings),
+                # Défense
                 'home_defence_rank': home_def_rank,
                 'away_defence_rank': away_def_rank,
+                # Forme (8 derniers matchs)
+                'home_form_rank': home_form_rank,
+                'away_form_rank': away_form_rank,
                 'timestamp': datetime.now().isoformat()
             }
         }

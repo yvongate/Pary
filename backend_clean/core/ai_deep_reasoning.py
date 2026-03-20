@@ -93,18 +93,20 @@ SECTION 1: CLASSEMENTS ACTUELS (données live)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {home_team}:
-  - Position: {home_detailed.get('position', 'Non fourni')}e sur 20
+  - Classement général: {rankings.get('home_standings_rank', home_detailed.get('position', '?'))}e sur 20
   - Points: {home_detailed.get('points', 'Non fourni')} ({home_detailed.get('won', '?')}V-{home_detailed.get('drawn', '?')}N-{home_detailed.get('lost', '?')}D)
   - Buts: {home_detailed.get('goals_for', '?')} marqués / {home_detailed.get('goals_against', '?')} encaissés
-  - Rang attaque domicile: {rankings.get('home_attack_rank', 'Non fourni')}
-  - Rang défense domicile: {rankings.get('home_defence_rank', 'Non fourni')}
+  - Rang attaque domicile: {rankings.get('home_attack_rank', 'Non fourni')}e
+  - Rang défense domicile: {rankings.get('home_defence_rank', 'Non fourni')}e
+  - Rang forme (8 derniers matchs): {rankings.get('home_form_rank', 'Non fourni')}e
 
 {away_team}:
-  - Position: {away_detailed.get('position', 'Non fourni')}e sur 20
+  - Classement général: {rankings.get('away_standings_rank', away_detailed.get('position', '?'))}e sur 20
   - Points: {away_detailed.get('points', 'Non fourni')} ({away_detailed.get('won', '?')}V-{away_detailed.get('drawn', '?')}N-{away_detailed.get('lost', '?')}D)
   - Buts: {away_detailed.get('goals_for', '?')} marqués / {away_detailed.get('goals_against', '?')} encaissés
-  - Rang attaque extérieur: {rankings.get('away_attack_rank', 'Non fourni')}
-  - Rang défense extérieur: {rankings.get('away_defence_rank', 'Non fourni')}
+  - Rang attaque extérieur: {rankings.get('away_attack_rank', 'Non fourni')}e
+  - Rang défense extérieur: {rankings.get('away_defence_rank', 'Non fourni')}e
+  - Rang forme (8 derniers matchs): {rankings.get('away_form_rank', 'Non fourni')}e
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 2: STATISTIQUES HISTORIQUES (BASELINE)
@@ -132,17 +134,17 @@ SECTION 3: HISTORIQUE DES MATCHS (pour analyse par type d'adversaire)
                 prompt += f"\n{home_team} à DOMICILE (derniers matchs):\n"
                 for match in home_history[:10]:  # 10 derniers matchs
                     opponent = match.get('opponent', 'Unknown')
-                    shots = match.get('team_shots', '?')
-                    opp_rank = match.get('opponent_rank', '?')
-                    prompt += f"  - vs {opponent} (rang {opp_rank}): {shots} tirs\n"
+                    shots = match.get('shots', '?')  # Champ correct: 'shots' pas 'team_shots'
+                    date = match.get('date', '?')
+                    prompt += f"  - vs {opponent}: {shots} tirs ({date})\n"
 
             if away_history:
                 prompt += f"\n{away_team} à l'EXTÉRIEUR (derniers matchs):\n"
                 for match in away_history[:10]:
                     opponent = match.get('opponent', 'Unknown')
-                    shots = match.get('team_shots', '?')
-                    opp_rank = match.get('opponent_rank', '?')
-                    prompt += f"  - vs {opponent} (rang {opp_rank}): {shots} tirs\n"
+                    shots = match.get('shots', '?')  # Champ correct: 'shots' pas 'team_shots'
+                    date = match.get('date', '?')
+                    prompt += f"  - vs {opponent}: {shots} tirs ({date})\n"
 
             prompt += "\n"
 
