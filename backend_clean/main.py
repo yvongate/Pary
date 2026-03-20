@@ -223,7 +223,7 @@ def normalize_team_name(team_name: str) -> str:
     # Vérifier mapping direct
     if team_name in TEAM_NAME_MAPPING:
         normalized = TEAM_NAME_MAPPING[team_name]
-        print(f"[NORMALIZE] '{team_name}' → '{normalized}'")
+        print(f"[NORMALIZE] '{team_name}' -> '{normalized}'")
         return normalized
 
     # Sinon retourner tel quel
