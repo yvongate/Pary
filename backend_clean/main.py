@@ -2000,7 +2000,8 @@ async def process_full_prediction(
                 from core.ai_deep_reasoning import DeepReasoningAnalyzer
                 analyzer = DeepReasoningAnalyzer()
 
-                # Analyse supplémentaire focalisée sur le value betting
+                # Analyse supplémentaire focalisée sur le value betting avec TOUTES les données
+                pred_ctx = prediction_result.get('context', {})
                 context = {
                     'home_team': home_team,
                     'away_team': away_team,
@@ -2013,13 +2014,23 @@ async def process_full_prediction(
                     'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                     'match_date': datetime.now().isoformat(),
                     'bookmaker_propositions': bookmaker_props_text,
-                    # Classements et stats détaillées pour l'IA
+                    # Classements et stats détaillées
                     'rankings': prediction_result.get('rankings_used', {}),
-                    'detailed_stats': prediction_result.get('context', {}).get('detailed_stats', {}),
+                    'detailed_stats': pred_ctx.get('detailed_stats', {}),
                     'match_history': {
                         'home': prediction_result.get('analysis', {}).get('home_team', {}).get('match_history', []),
                         'away': prediction_result.get('analysis', {}).get('away_team', {}).get('match_history', [])
-                    }
+                    },
+                    # Météo
+                    'weather': pred_ctx.get('weather', {}),
+                    # Blessures et analyses RDJ
+                    'rdj_context': pred_ctx.get('rdj_context', {}),
+                    # Stats formations Understat
+                    'formation_stats': pred_ctx.get('formation_stats', {}),
+                    # Derby
+                    'is_derby': pred_ctx.get('is_derby', False),
+                    # Raisonnement tactique déjà calculé
+                    'tactical_reasoning': pred_ctx.get('adjustments', {}).get('tactical_reasoning', '')
                 }
                 value_betting_analysis = analyzer.analyze_match(context)
 
@@ -2032,7 +2043,8 @@ async def process_full_prediction(
             from core.ai_deep_reasoning import DeepReasoningAnalyzer
             analyzer = DeepReasoningAnalyzer()
 
-            # Créer contexte enrichi pour l'IA avec classements et historique
+            # Créer contexte enrichi pour l'IA avec TOUTES les données disponibles
+            pred_context = prediction_result.get('context', {}) if prediction_result and 'error' not in prediction_result else {}
             context = {
                 'home_team': home_team,
                 'away_team': away_team,
@@ -2045,13 +2057,23 @@ async def process_full_prediction(
                 'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                 'match_date': datetime.now().isoformat(),
                 'bookmaker_propositions': bookmaker_props_text,
-                # Classements et stats détaillées pour l'IA (depuis prediction_result)
+                # Classements et stats détaillées
                 'rankings': prediction_result.get('rankings_used', {}) if prediction_result and 'error' not in prediction_result else {},
-                'detailed_stats': prediction_result.get('context', {}).get('detailed_stats', {}) if prediction_result and 'error' not in prediction_result else {},
+                'detailed_stats': pred_context.get('detailed_stats', {}),
                 'match_history': {
                     'home': prediction_result.get('analysis', {}).get('home_team', {}).get('match_history', []) if prediction_result and 'error' not in prediction_result else [],
                     'away': prediction_result.get('analysis', {}).get('away_team', {}).get('match_history', []) if prediction_result and 'error' not in prediction_result else []
-                }
+                },
+                # Météo
+                'weather': pred_context.get('weather', {}),
+                # Blessures et analyses RDJ
+                'rdj_context': pred_context.get('rdj_context', {}),
+                # Stats formations Understat
+                'formation_stats': pred_context.get('formation_stats', {}),
+                # Derby
+                'is_derby': pred_context.get('is_derby', False),
+                # Raisonnement tactique déjà calculé
+                'tactical_reasoning': pred_context.get('adjustments', {}).get('tactical_reasoning', '')
             }
 
             ai_analysis = analyzer.analyze_match(context)

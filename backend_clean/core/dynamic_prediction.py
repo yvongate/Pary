@@ -1292,6 +1292,13 @@ Analyse et ajuste maintenant:"""
                     'home': home_detailed_stats,
                     'away': away_detailed_stats
                 },
+                'rdj_context': rdj_context,  # Blessures, compositions, analyses RDJ
+                'lineups': lineups,  # Compositions confirmées
+                'formation_stats': {
+                    'home': home_formation_stats,
+                    'away': away_formation_stats
+                },
+                'is_derby': is_derby,
                 'adjustments': {
                     'model_type': 'Poisson bidirectionnel + IA tactique',
                     'possession_home': round(home_possession * 100, 1),

@@ -148,6 +148,84 @@ SECTION 3: HISTORIQUE DES MATCHS (pour analyse par type d'adversaire)
 
             prompt += "\n"
 
+        # SECTION 4: Météo (si disponible)
+        weather = context.get('weather', {})
+        if weather:
+            prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: MÉTÉO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Conditions: {weather.get('condition', 'Non fourni')}
+Température: {weather.get('temperature', '?')}°C
+Vent: {weather.get('wind_speed', '?')} km/h
+Impact potentiel: {weather.get('impact_description', 'Non évalué')}
+
+"""
+
+        # SECTION 5: Blessures et contexte RDJ (si disponible)
+        rdj_context = context.get('rdj_context', {})
+        if rdj_context:
+            injuries = rdj_context.get('injuries_text', '')
+            if injuries:
+                prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: BLESSURES ET SUSPENSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{injuries[:800]}
+
+"""
+
+        # SECTION 6: Stats formations Understat (si disponible)
+        formation_stats = context.get('formation_stats', {})
+        home_form_stats = formation_stats.get('home', {})
+        away_form_stats = formation_stats.get('away', {})
+        if home_form_stats or away_form_stats:
+            prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: STATS FORMATIONS (Understat)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+            if home_form_stats:
+                prompt += f"""{home_team} en {home_form_stats.get('formation', home_formation)}:
+  - Tirs/90: {home_form_stats.get('shots_per_90', '?')}
+  - xG/90: {home_form_stats.get('xg_per_90', '?')}
+  - Tirs concédés/90: {home_form_stats.get('shots_against_per_90', '?')}
+
+"""
+            if away_form_stats:
+                prompt += f"""{away_team} en {away_form_stats.get('formation', away_formation)}:
+  - Tirs/90: {away_form_stats.get('shots_per_90', '?')}
+  - xG/90: {away_form_stats.get('xg_per_90', '?')}
+  - Tirs concédés/90: {away_form_stats.get('shots_against_per_90', '?')}
+
+"""
+
+        # Derby indicator
+        is_derby = context.get('is_derby', False)
+        if is_derby:
+            prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ DERBY - Match à enjeu émotionnel fort
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ce match est identifié comme un DERBY local.
+Les derbies ont tendance à être plus disputés avec:
+- Plus d'engagement physique
+- Potentiellement plus de fautes et tensions
+- Atmosphère électrique qui peut affecter le jeu
+
+"""
+
+        # Raisonnement tactique déjà calculé (si disponible)
+        tactical_reasoning = context.get('tactical_reasoning', '')
+        if tactical_reasoning:
+            prompt += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSE TACTIQUE (pré-calculée)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{tactical_reasoning}
+
+"""
+
         # Ajouter les propositions bookmaker si fournies
         if bookmaker_props and bookmaker_props.strip():
             prompt += f"""
