@@ -233,63 +233,84 @@ IMPORTANT:
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INSTRUCTIONS DE RAISONNEMENT
+INSTRUCTIONS DE RAISONNEMENT (OBLIGATOIRES)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert et prédire LES DEUX ÉQUIPES:
+IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE en cherchant des PATTERNS.
+Tu DOIS analyser les performances SELON LE TYPE D'ADVERSAIRE (top 5, milieu, bas de tableau).
+Tu DOIS citer les CLASSEMENTS et POSITIONS exactes des équipes.
 
 PARTIE A: ANALYSE {home_team} (DOMICILE)
 ──────────────────────────────────────
 
-ETAPE 1: Profil de {home_team}
-  - Position, forme, force offensive et défensive à domicile?
+ETAPE 1: Profil de {home_team} avec CLASSEMENTS (OBLIGATOIRE - cite les chiffres!)
+  - Classement général: Xe sur 20
+  - Classement domicile: Xe
+  - Classement attaque: Xe / Classement défense: Xe
+  - TYPE D'EQUIPE: top 5 (1er-5e) / milieu (6e-14e) / bas (15e-20e)
 
-ETAPE 2: Utiliser les formations confirmées (SYMÉTRIQUE)
-  - {home_team} en {home_formation} fait historiquement [X] tirs/90
-  - {away_team} en {away_formation} concède [Y] tirs/90
-  - Moyenne baseline formations: (X + Y) / 2 tirs
-  - Valider avec ratio xG/xGA (dominance si > 1.3)
-  - Si pas de formations, utilise l'historique général de {home_team} à domicile
+ETAPE 2: Baseline historique PAR TYPE D'ADVERSAIRE (OBLIGATOIRE)
+  Analyse les stats de {home_team} à domicile:
+  - Moyenne générale: {home_stats.get('avg_shots', 0):.1f} tirs/match
+  - Contre équipes du TOP 5: environ X tirs (moins car adversaire fort)
+  - Contre équipes du MILIEU: environ Y tirs
+  - Contre équipes du BAS: environ Z tirs (plus car adversaire faible)
 
-ETAPE 3: Contexte {home_team}
-  - Blessures/suspensions impactantes?
-  - Forme récente?
-  - Cohérence avec classements?
+  {away_team} est une équipe du [TOP 5 / MILIEU / BAS].
+  Donc {home_team} devrait faire environ [X/Y/Z] tirs.
+
+  Formation {home_team} en {home_formation}: ajustement si formation offensive/défensive
+
+ETAPE 3: Contexte et ajustements {home_team}
+  - Blessures/suspensions impactantes? (+/- X tirs)
+  - Forme récente? (+/- X tirs)
+  - Motivation du match? (+/- X tirs)
 
 ETAPE 4: Prédiction {home_team}
-  - Baseline formations (étape 2) ajusté avec contexte (étape 3)
-  - Combien de tirs pour {home_team}?
+  - Baseline (étape 2): X tirs (basé sur type adversaire)
+  - Ajustements (étape 3): +/- X tirs
+  - Prédiction finale {home_team}: X tirs (fourchette X-Y)
 
 
 PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 ──────────────────────────────────────
 
-ETAPE 5: Profil de {away_team}
-  - Position, forme, force offensive et défensive à l'extérieur?
+ETAPE 5: Profil de {away_team} avec CLASSEMENTS (OBLIGATOIRE - cite les chiffres!)
+  - Classement général: Xe sur 20
+  - Classement extérieur: Xe
+  - Classement attaque: Xe / Classement défense: Xe
+  - TYPE D'EQUIPE: top 5 (1er-5e) / milieu (6e-14e) / bas (15e-20e)
 
-ETAPE 6: Utiliser les formations confirmées (SYMÉTRIQUE)
-  - {away_team} en {away_formation} fait historiquement [X] tirs/90
-  - {home_team} en {home_formation} concède [Y] tirs/90
-  - Moyenne baseline formations: (X + Y) / 2 tirs
-  - Valider avec ratio xG/xGA (dominance si > 1.3)
-  - Si pas de formations, utilise l'historique général de {away_team} à l'extérieur
+ETAPE 6: Baseline historique PAR TYPE D'ADVERSAIRE (OBLIGATOIRE)
+  Analyse les stats de {away_team} à l'extérieur:
+  - Moyenne générale: {away_stats.get('avg_shots', 0):.1f} tirs/match
+  - A l'extérieur vs TOP 5: environ X tirs (moins car adversaire fort)
+  - A l'extérieur vs MILIEU: environ Y tirs
+  - A l'extérieur vs BAS: environ Z tirs (plus car adversaire faible)
 
-ETAPE 7: Contexte {away_team}
-  - Blessures/suspensions impactantes?
-  - Forme récente?
-  - Cohérence avec classements?
+  {home_team} est une équipe du [TOP 5 / MILIEU / BAS].
+  Donc {away_team} devrait faire environ [X/Y/Z] tirs.
+
+  Formation {away_team} en {away_formation}: ajustement si formation offensive/défensive
+
+ETAPE 7: Contexte et ajustements {away_team}
+  - Blessures/suspensions impactantes? (+/- X tirs)
+  - Forme récente? (+/- X tirs)
+  - Motivation du match? (+/- X tirs)
 
 ETAPE 8: Prédiction {away_team}
-  - Baseline formations (étape 6) ajusté avec contexte (étape 7)
-  - Combien de tirs pour {away_team}?
+  - Baseline (étape 6): X tirs (basé sur type adversaire)
+  - Ajustements (étape 7): +/- X tirs
+  - Prédiction finale {away_team}: X tirs (fourchette X-Y)
 
 
 PARTIE C: SYNTHESE FINALE
 ──────────────────────────
 
 ETAPE 9: Vérification cohérence
-  - Le total est-il réaliste? (≈28 tirs total)
-  - Ajustements nécessaires?
+  - Total prédit: X tirs ({home_team}) + Y tirs ({away_team}) = Z tirs total
+  - Cohérence avec les classements? (équipe forte vs faible = écart important)
+  - Ajustements finaux si nécessaire
 
 """
 
