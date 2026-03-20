@@ -2290,7 +2290,7 @@ def automation_status():
         db = SQLiteDatabaseService()
 
         # Compter les prédictions
-        count_query = "SELECT COUNT(*) as total FROM predictions"
+        count_query = "SELECT COUNT(*) as total FROM match_predictions"
         cursor = db.conn.cursor()
         cursor.execute(count_query)
         total = cursor.fetchone()[0]
