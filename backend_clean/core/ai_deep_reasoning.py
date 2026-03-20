@@ -227,7 +227,7 @@ IMPORTANT:
         prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INSTRUCTIONS DE RAISONNEMENT - FORMAT A 9 ETAPES
+INSTRUCTIONS DE RAISONNEMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert et prédire LES DEUX ÉQUIPES:
@@ -236,27 +236,22 @@ PARTIE A: ANALYSE {home_team} (DOMICILE)
 ──────────────────────────────────────
 
 ETAPE 1: Profil de {home_team}
-  - Position au classement, forme récente
-  - Force offensive et défensive à domicile
-  - Classements: général, domicile, attaque, défense
+  - Position, forme, force offensive et défensive à domicile?
 
-ETAPE 2: Baseline historique {home_team}
-  - Moyenne tirs des derniers matchs à domicile
-  - Contre quels types d'équipes? (forts/faibles)
-  - Analyse des formations (si disponibles):
-    * {home_team} en {home_formation} fait historiquement [X] tirs/90
-    * {away_team} en {away_formation} concède [Y] tirs/90
-    * Moyenne baseline: (X + Y) / 2
+ETAPE 2: Utiliser les formations confirmées (SYMÉTRIQUE)
+  - {home_team} en {home_formation} fait historiquement [X] tirs/90
+  - {away_team} en {away_formation} concède [Y] tirs/90
+  - Moyenne baseline formations: (X + Y) / 2 tirs
+  - Valider avec ratio xG/xGA (dominance si > 1.3)
+  - Si pas de formations, utilise l'historique général de {home_team} à domicile
 
-ETAPE 3: Contexte et ajustements {home_team}
+ETAPE 3: Contexte {home_team}
   - Blessures/suspensions impactantes?
-  - Forme récente (3-4 derniers matchs)?
-  - Motivation (importance du match, derby, lutte pour titre/maintien)?
-  - Cohérence avec classements actuels?
+  - Forme récente?
+  - Cohérence avec classements?
 
 ETAPE 4: Prédiction {home_team}
-  - Baseline (étape 2) + ajustements contextuels (étape 3)
-  - Justification: "[baseline] moyenne + [ajustements formation/domicile/contexte]"
+  - Baseline formations (étape 2) ajusté avec contexte (étape 3)
   - Combien de tirs pour {home_team}?
 
 
@@ -264,27 +259,22 @@ PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 ──────────────────────────────────────
 
 ETAPE 5: Profil de {away_team}
-  - Position au classement, forme récente
-  - Force offensive et défensive à l'extérieur
-  - Classements: général, extérieur, attaque, défense
+  - Position, forme, force offensive et défensive à l'extérieur?
 
-ETAPE 6: Baseline historique {away_team}
-  - Moyenne tirs des derniers matchs à l'extérieur
-  - Contre quels types d'équipes?
-  - Analyse des formations (si disponibles):
-    * {away_team} en {away_formation} fait historiquement [X] tirs/90
-    * {home_team} en {home_formation} concède [Y] tirs/90
-    * Moyenne baseline: (X + Y) / 2
+ETAPE 6: Utiliser les formations confirmées (SYMÉTRIQUE)
+  - {away_team} en {away_formation} fait historiquement [X] tirs/90
+  - {home_team} en {home_formation} concède [Y] tirs/90
+  - Moyenne baseline formations: (X + Y) / 2 tirs
+  - Valider avec ratio xG/xGA (dominance si > 1.3)
+  - Si pas de formations, utilise l'historique général de {away_team} à l'extérieur
 
-ETAPE 7: Contexte et ajustements {away_team}
+ETAPE 7: Contexte {away_team}
   - Blessures/suspensions impactantes?
   - Forme récente?
-  - Motivation?
   - Cohérence avec classements?
 
 ETAPE 8: Prédiction {away_team}
-  - Baseline (étape 6) + ajustements contextuels (étape 7)
-  - Justification: "[baseline] moyenne + [ajustements formation/extérieur/contexte]"
+  - Baseline formations (étape 6) ajusté avec contexte (étape 7)
   - Combien de tirs pour {away_team}?
 
 
@@ -292,10 +282,8 @@ PARTIE C: SYNTHESE FINALE
 ──────────────────────────
 
 ETAPE 9: Vérification cohérence
-  - Total tirs réaliste? (~28 tirs pour un match moyen)
-  - Écart entre les équipes cohérent avec classements/forme?
-  - Ajustements finaux nécessaires?
-  - Validation des fourchettes
+  - Le total est-il réaliste? (≈28 tirs total)
+  - Ajustements nécessaires?
 
 """
 
@@ -518,89 +506,21 @@ IMPORTANT: Ces 2 paris sont souvent DIFFÉRENTS!
 FORMAT DE REPONSE OBLIGATOIRE (si propositions):
 
 ==================================================
-RAISONNEMENT DETAILLE - {home_team} vs {away_team}
-==================================================
-
-PARTIE A: ANALYSE {home_team} (DOMICILE)
-
-ETAPE 1: Profil de {home_team}
-[Position au classement, forme récente, force offensive/défensive à domicile]
-[Analyse des classements: général, domicile, attaque, défense]
-
-ETAPE 2: Baseline historique
-En analysant les derniers matchs à domicile:
-  - Moyenne: [X] tirs/match
-  - Contre équipes fortes: [X] tirs en moyenne
-  - Contre équipes faibles: [X] tirs en moyenne
-[Si formations disponibles:]
-  - {home_team} en {home_formation}: [X] tirs/90 historiquement
-  - {away_team} en {away_formation}: concède [Y] tirs/90
-  - Baseline formations: ([X] + [Y]) / 2 = [Z] tirs
-
-ETAPE 3: Contexte et ajustements
-Blessures/suspensions: [Liste des absents impactants ou "Aucune absence majeure"]
-Forme récente: [Victoires/défaites récentes]
-Motivation: [Importance du match, enjeux]
-Cohérence: [Validation avec classements]
-
-ETAPE 4: Prédiction {home_team}
-Baseline: [X] tirs
-Ajustements: +[Y] tirs (formation offensive) +[Z] tirs (domicile) -[W] tirs (blessures)
-Prédiction finale {home_team}: [Total] tirs
-
-
-PARTIE B: ANALYSE {away_team} (EXTERIEUR)
-
-ETAPE 5: Profil de {away_team}
-[Position au classement, forme récente, force offensive/défensive à l'extérieur]
-
-ETAPE 6: Baseline historique
-En analysant les derniers matchs à l'extérieur:
-  - Moyenne: [X] tirs/match
-  - Contre équipes fortes: [X] tirs
-  - Contre équipes faibles: [X] tirs
-[Si formations disponibles:]
-  - {away_team} en {away_formation}: [X] tirs/90
-  - {home_team} en {home_formation}: concède [Y] tirs/90
-  - Baseline: ([X] + [Y]) / 2 = [Z] tirs
-
-ETAPE 7: Contexte et ajustements
-Blessures/suspensions: [...]
-Forme récente: [...]
-Motivation: [...]
-
-ETAPE 8: Prédiction {away_team}
-Baseline: [X] tirs
-Ajustements: [détails des ajustements]
-Prédiction finale {away_team}: [Total] tirs
-
-
-PARTIE C: SYNTHESE FINALE
-
-ETAPE 9: Vérification cohérence
-Total prédit: [X+Y] tirs
-Cohérence: OUI/NON [justification]
-Écart entre équipes: {home_team} +[X-Y] tirs
-Ajustements finaux: [si nécessaire]
-
-==================================================
-MA PREDICTION INDEPENDANTE (AVANT analyse cotes)
+MA PREDICTION INDEPENDANTE (étape 2 - AVANT analyse cotes)
 
 {home_team}: [X] tirs
-{away_team}: [Y] tirs
+{away_team}: [Z] tirs
 
-TOTAUX: [X+Y] tirs
-ÉCARTS: {home_team} +[X-Y] tirs
+TOTAL: [X+Z] tirs
+ÉCART: {home_team} +[X-Z] tirs
 
-Base de calcul: Analyse 9 étapes ci-dessus
+Base de calcul: Formations {home_formation} vs {away_formation}
++ Stats historiques + Analyse tactique
 
 ==================================================
-=== RECOMMANDATIONS TIRS ===
-==================================================
+🔥 MEILLEUR VALUE BET (EV Maximal - Rentabilité long terme)
 
-🔥 MEILLEUR VALUE BET TIRS (EV Maximal - Rentabilité long terme)
-
-[Type: TOTAL TIRS ou HANDICAP TIRS] [Proposition] @ [cote]
+[Type: TOTAL ou HANDICAP] [Proposition] @ [cote]
 
 Exemples:
 - TOTAL: "+27.5 tirs @ 2.50"
@@ -614,14 +534,22 @@ Exemples:
 
 POURQUOI LE MARCHE SE TROMPE:
 [Explique pourquoi TA analyse détecte quelque chose que le bookmaker n'a pas vu]
+Exemple pour total: "Le bookmaker n'a pas pris en compte les compositions
+confirmées qui montrent un PSG ultra-offensif contre un bloc bas..."
+Exemple pour handicap: "Avec PSG qui fait 20 tirs à domicile et Nantes
+seulement 8, l'écart de +12 tirs dépassera largement le handicap -7.5..."
 
 JUSTIFICATION TACTIQUE:
 [Analyse détaillée formations, joueurs, style de jeu]
 
---------------------------------------------------
-⚖️ BEST BALANCED BET TIRS (Sweet Spot - Compromis optimal)
+==================================================
+⚖️ BEST BALANCED BET (Sweet Spot - Compromis optimal)
 
-[Type: TOTAL TIRS ou HANDICAP TIRS] [Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
+[Type: TOTAL ou HANDICAP] [Proposition] @ [cote] OU "AUCUN PARI EQUILIBRE TROUVE"
+
+Exemples:
+- TOTAL: "+25.5 tirs @ 1.85"
+- HANDICAP: "PSG handicap tirs -5.5 @ 1.90"
 
 Si trouvé:
 - MA probabilité de réussite: X% (doit être >70%)
@@ -630,27 +558,39 @@ Si trouvé:
 - Balance: EXCELLENTE / BONNE
 
 POURQUOI C'EST LE MEILLEUR COMPROMIS:
-[Explique le balance entre sécurité et rentabilité]
+[Explique le balance entre sécurité (haute probabilité) et rentabilité (bonne cote)]
+Exemple pour total: "Probabilité 76% garantit bonne sécurité, tout en gardant
+une cote 1.82 qui offre rentabilité décente (+18% EV). Ni trop risqué, ni cote trop faible."
+Exemple pour handicap: "Avec écart prévu de +8 tirs pour PSG, le handicap -5.5
+a 74% de chances de réussite, tout en offrant cote 1.90 décente."
+
+JUSTIFICATION TACTIQUE:
+[Analyse détaillée basée sur historique et contexte]
 
 Si aucun trouvé:
-"AUCUN PARI EQUILIBRE TROUVE - Raison: [...]"
+"AUCUN PARI EQUILIBRE TROUVE
+Raison: [Toutes les cotes probables sont <1.60 / Aucune proposition >70% de probabilité / Etc.]"
+
+NOTE: Si le balanced bet = le value bet, indique:
+"LE MEILLEUR VALUE BET EST AUSSI LE MEILLEUR PARI EQUILIBRE (JACKPOT!)"
 
 ==================================================
-AUTRES PROPOSITIONS ANALYSEES (TIRS)
+AUTRES PROPOSITIONS ANALYSEES
 
-[Pour chaque autre proposition tirs:]
-- Type: TIRS
-- Proposition: [...]
+[Pour chaque autre proposition:]
 - Probabilité réelle: X%
 - EV: +/-X%
 - Verdict: VALUE / PAS DE VALUE / EVITER
 
 ==================================================
-HANDICAPS OPTIMAUX (calculés automatiquement)
+HANDICAPS RECOMMANDES (calculés automatiquement)
 
-HANDICAPS TIRS:
+HANDICAPS TIRS OPTIMAUX:
 - {home_team} handicap tirs [valeur] @ [cote estimée]
-  Ecart prevu: +[X-Z] tirs
+  Ecart prevu: {home_team} [X] tirs - {away_team} [Y] tirs = +[Z] tirs
+
+- {away_team} handicap tirs [valeur] @ [cote estimée]
+  Ecart prevu: [calcul inverse]
 
 NOTE: Ces handicaps sont calcules avec 70% de confiance.
       Si bookmaker propose handicap proche, FORTE VALUE potentielle!
@@ -659,63 +599,10 @@ NOTE: Ces handicaps sont calcules avec 70% de confiance.
         else:
             prompt += f"""
 
-FORMAT DE REPONSE OBLIGATOIRE (sans propositions bookmaker):
+ETAPE 3: Prediction finale
 
-==================================================
-RAISONNEMENT DETAILLE - {home_team} vs {away_team}
-==================================================
-
-PARTIE A: ANALYSE {home_team} (DOMICILE)
-
-ETAPE 1: Profil de {home_team}
-[Position, forme, force offensive/défensive à domicile]
-
-ETAPE 2: Baseline historique
-[Moyenne tirs à domicile, contre quels types d'équipes]
-[Si formations disponibles: analyse formations]
-
-ETAPE 3: Contexte et ajustements
-[Blessures, forme, motivation]
-
-ETAPE 4: Prédiction {home_team}
-Baseline: [X] tirs
-Ajustements: [détails]
-Prédiction finale: [Total] tirs
-
-
-PARTIE B: ANALYSE {away_team} (EXTERIEUR)
-
-ETAPE 5: Profil de {away_team}
-[Position, forme, force à l'extérieur]
-
-ETAPE 6: Baseline historique
-[Moyenne tirs à l'extérieur]
-
-ETAPE 7: Contexte et ajustements
-[Blessures, forme, motivation]
-
-ETAPE 8: Prédiction {away_team}
-Baseline: [X] tirs
-Ajustements: [détails]
-Prédiction finale: [Total] tirs
-
-
-PARTIE C: SYNTHESE FINALE
-
-ETAPE 9: Vérification cohérence
-Total prédit: [X+Y] tirs
-Cohérence: OUI/NON
-Ajustements finaux: [si nécessaire]
-
-==================================================
-PREDICTIONS FINALES:
-
-{home_team}: [X] tirs
-{away_team}: [Y] tirs
-TOTAUX: [X+Y] tirs
-ÉCARTS: {home_team} +[X-Y] tirs
-
-==================================================
+Donne une fourchette realiste:
+- Tirs min/max
 """
 
         prompt += f"""
@@ -723,13 +610,11 @@ TOTAUX: [X+Y] tirs
 FORMAT DE REPONSE FINAL:
 
 PREDICTION BASELINE:
-Total tirs: [min-max]
-Total fautes: [min-max]
+Total tirs: [nombre_precis] ([min]-[max])
 
+SHOTS: [nombre_precis] (prediction centrale)
 SHOTS_RANGE_MIN: [nombre]
 SHOTS_RANGE_MAX: [nombre]
-FOULS_RANGE_MIN: [nombre]
-FOULS_RANGE_MAX: [nombre]
 """
 
         # Appel à l'IA
@@ -738,7 +623,7 @@ FOULS_RANGE_MAX: [nombre]
                 model="claude-sonnet-4-20250514",
                 max_tokens=8192,
                 temperature=0.3,
-                system="Tu es un analyste football expert specialise dans le value betting et l'analyse tactique.",
+                system="Tu es un analyste football expert qui raisonne de maniere structuree avec des SI/ALORS pour trouver des patterns.",
                 messages=[
                     {
                         "role": "user",
@@ -770,8 +655,14 @@ FOULS_RANGE_MAX: [nombre]
         import re
 
         result = {
+            'shots': 25,
             'shots_range': {'min': 20, 'max': 30}
         }
+
+        # Extraire SHOTS (nombre précis)
+        match = re.search(r'SHOTS:\s*(\d+)', text)
+        if match:
+            result['shots'] = int(match.group(1))
 
         # Extraire SHOTS_RANGE_MIN
         match = re.search(r'SHOTS_RANGE_MIN:\s*(\d+)', text)
@@ -1023,7 +914,7 @@ INSTRUCTIONS IMPORTANTES:
    - Formations offensives (4-3-3, 3-4-3, 4-2-4) = plus de tirs attendus
    - Formations équilibrées (4-2-3-1, 3-5-2) = tirs modérés
 4. Croiser avec les absences mentionnées dans RDJ pour valider cohérence
-5. Utilise ces infos CONFIRMEES pour affiner tes prédictions de tirs/corners
+5. Utilise ces infos CONFIRMEES pour affiner tes prédictions de tirs
 
 Note: Si le texte ne contient pas d'infos claires, utilise ton analyse des autres sections.
 """
@@ -1238,7 +1129,7 @@ A domicile, ils sont classes 10e en attaque et 10e en defense.
 
 ETAPE 2: Baseline historique
 En analysant les 14 derniers matchs a domicile:
-  - Moyenne: 15.6 tirs et 5.8 corners
+  - Moyenne: 15.6 tirs
   - Contre equipes du top 6: 12 tirs en moyenne
   - Contre equipes du bas: 18 tirs en moyenne
 
@@ -1250,26 +1141,30 @@ Motivation: Match important pour garder la 1re place
 ETAPE 4: Prediction Arsenal
 Baseline: 15-16 tirs
 Ajustements: +1 tir (bonne forme)
-Prediction finale Arsenal: 15-17 tirs
+Prediction finale Arsenal: 16 tirs (fourchette 15-17)
 
 [Meme structure pour PARTIE B avec l'equipe exterieur]
 
 PARTIE C: SYNTHESE FINALE
-Total predit: 27-33 tirs
+Total predit: 30 tirs (fourchette 27-33)
 Coherence: OUI, dans les normes d'un match de Premier League
 
 ==================================================
 PREDICTION FINALE:
 
 EQUIPE DOMICILE ({home_team}):
-HOME_TIRS_MIN: [nombre]
-HOME_TIRS_MAX: [nombre]
+HOME_TIRS: 16 tirs (prediction centrale)
+HOME_TIRS_MIN: 15
+HOME_TIRS_MAX: 17
 
 EQUIPE EXTERIEUR ({away_team}):
-AWAY_TIRS_MIN: [nombre]
-AWAY_TIRS_MAX: [nombre]
+AWAY_TIRS: 14 tirs (prediction centrale)
+AWAY_TIRS_MIN: 12
+AWAY_TIRS_MAX: 16
 
-CONFIANCE: [0-100]%
+TOTAL_TIRS: 30 tirs au total (somme des predictions centrales)
+
+CONFIANCE: 78%
 """
 
     # ================================================================
@@ -1347,7 +1242,7 @@ def _generate_weather_sentence(weather: Dict) -> str:
     # Pluie
     if rain > 5:
         rain_desc = "pluie forte"
-        rain_impact = "Le ballon sera glissant, favorisant les erreurs techniques et les occasions de corners."
+        rain_impact = "Le ballon sera glissant, favorisant les erreurs techniques."
     elif rain > 1:
         rain_desc = "pluie légère"
         rain_impact = "Légère humidité sur le terrain, le ballon pourrait être un peu plus rapide."
@@ -1358,10 +1253,10 @@ def _generate_weather_sentence(weather: Dict) -> str:
     # Vent
     if wind > 40:
         wind_desc = "vent très fort"
-        wind_impact = "Le vent perturbera les trajectoires de ballon, notamment sur les centres et corners."
+        wind_impact = "Le vent perturbera les trajectoires de ballon, notamment sur les centres."
     elif wind > 25:
         wind_desc = "vent fort"
-        wind_impact = "Le vent pourrait affecter les passes longues et les corners."
+        wind_impact = "Le vent pourrait affecter les passes longues."
     elif wind > 15:
         wind_desc = "vent modéré"
         wind_impact = None
@@ -1396,13 +1291,21 @@ def _parse_ai_prediction(text: str) -> Dict:
     import re
 
     result = {
+        'home_shots': 14,
         'home_shots_min': 10,
         'home_shots_max': 18,
+        'away_shots': 10,
         'away_shots_min': 8,
         'away_shots_max': 16,
+        'total_shots': 24,
         'confidence': 50,
         'reasoning': text
     }
+
+    # Extraire HOME_TIRS (nombre précis)
+    match = re.search(r'HOME_TIRS:\s*(\d+)', text)
+    if match:
+        result['home_shots'] = int(match.group(1))
 
     # Extraire HOME_TIRS_MIN
     match = re.search(r'HOME_TIRS_MIN:\s*(\d+)', text)
@@ -1414,6 +1317,11 @@ def _parse_ai_prediction(text: str) -> Dict:
     if match:
         result['home_shots_max'] = int(match.group(1))
 
+    # Extraire AWAY_TIRS (nombre précis)
+    match = re.search(r'AWAY_TIRS:\s*(\d+)', text)
+    if match:
+        result['away_shots'] = int(match.group(1))
+
     # Extraire AWAY_TIRS_MIN
     match = re.search(r'AWAY_TIRS_MIN:\s*(\d+)', text)
     if match:
@@ -1423,6 +1331,11 @@ def _parse_ai_prediction(text: str) -> Dict:
     match = re.search(r'AWAY_TIRS_MAX:\s*(\d+)', text)
     if match:
         result['away_shots_max'] = int(match.group(1))
+
+    # Extraire TOTAL_TIRS (nombre précis)
+    match = re.search(r'TOTAL_TIRS:\s*(\d+)', text)
+    if match:
+        result['total_shots'] = int(match.group(1))
 
     # Extraire CONFIANCE
     match = re.search(r'CONFIANCE:\s*(\d+)', text)
