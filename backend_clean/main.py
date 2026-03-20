@@ -2012,7 +2012,14 @@ async def process_full_prediction(
                     'away_stats': {'avg_shots': away_shots},
                     'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                     'match_date': datetime.now().isoformat(),
-                    'bookmaker_propositions': bookmaker_props_text
+                    'bookmaker_propositions': bookmaker_props_text,
+                    # Classements et stats détaillées pour l'IA
+                    'rankings': prediction_result.get('rankings_used', {}),
+                    'detailed_stats': prediction_result.get('context', {}).get('detailed_stats', {}),
+                    'match_history': {
+                        'home': prediction_result.get('analysis', {}).get('home_team', {}).get('match_history', []),
+                        'away': prediction_result.get('analysis', {}).get('away_team', {}).get('match_history', [])
+                    }
                 }
                 value_betting_analysis = analyzer.analyze_match(context)
 
@@ -2025,7 +2032,7 @@ async def process_full_prediction(
             from core.ai_deep_reasoning import DeepReasoningAnalyzer
             analyzer = DeepReasoningAnalyzer()
 
-            # Créer contexte enrichi pour l'IA
+            # Créer contexte enrichi pour l'IA avec classements et historique
             context = {
                 'home_team': home_team,
                 'away_team': away_team,
@@ -2037,7 +2044,14 @@ async def process_full_prediction(
                 'away_stats': {'avg_shots': away_shots},
                 'league': LEAGUES.get(league_code, {}).get('name', 'Unknown'),
                 'match_date': datetime.now().isoformat(),
-                'bookmaker_propositions': bookmaker_props_text  # Texte brut des propositions
+                'bookmaker_propositions': bookmaker_props_text,
+                # Classements et stats détaillées pour l'IA (depuis prediction_result)
+                'rankings': prediction_result.get('rankings_used', {}) if prediction_result and 'error' not in prediction_result else {},
+                'detailed_stats': prediction_result.get('context', {}).get('detailed_stats', {}) if prediction_result and 'error' not in prediction_result else {},
+                'match_history': {
+                    'home': prediction_result.get('analysis', {}).get('home_team', {}).get('match_history', []) if prediction_result and 'error' not in prediction_result else [],
+                    'away': prediction_result.get('analysis', {}).get('away_team', {}).get('match_history', []) if prediction_result and 'error' not in prediction_result else []
+                }
             }
 
             ai_analysis = analyzer.analyze_match(context)

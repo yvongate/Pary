@@ -64,6 +64,14 @@ class DeepReasoningAnalyzer:
         away_stats = context.get('away_stats', {})
         bookmaker_props = context.get('bookmaker_propositions', '')
 
+        # Extraire les classements et stats détaillées
+        rankings = context.get('rankings', {})
+        detailed_stats = context.get('detailed_stats', {})
+        match_history = context.get('match_history', {})
+
+        home_detailed = detailed_stats.get('home', {}) or {}
+        away_detailed = detailed_stats.get('away', {}) or {}
+
         # Construire le prompt
         prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT specialise dans le VALUE BETTING.
 
@@ -80,7 +88,27 @@ Joueurs: {', '.join(context.get('home_players', [])) if context.get('home_player
 {away_team} ({away_formation}):
 Joueurs: {', '.join(context.get('away_players', [])) if context.get('away_players') else 'Non fournis'}
 
-STATISTIQUES HISTORIQUES (BASELINE):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: CLASSEMENTS ACTUELS (données live)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{home_team}:
+  - Position: {home_detailed.get('position', 'Non fourni')}e sur 20
+  - Points: {home_detailed.get('points', 'Non fourni')} ({home_detailed.get('won', '?')}V-{home_detailed.get('drawn', '?')}N-{home_detailed.get('lost', '?')}D)
+  - Buts: {home_detailed.get('goals_for', '?')} marqués / {home_detailed.get('goals_against', '?')} encaissés
+  - Rang attaque domicile: {rankings.get('home_attack_rank', 'Non fourni')}
+  - Rang défense domicile: {rankings.get('home_defence_rank', 'Non fourni')}
+
+{away_team}:
+  - Position: {away_detailed.get('position', 'Non fourni')}e sur 20
+  - Points: {away_detailed.get('points', 'Non fourni')} ({away_detailed.get('won', '?')}V-{away_detailed.get('drawn', '?')}N-{away_detailed.get('lost', '?')}D)
+  - Buts: {away_detailed.get('goals_for', '?')} marqués / {away_detailed.get('goals_against', '?')} encaissés
+  - Rang attaque extérieur: {rankings.get('away_attack_rank', 'Non fourni')}
+  - Rang défense extérieur: {rankings.get('away_defence_rank', 'Non fourni')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: STATISTIQUES HISTORIQUES (BASELINE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {home_team}:
   - Moyenne tirs: {home_stats.get('avg_shots', 0):.1f} tirs/match
@@ -89,6 +117,34 @@ STATISTIQUES HISTORIQUES (BASELINE):
   - Moyenne tirs: {away_stats.get('avg_shots', 0):.1f} tirs/match
 
 """
+
+        # Ajouter l'historique des matchs si disponible
+        home_history = match_history.get('home', [])
+        away_history = match_history.get('away', [])
+
+        if home_history or away_history:
+            prompt += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: HISTORIQUE DES MATCHS (pour analyse par type d'adversaire)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+            if home_history:
+                prompt += f"\n{home_team} à DOMICILE (derniers matchs):\n"
+                for match in home_history[:10]:  # 10 derniers matchs
+                    opponent = match.get('opponent', 'Unknown')
+                    shots = match.get('team_shots', '?')
+                    opp_rank = match.get('opponent_rank', '?')
+                    prompt += f"  - vs {opponent} (rang {opp_rank}): {shots} tirs\n"
+
+            if away_history:
+                prompt += f"\n{away_team} à l'EXTÉRIEUR (derniers matchs):\n"
+                for match in away_history[:10]:
+                    opponent = match.get('opponent', 'Unknown')
+                    shots = match.get('team_shots', '?')
+                    opp_rank = match.get('opponent_rank', '?')
+                    prompt += f"  - vs {opponent} (rang {opp_rank}): {shots} tirs\n"
+
+            prompt += "\n"
 
         # Ajouter les propositions bookmaker si fournies
         if bookmaker_props and bookmaker_props.strip():
