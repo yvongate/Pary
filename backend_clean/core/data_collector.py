@@ -21,6 +21,17 @@ class DataCollector:
     Collects and aggregates data from all available sources
     """
 
+    # Mapping codes CSV → codes soccerstats.com pour scraping
+    SOCCERSTATS_CODES = {
+        "E0": "england",
+        "F1": "france",
+        "SP1": "spain",
+        "I1": "italy",
+        "P1": "portugal",
+        "B1": "belgium",
+        "T1": "turkey",
+    }
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Args:
@@ -56,7 +67,10 @@ class DataCollector:
             return self.cache[cache_key]
 
         try:
-            rankings = soccerstats_overview.get_tables_overview(league_code)
+            # Convertir code ligue CSV (F1) → code soccerstats (france)
+            soccerstats_league = self.SOCCERSTATS_CODES.get(league_code, league_code)
+
+            rankings = soccerstats_overview.get_tables_overview(soccerstats_league)
             if rankings:
                 self.cache[cache_key] = rankings
             return rankings
@@ -222,7 +236,10 @@ class DataCollector:
         """
         # Get team context from soccerstats
         try:
-            team_context = soccerstats_working.get_team_context(home_team, league_code)
+            # Convertir code ligue CSV (F1) → code soccerstats (france)
+            soccerstats_league = self.SOCCERSTATS_CODES.get(league_code, league_code)
+
+            team_context = soccerstats_working.get_team_context(home_team, soccerstats_league)
             if team_context:
                 # Calculate morale from position and gaps
                 position = team_context.get('position', 10)
@@ -312,6 +329,7 @@ class DataCollector:
             City name
         """
         city_mapping = {
+            # Premier League (Angleterre)
             'arsenal': 'London',
             'chelsea': 'London',
             'tottenham': 'London',
@@ -320,22 +338,201 @@ class DataCollector:
             'fulham': 'London',
             'brentford': 'London',
             'manchester city': 'Manchester',
+            'man city': 'Manchester',
             'manchester united': 'Manchester',
+            'man united': 'Manchester',
             'liverpool': 'Liverpool',
             'everton': 'Liverpool',
             'newcastle': 'Newcastle',
             'aston villa': 'Birmingham',
             'wolverhampton': 'Wolverhampton',
+            'wolves': 'Wolverhampton',
             'brighton': 'Brighton',
             'southampton': 'Southampton',
             'bournemouth': 'Bournemouth',
             'nottingham forest': 'Nottingham',
+            "nott'm forest": 'Nottingham',
             'leicester': 'Leicester',
             'leeds': 'Leeds',
+
+            # Ligue 1 (France)
+            'paris sg': 'Paris',
+            'psg': 'Paris',
+            'marseille': 'Marseille',
+            'lyon': 'Lyon',
+            'lille': 'Lille',
+            'monaco': 'Monaco',
+            'nice': 'Nice',
+            'rennes': 'Rennes',
+            'lens': 'Lens',
+            'nantes': 'Nantes',
+            'strasbourg': 'Strasbourg',
+            'brest': 'Brest',
+            'montpellier': 'Montpellier',
+            'toulouse': 'Toulouse',
+            'reims': 'Reims',
+            'lorient': 'Lorient',
+            'auxerre': 'Auxerre',
+            'angers': 'Angers',
+            'le havre': 'Le Havre',
+            'metz': 'Metz',
+            'paris fc': 'Paris',
+
+            # La Liga (Espagne)
+            'barcelona': 'Barcelona',
+            'real madrid': 'Madrid',
+            'atletico madrid': 'Madrid',
+            'ath madrid': 'Madrid',
+            'sevilla': 'Sevilla',
+            'valencia': 'Valencia',
+            'villarreal': 'Villarreal',
+            'athletic bilbao': 'Bilbao',
+            'ath bilbao': 'Bilbao',
+            'real sociedad': 'San Sebastian',
+            'sociedad': 'San Sebastian',
+            'real betis': 'Sevilla',
+            'betis': 'Sevilla',
+            'espanyol': 'Barcelona',
+            'espanol': 'Barcelona',
+            'celta vigo': 'Vigo',
+            'celta': 'Vigo',
+            'getafe': 'Madrid',
+            'osasuna': 'Pamplona',
+            'alaves': 'Vitoria',
+            'mallorca': 'Palma',
+            'cadiz': 'Cadiz',
+            'elche': 'Elche',
+            'granada': 'Granada',
+            'rayo vallecano': 'Madrid',
+            'vallecano': 'Madrid',
+            'girona': 'Girona',
+            'almeria': 'Almeria',
+
+            # Serie A (Italie)
+            'inter': 'Milan',
+            'milan': 'Milan',
+            'juventus': 'Turin',
+            'roma': 'Rome',
+            'lazio': 'Rome',
+            'napoli': 'Naples',
+            'atalanta': 'Bergamo',
+            'fiorentina': 'Florence',
+            'torino': 'Turin',
+            'bologna': 'Bologna',
+            'sassuolo': 'Sassuolo',
+            'udinese': 'Udine',
+            'sampdoria': 'Genoa',
+            'verona': 'Verona',
+            'cagliari': 'Cagliari',
+            'empoli': 'Empoli',
+            'spezia': 'La Spezia',
+            'salernitana': 'Salerno',
+            'lecce': 'Lecce',
+            'monza': 'Monza',
+            'cremonese': 'Cremona',
+
+            # Bundesliga (Allemagne)
+            'bayern munich': 'Munich',
+            'bayern': 'Munich',
+            'dortmund': 'Dortmund',
+            'rb leipzig': 'Leipzig',
+            'leipzig': 'Leipzig',
+            'leverkusen': 'Leverkusen',
+            'frankfurt': 'Frankfurt',
+            'wolfsburg': 'Wolfsburg',
+            'freiburg': 'Freiburg',
+            'union berlin': 'Berlin',
+            'stuttgart': 'Stuttgart',
+            'monchengladbach': 'Monchengladbach',
+            "m'gladbach": 'Monchengladbach',
+            'hoffenheim': 'Hoffenheim',
+            'mainz': 'Mainz',
+            'augsburg': 'Augsburg',
+            'werder bremen': 'Bremen',
+            'hertha': 'Berlin',
+            'schalke': 'Gelsenkirchen',
+            'bochum': 'Bochum',
+
+            # Primeira Liga (Portugal)
+            'benfica': 'Lisbon',
+            'porto': 'Porto',
+            'sporting': 'Lisbon',
+            'sp lisbon': 'Lisbon',
+            'braga': 'Braga',
+            'guimaraes': 'Guimaraes',
+            'boavista': 'Porto',
+            'maritimo': 'Funchal',
+            'pacos ferreira': 'Pacos de Ferreira',
+            'gil vicente': 'Barcelos',
+            'famalicao': 'Famalicao',
+            'arouca': 'Arouca',
+            'vizela': 'Vizela',
+            'casa pia': 'Lisbon',
+            'estoril': 'Estoril',
+            'chaves': 'Chaves',
+            'portimonense': 'Portimao',
+            'rio ave': 'Vila do Conde',
+            'nacional': 'Funchal',
+            'avs': 'Vila das Aves',
+
+            # Jupiler Pro League (Belgique)
+            'club brugge': 'Bruges',
+            'anderlecht': 'Brussels',
+            'antwerp': 'Antwerp',
+            'genk': 'Genk',
+            'gent': 'Ghent',
+            'union sg': 'Brussels',
+            'st. gilloise': 'Brussels',
+            'charleroi': 'Charleroi',
+            'standard liege': 'Liege',
+            'kortrijk': 'Kortrijk',
+            'mechelen': 'Mechelen',
+            'oostende': 'Ostend',
+            'leuven': 'Leuven',
+            'eupen': 'Eupen',
+            'seraing': 'Seraing',
+            'cercle brugge': 'Bruges',
+            'waregem': 'Waregem',
+            'dender': 'Denderleeuw',
+
+            # Super Lig (Turquie)
+            'galatasaray': 'Istanbul',
+            'fenerbahce': 'Istanbul',
+            'besiktas': 'Istanbul',
+            'trabzonspor': 'Trabzon',
+            'basaksehir': 'Istanbul',
+            'antalyaspor': 'Antalya',
+            'konyaspor': 'Konya',
+            'sivasspor': 'Sivas',
+            'alanyaspor': 'Alanya',
+            'kasimpasa': 'Istanbul',
+            'gaziantep': 'Gaziantep',
+            'hatayspor': 'Hatay',
+            'adana demirspor': 'Adana',
+            'kayserispor': 'Kayseri',
+            'goztepe': 'Izmir',
+            'goztep': 'Izmir',
+            'rizespor': 'Rize',
+            'giresunspor': 'Giresun',
+            'fatih karagumruk': 'Istanbul',
+            'istanbulspor': 'Istanbul',
+            'pendikspor': 'Istanbul',
+            'samsunspor': 'Samsun',
+            'genclerbirligi': 'Ankara',
+            'eyupspor': 'Istanbul',
         }
 
         team_key = team_name.lower()
-        return city_mapping.get(team_key, 'London')  # Default to London
+        # Essayer d'abord match exact, sinon chercher si le nom d'équipe contient la clé
+        if team_key in city_mapping:
+            return city_mapping[team_key]
+
+        # Fallback: chercher si la clé contient le nom de l'équipe
+        for key, city in city_mapping.items():
+            if key in team_key or team_key in key:
+                return city
+
+        return 'London'  # Default to London si vraiment rien trouvé
 
     # === COMPLETE DATA COLLECTION ===
 

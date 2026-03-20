@@ -131,12 +131,15 @@ class DynamicPredictor:
         Rcupre les classements ACTUELS en temps rel
 
         Args:
-            league_code: england, spain, italy, france, germany
+            league_code: Code CSV (E0, F1, SP1, etc.) ou code soccerstats (england, spain, etc.)
 
         Returns:
             Dict avec tous les classements (12 tableaux)
         """
-        rankings = soccerstats_overview.get_tables_overview(league_code)
+        # Convertir code ligue CSV (F1) → code soccerstats (france)
+        soccerstats_league = self.SOCCERSTATS_CODES.get(league_code, league_code)
+
+        rankings = soccerstats_overview.get_tables_overview(soccerstats_league)
         return rankings if rankings else {}
 
     def analyze_correlation(self, team_history: List[Dict], current_rankings: Dict,
