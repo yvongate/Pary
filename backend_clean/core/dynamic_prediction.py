@@ -35,6 +35,17 @@ class DynamicPredictor:
     Aucun modle pr-entran - tout est calcul  la demande
     """
 
+    # Mapping codes CSV → codes soccerstats.com pour scraping
+    SOCCERSTATS_CODES = {
+        "E0": "england",
+        "F1": "france",
+        "SP1": "spain",
+        "I1": "italy",
+        "P1": "portugal",
+        "B1": "belgium",
+        "T1": "turkey",
+    }
+
     def __init__(self, use_formations: bool = True):
         """
         Args:
@@ -947,8 +958,11 @@ Analyse et ajuste maintenant:"""
             home_soccerstats = csv_to_soccerstats_name(home_team)
             away_soccerstats = csv_to_soccerstats_name(away_team)
 
-            home_detailed_stats = soccerstats_working.get_team_context(home_soccerstats, league_code)
-            away_detailed_stats = soccerstats_working.get_team_context(away_soccerstats, league_code)
+            # Convertir code ligue CSV (F1) → code soccerstats (france)
+            soccerstats_league = self.SOCCERSTATS_CODES.get(league_code, "england")
+
+            home_detailed_stats = soccerstats_working.get_team_context(home_soccerstats, soccerstats_league)
+            away_detailed_stats = soccerstats_working.get_team_context(away_soccerstats, soccerstats_league)
 
             if home_detailed_stats:
                 print(f"    {home_team}: {home_detailed_stats['won']}V-{home_detailed_stats['drawn']}N-{home_detailed_stats['lost']}D, "
