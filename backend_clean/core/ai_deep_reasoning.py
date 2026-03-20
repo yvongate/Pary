@@ -1,6 +1,12 @@
 """
 IA Deep Reasoning - Verification independante avec raisonnement profond
 L'IA recoit TOUTES les donnees et raisonne comme un analyste expert
+
+Format de raisonnement restaure du commit bf4507ae (sans corners):
+- 9 etapes structurees (PARTIE A: 1-4, PARTIE B: 5-8, PARTIE C: 9)
+- Comparaisons naturelles face aux differents types d'equipes du championnat
+- Predictions precises + intervalles (min/max)
+- Focus uniquement sur les TIRS
 """
 import os
 from typing import Dict, List, Optional
