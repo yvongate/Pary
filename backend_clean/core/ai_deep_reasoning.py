@@ -1061,63 +1061,90 @@ SECTION 7: STATISTIQUES DETAILLEES DE LA SAISON
     prompt += f"""
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INSTRUCTIONS DE RAISONNEMENT
+INSTRUCTIONS DE RAISONNEMENT (OBLIGATOIRES)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Tu dois raisonner ETAPE PAR ETAPE comme un analyste expert et prédire LES DEUX ÉQUIPES:
+IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE en cherchant des PATTERNS dans l'historique.
+Tu DOIS utiliser les CLASSEMENTS de la SECTION 1 et l'HISTORIQUE des SECTIONS 2-3.
+Tu DOIS analyser les performances SELON LE TYPE D'ADVERSAIRE (top 5, milieu, bas).
 
 PARTIE A: ANALYSE {home_team} (DOMICILE)
 ──────────────────────────────────────
 
-ETAPE 1: Profil de {home_team}
-  - Position, forme, force offensive et défensive à domicile?
+ETAPE 1: Profil de {home_team} avec CLASSEMENTS (OBLIGATOIRE - cite les chiffres!)
+  - Classement général: Xe sur 20 (cite le chiffre de SECTION 1)
+  - Classement domicile: Xe
+  - Classement attaque: Xe / Classement défense: Xe
+  - Forme (8 derniers matchs): Xe
+  - TYPE D'EQUIPE: top 5 (1er-5e) / milieu (6e-14e) / bas (15e-20e)
 
-ETAPE 2: Utiliser les formations confirmées (SYMÉTRIQUE)
-  - {home_team} en {home_formation_stats['formation'] if home_formation_stats else 'N/A'} fait historiquement {home_formation_stats['shots_per_90'] if home_formation_stats else 'N/A'} tirs/90
-  - {away_team} en {away_formation_stats['formation'] if away_formation_stats else 'N/A'} concède {away_formation_stats['shots_against_per_90'] if away_formation_stats else 'N/A'} tirs/90
-  - Moyenne baseline formations: ({home_formation_stats['shots_per_90'] if home_formation_stats else 0} + {away_formation_stats['shots_against_per_90'] if away_formation_stats else 0}) / 2 tirs
-  - Valider avec ratio xG/xGA (dominance si > 1.3)
-  - Si pas de formations, utilise l'historique général de {home_team} à domicile
+ETAPE 2: Baseline historique PAR TYPE D'ADVERSAIRE (OBLIGATOIRE - analyse SECTION 2)
+  Analyse les matchs de {home_team} à domicile et REGROUPE par position adversaire:
+  - Moyenne générale: X tirs/match (tous matchs confondus)
+  - Contre équipes du TOP 5 (1er-5e): X tirs en moyenne (cite les adversaires)
+  - Contre équipes du MILIEU (6e-14e): Y tirs en moyenne
+  - Contre équipes du BAS (15e-20e): Z tirs en moyenne
 
-ETAPE 3: Contexte {home_team}
-  - Blessures/suspensions impactantes?
-  - Forme récente?
-  - Cohérence avec classements?
+  {away_team} est actuellement Xe au classement général.
+  Donc {home_team} devrait faire environ [X/Y/Z] tirs (selon le groupe de {away_team}).
+
+  SI formations disponibles:
+  - {home_team} en {home_formation_stats['formation'] if home_formation_stats else 'N/A'}: {home_formation_stats['shots_per_90'] if home_formation_stats else 'N/A'} tirs/90
+  - Valider avec les stats formations
+
+ETAPE 3: Contexte et ajustements {home_team}
+  - Blessures/suspensions impactantes? (+/- X tirs)
+  - Forme récente? (+/- X tirs)
+  - Motivation du match? (+/- X tirs)
 
 ETAPE 4: Prédiction {home_team}
-  - Baseline formations (étape 2) ajusté avec contexte (étape 3)
-  - Combien de tirs pour {home_team}?
+  - Baseline (étape 2): X tirs (basé sur historique vs type adversaire)
+  - Ajustements (étape 3): +/- X tirs
+  - Prédiction finale {home_team}: X tirs (fourchette X-Y)
 
 
 PARTIE B: ANALYSE {away_team} (EXTERIEUR)
 ──────────────────────────────────────
 
-ETAPE 5: Profil de {away_team}
-  - Position, forme, force offensive et défensive à l'extérieur?
+ETAPE 5: Profil de {away_team} avec CLASSEMENTS (OBLIGATOIRE - cite les chiffres!)
+  - Classement général: Xe sur 20 (cite le chiffre de SECTION 1)
+  - Classement extérieur: Xe
+  - Classement attaque: Xe / Classement défense: Xe
+  - Forme (8 derniers matchs): Xe
+  - TYPE D'EQUIPE: top 5 (1er-5e) / milieu (6e-14e) / bas (15e-20e)
 
-ETAPE 6: Utiliser les formations confirmées (SYMÉTRIQUE)
-  - {away_team} en {away_formation_stats['formation'] if away_formation_stats else 'N/A'} fait historiquement {away_formation_stats['shots_per_90'] if away_formation_stats else 'N/A'} tirs/90
-  - {home_team} en {home_formation_stats['formation'] if home_formation_stats else 'N/A'} concède {home_formation_stats['shots_against_per_90'] if home_formation_stats else 'N/A'} tirs/90
-  - Moyenne baseline formations: ({away_formation_stats['shots_per_90'] if away_formation_stats else 0} + {home_formation_stats['shots_against_per_90'] if home_formation_stats else 0}) / 2 tirs
-  - Valider avec ratio xG/xGA (dominance si > 1.3)
-  - Si pas de formations, utilise l'historique général de {away_team} à l'extérieur
+ETAPE 6: Baseline historique PAR TYPE D'ADVERSAIRE (OBLIGATOIRE - analyse SECTION 3)
+  Analyse les matchs de {away_team} à l'extérieur et REGROUPE par position adversaire:
+  - Moyenne générale: X tirs/match (tous matchs confondus)
+  - A l'extérieur vs TOP 5 (1er-5e): X tirs en moyenne
+  - A l'extérieur vs MILIEU (6e-14e): Y tirs en moyenne
+  - A l'extérieur vs BAS (15e-20e): Z tirs en moyenne
 
-ETAPE 7: Contexte {away_team}
-  - Blessures/suspensions impactantes?
-  - Forme récente?
-  - Cohérence avec classements?
+  {home_team} est actuellement Xe au classement général.
+  Donc {away_team} devrait faire environ [X/Y/Z] tirs (selon le groupe de {home_team}).
+
+  SI formations disponibles:
+  - {away_team} en {away_formation_stats['formation'] if away_formation_stats else 'N/A'}: {away_formation_stats['shots_per_90'] if away_formation_stats else 'N/A'} tirs/90
+  - Valider avec les stats formations
+
+ETAPE 7: Contexte et ajustements {away_team}
+  - Blessures/suspensions impactantes? (+/- X tirs)
+  - Forme récente? (+/- X tirs)
+  - Motivation du match? (+/- X tirs)
 
 ETAPE 8: Prédiction {away_team}
-  - Baseline formations (étape 6) ajusté avec contexte (étape 7)
-  - Combien de tirs pour {away_team}?
+  - Baseline (étape 6): X tirs (basé sur historique vs type adversaire)
+  - Ajustements (étape 7): +/- X tirs
+  - Prédiction finale {away_team}: X tirs (fourchette X-Y)
 
 
 PARTIE C: SYNTHESE FINALE
 ──────────────────────────
 
 ETAPE 9: Vérification cohérence
-  - Le total est-il réaliste? (≈28 tirs total)
-  - Ajustements nécessaires?
+  - Total prédit: X tirs ({home_team}) + Y tirs ({away_team}) = Z tirs total
+  - Cohérence avec les classements? (équipe forte vs faible = écart important)
+  - Ajustements finaux si nécessaire
 
 FORMAT DE REPONSE OBLIGATOIRE - TEXTE SIMPLE SANS MARKDOWN:
 
@@ -1128,32 +1155,70 @@ RAISONNEMENT DETAILLE - Arsenal vs Chelsea
 
 PARTIE A: ANALYSE ARSENAL (DOMICILE)
 
-ETAPE 1: Profil d'Arsenal
-Arsenal est actuellement 1er du championnat avec 67 points.
-Leur forme recente est excellente (2e sur 8 matchs).
-A domicile, ils sont classes 10e en attaque et 10e en defense.
+ETAPE 1: Profil d'Arsenal avec CLASSEMENTS
+  - Classement general: 1er sur 20 (67 points)
+  - Classement domicile: 2e
+  - Classement attaque: 1er / Classement defense: 3e
+  - Forme (8 derniers matchs): 2e
+  - TYPE D'EQUIPE: TOP 5
 
-ETAPE 2: Baseline historique
+ETAPE 2: Baseline historique PAR TYPE D'ADVERSAIRE
 En analysant les 14 derniers matchs a domicile:
-  - Moyenne: 15.6 tirs
-  - Contre equipes du top 6: 12 tirs en moyenne
-  - Contre equipes du bas: 18 tirs en moyenne
+  - Moyenne generale: 15.6 tirs
+  - Contre equipes du TOP 5 (Man City, Liverpool, Chelsea, Tottenham): 12 tirs en moyenne
+  - Contre equipes du MILIEU (6e-14e): 15 tirs en moyenne
+  - Contre equipes du BAS (15e-20e): 18 tirs en moyenne
+
+Chelsea est actuellement 6e au classement (equipe du MILIEU).
+Donc Arsenal devrait faire environ 15 tirs (moyenne vs milieu de tableau).
 
 ETAPE 3: Contexte et ajustements
-Blessures: Aucune absence majeure
-Forme: 3 victoires sur les 4 derniers matchs a domicile
-Motivation: Match important pour garder la 1re place
+  - Blessures: Aucune absence majeure (+0 tir)
+  - Forme: 3 victoires sur 4 derniers a domicile (+1 tir)
+  - Motivation: Match important pour le titre (+0 tir)
 
 ETAPE 4: Prediction Arsenal
-Baseline: 15-16 tirs
-Ajustements: +1 tir (bonne forme)
-Prediction finale Arsenal: 16 tirs (fourchette 15-17)
+  - Baseline (etape 2): 15 tirs (vs equipe du milieu)
+  - Ajustements: +1 tir (bonne forme)
+  - Prediction finale Arsenal: 16 tirs (fourchette 15-17)
 
-[Meme structure pour PARTIE B avec l'equipe exterieur]
+
+PARTIE B: ANALYSE CHELSEA (EXTERIEUR)
+
+ETAPE 5: Profil de Chelsea avec CLASSEMENTS
+  - Classement general: 6e sur 20
+  - Classement exterieur: 8e
+  - Classement attaque: 5e / Classement defense: 7e
+  - Forme (8 derniers matchs): 10e
+  - TYPE D'EQUIPE: MILIEU
+
+ETAPE 6: Baseline historique PAR TYPE D'ADVERSAIRE
+En analysant les 12 derniers matchs a l'exterieur:
+  - Moyenne generale: 12.3 tirs
+  - A l'exterieur vs TOP 5 (Arsenal, Man City, Liverpool): 10 tirs en moyenne
+  - A l'exterieur vs MILIEU (6e-14e): 12 tirs en moyenne
+  - A l'exterieur vs BAS (15e-20e): 15 tirs en moyenne
+
+Arsenal est actuellement 1er au classement (equipe du TOP 5).
+Donc Chelsea devrait faire environ 10 tirs (moyenne vs top 5 a l'exterieur).
+
+ETAPE 7: Contexte et ajustements
+  - Blessures: Attaquant principal absent (-1 tir)
+  - Forme: Moyenne recemment (+0 tir)
+  - Motivation: Qualif Europe en jeu (+1 tir)
+
+ETAPE 8: Prediction Chelsea
+  - Baseline (etape 6): 10 tirs (vs equipe du top 5)
+  - Ajustements: -1 +1 = +0 tirs
+  - Prediction finale Chelsea: 10 tirs (fourchette 9-12)
+
 
 PARTIE C: SYNTHESE FINALE
-Total predit: 30 tirs (fourchette 27-33)
-Coherence: OUI, dans les normes d'un match de Premier League
+
+ETAPE 9: Verification coherence
+  - Total predit: 16 (Arsenal) + 10 (Chelsea) = 26 tirs
+  - Coherence: OUI (Arsenal 1er vs Chelsea 6e = domination logique)
+  - Ecart: Arsenal +6 tirs (coherent avec classements)
 
 ==================================================
 PREDICTION FINALE:
@@ -1164,13 +1229,13 @@ HOME_TIRS_MIN: 15
 HOME_TIRS_MAX: 17
 
 EQUIPE EXTERIEUR ({away_team}):
-AWAY_TIRS: 14 tirs (prediction centrale)
-AWAY_TIRS_MIN: 12
-AWAY_TIRS_MAX: 16
+AWAY_TIRS: 10 tirs (prediction centrale)
+AWAY_TIRS_MIN: 9
+AWAY_TIRS_MAX: 12
 
-TOTAL_TIRS: 30 tirs au total (somme des predictions centrales)
+TOTAL_TIRS: 26 tirs au total (somme des predictions centrales)
 
-CONFIANCE: 78%
+CONFIANCE: 82%
 """
 
     # ================================================================
