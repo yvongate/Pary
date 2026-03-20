@@ -50,12 +50,24 @@ class SQLiteDatabaseService:
         table_exists = cursor.fetchone() is not None
 
         if table_exists:
-            # Migration : Recréer la table sans les contraintes NOT NULL sur corners
-            print("Migration de la base de données : suppression des contraintes NOT NULL sur corners...")
+            # Vérifier si la migration a déjà été effectuée
+            cursor.execute("PRAGMA table_info(match_predictions)")
+            columns = cursor.fetchall()
 
-            # 1. Créer table temporaire avec nouveau schéma
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS match_predictions_new (
+            # Chercher la colonne corners_min et vérifier si elle est nullable
+            corners_min_column = next((col for col in columns if col[1] == 'corners_min'), None)
+
+            # Si corners_min existe et est déjà nullable (notnull=0), migration déjà faite
+            if corners_min_column and corners_min_column[3] == 0:  # col[3] = notnull (0=nullable, 1=NOT NULL)
+                # Migration déjà effectuée, ne rien faire
+                pass
+            else:
+                # Migration nécessaire : Recréer la table sans les contraintes NOT NULL sur corners
+                print("Migration de la base de données : suppression des contraintes NOT NULL sur corners...")
+
+                # 1. Créer table temporaire avec nouveau schéma
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS match_predictions_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     match_id TEXT UNIQUE NOT NULL,
                     home_team TEXT NOT NULL,
@@ -91,26 +103,26 @@ class SQLiteDatabaseService:
                     status TEXT DEFAULT 'completed',
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            # 2. Copier les données
-            try:
-                cursor.execute("""
-                    INSERT INTO match_predictions_new
-                    SELECT * FROM match_predictions
+                    )
                 """)
 
-                # 3. Supprimer l'ancienne table
-                cursor.execute("DROP TABLE match_predictions")
+                # 2. Copier les données
+                try:
+                    cursor.execute("""
+                        INSERT INTO match_predictions_new
+                        SELECT * FROM match_predictions
+                    """)
 
-                # 4. Renommer la nouvelle table
-                cursor.execute("ALTER TABLE match_predictions_new RENAME TO match_predictions")
+                    # 3. Supprimer l'ancienne table
+                    cursor.execute("DROP TABLE match_predictions")
 
-                print("✅ Migration réussie : corners sont maintenant optionnels")
-            except Exception as e:
-                print(f"⚠️ Migration ignorée (peut-être déjà faite) : {e}")
-                cursor.execute("DROP TABLE IF EXISTS match_predictions_new")
+                    # 4. Renommer la nouvelle table
+                    cursor.execute("ALTER TABLE match_predictions_new RENAME TO match_predictions")
+
+                    print("[OK] Migration réussie : corners sont maintenant optionnels")
+                except Exception as e:
+                    print(f"[WARNING] Migration ignorée (peut-être déjà faite) : {e}")
+                    cursor.execute("DROP TABLE IF EXISTS match_predictions_new")
         else:
             # Première création : table propre sans contraintes NOT NULL sur corners
             cursor.execute("""
