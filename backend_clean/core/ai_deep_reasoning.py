@@ -458,6 +458,83 @@ ETAPE 9: Vérification cohérence
   - Cohérence avec les classements? (équipe forte vs faible = écart important)
   - Ajustements finaux si nécessaire
 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MAINTENANT: RAISONNEMENT POUR LES TIRS CADRES (même logique)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTEXTE IMPORTANT:
+- Moyenne tirs cadrés {home_team} domicile: {home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
+- Moyenne tirs cadrés {away_team} extérieur: {away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
+- Ratio moyen {home_team}: {(home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 1) * 0.45) / max(home_stats.get('avg_shots', 1), 1)):.1%} (tirs cadrés / tirs totaux)
+- Ratio moyen {away_team}: {(away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 1) * 0.45) / max(away_stats.get('avg_shots', 1), 1)):.1%}
+
+PARTIE D: ANALYSE {home_team} (DOMICILE) - TIRS CADRES
+──────────────────────────────────────────────────────
+
+ETAPE 1D: Baseline tirs cadrés PAR TYPE D'ADVERSAIRE
+  Analyse les stats de {home_team} à domicile:
+  - Moyenne générale tirs cadrés: {home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
+  - Contre équipes du TOP 5: environ X tirs cadrés (moins car adversaire fort)
+  - Contre équipes du MILIEU: environ Y tirs cadrés
+  - Contre équipes du BAS: environ Z tirs cadrés (plus car adversaire faible)
+
+  {away_team} est une équipe du [TOP 5 / MILIEU / BAS].
+  Donc {home_team} devrait faire environ [X/Y/Z] tirs cadrés.
+
+ETAPE 2D: Validation avec ratio historique
+  - Prédiction tirs totaux {home_team} (étape 4): X tirs
+  - Ratio historique {home_team}: {(home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 1) * 0.45) / max(home_stats.get('avg_shots', 1), 1)):.1%}
+  - Tirs cadrés attendus: X × {(home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 1) * 0.45) / max(home_stats.get('avg_shots', 1), 1)):.1%} = Y tirs cadrés
+
+ETAPE 3D: Ajustements contexte {home_team}
+  - Blessures impact offensif? (+/- X tirs cadrés)
+  - Forme = plus ou moins de précision? (+/- X tirs cadrés)
+
+ETAPE 4D: Prédiction finale {home_team} tirs cadrés
+  - Baseline (étape 1D): X tirs cadrés (par type adversaire)
+  - Ratio validation (étape 2D): Y tirs cadrés
+  - Ajustements (étape 3D): +/- Z tirs cadrés
+  - Prédiction finale {home_team} tirs cadrés: Y tirs cadrés (fourchette X-Z)
+
+
+PARTIE E: ANALYSE {away_team} (EXTERIEUR) - TIRS CADRES
+──────────────────────────────────────────────────────
+
+ETAPE 5E: Baseline tirs cadrés PAR TYPE D'ADVERSAIRE
+  Analyse les stats de {away_team} à l'extérieur:
+  - Moyenne générale tirs cadrés: {away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
+  - A l'extérieur vs TOP 5: environ X tirs cadrés (moins car adversaire fort)
+  - A l'extérieur vs MILIEU: environ Y tirs cadrés
+  - A l'extérieur vs BAS: environ Z tirs cadrés (plus car adversaire faible)
+
+  {home_team} est une équipe du [TOP 5 / MILIEU / BAS].
+  Donc {away_team} devrait faire environ [X/Y/Z] tirs cadrés.
+
+ETAPE 6E: Validation avec ratio historique
+  - Prédiction tirs totaux {away_team} (étape 8): X tirs
+  - Ratio historique {away_team}: {(away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 1) * 0.45) / max(away_stats.get('avg_shots', 1), 1)):.1%}
+  - Tirs cadrés attendus: X × {(away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 1) * 0.45) / max(away_stats.get('avg_shots', 1), 1)):.1%} = Y tirs cadrés
+
+ETAPE 7E: Ajustements contexte {away_team}
+  - Blessures impact offensif? (+/- X tirs cadrés)
+  - Forme = plus ou moins de précision? (+/- X tirs cadrés)
+
+ETAPE 8E: Prédiction finale {away_team} tirs cadrés
+  - Baseline (étape 5E): X tirs cadrés (par type adversaire)
+  - Ratio validation (étape 6E): Y tirs cadrés
+  - Ajustements (étape 7E): +/- Z tirs cadrés
+  - Prédiction finale {away_team} tirs cadrés: Y tirs cadrés (fourchette X-Z)
+
+
+PARTIE F: SYNTHESE FINALE - TIRS CADRES
+───────────────────────────────────────
+
+ETAPE 9F: Vérification cohérence tirs cadrés
+  - Total tirs cadrés prédit: X tirs cadrés ({home_team}) + Y tirs cadrés ({away_team}) = Z tirs cadrés total
+  - Cohérence avec prédictions tirs totaux? (Z/total_tirs doit être ~45%)
+  - Ajustements finaux si nécessaire
+
 """
 
         # Si propositions bookmaker, ajouter analyse value
@@ -780,16 +857,43 @@ Donne une fourchette realiste:
 
         prompt += f"""
 
-FORMAT DE REPONSE FINAL:
+EXEMPLE DE BON RAISONNEMENT COMPLET:
 
-PREDICTION BASELINE:
-Total tirs: [nombre_precis] ([min]-[max])
+Pour {home_team}:
+  - Prédiction TIRS TOTAUX (étape 4): 16 tirs (15-17)
+  - Baseline TIRS CADRES vs type adversaire (étape 1D): 7 tirs cadrés
+  - Validation ratio (étape 2D): 16 × 44% = 7 tirs cadrés ✓ Cohérent!
+  - Ajustements (étape 3D): +0 (pas de changement)
+  - Prédiction finale TIRS CADRES (étape 4D): 7 tirs cadrés (6-8)
 
-SHOTS: [nombre_precis] (prediction centrale)
+Pour {away_team}:
+  - Prédiction TIRS TOTAUX (étape 8): 10 tirs (9-12)
+  - Baseline TIRS CADRES vs type adversaire (étape 5E): 4 tirs cadrés
+  - Validation ratio (étape 6E): 10 × 40% = 4 tirs cadrés ✓ Cohérent!
+  - Ajustements (étape 7E): +0 (pas de changement)
+  - Prédiction finale TIRS CADRES (étape 8E): 4 tirs cadrés (3-5)
+
+Total final:
+  - Tirs totaux: 16 + 10 = 26 tirs
+  - Tirs cadrés: 7 + 4 = 11 tirs cadrés
+  - Ratio validation: 11 / 26 = 42% ✓ Cohérent avec moyennes!
+
+
+FORMAT DE REPONSE FINAL (TEXTE SIMPLE):
+
+RAISONNEMENT COMPLET POUR {home_team} vs {away_team}
+
+[VOTRE RAISONNEMENT DETAILLE AVEC ETAPES]
+
+PREDICTIONS FINALES:
+
+TIRS TOTAUX:
+SHOTS: [nombre] (prediction centrale)
 SHOTS_RANGE_MIN: [nombre]
 SHOTS_RANGE_MAX: [nombre]
 
-SHOTS_ON_TARGET: [nombre_precis] (tirs cadrés prediction centrale)
+TIRS CADRES:
+SHOTS_ON_TARGET: [nombre] (prediction centrale)
 SHOTS_ON_TARGET_MIN: [nombre]
 SHOTS_ON_TARGET_MAX: [nombre]
 """
