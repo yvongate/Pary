@@ -41,8 +41,8 @@ class DeepReasoningAnalyzer:
                 'away_formation': str,
                 'home_players': List[str],
                 'away_players': List[str],
-                'home_stats': {'avg_shots': float},
-                'away_stats': {'avg_shots': float},
+                'home_stats': {'avg_shots': float, 'avg_shots_on_target': float},
+                'away_stats': {'avg_shots': float, 'avg_shots_on_target': float},
                 'league': str,
                 'match_date': str,
                 'bookmaker_propositions': str (optionnel, texte brut)
@@ -50,7 +50,8 @@ class DeepReasoningAnalyzer:
 
         Returns:
             {
-                'shots_range': {'min': int, 'max': int},
+                'shots_range': {'min': int, 'max': int, 'predicted': int},
+                'shots_on_target_range': {'min': int, 'max': int, 'predicted': int},
                 'reasoning': str,
                 'best_value_bet': str (optionnel, si propositions fournies),
                 'best_balanced_bet': str (optionnel, si propositions fournies)
@@ -377,6 +378,13 @@ INSTRUCTIONS DE RAISONNEMENT (OBLIGATOIRES)
 IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE en cherchant des PATTERNS.
 Tu DOIS analyser les performances SELON LE TYPE D'ADVERSAIRE (top 5, milieu, bas de tableau).
 Tu DOIS citer les CLASSEMENTS et POSITIONS exactes des équipes.
+
+METRICS A PREDIRE:
+Tu DOIS predire DEUX metriques:
+1. Le nombre de TIRS TOTAUX
+2. Le nombre de TIRS CADRES (shots on target)
+
+Utilise la ratio moyenne historique: tirs_cadres ≈ tirs_totaux * {(home_stats.get('avg_shots_on_target', 0) / max(home_stats.get('avg_shots', 1), 1)) if home_stats.get('avg_shots_on_target') else 0.45:.2f} (ratio {home_team} domicile)
 
 PARTIE A: ANALYSE {home_team} (DOMICILE)
 ──────────────────────────────────────
@@ -780,6 +788,10 @@ Total tirs: [nombre_precis] ([min]-[max])
 SHOTS: [nombre_precis] (prediction centrale)
 SHOTS_RANGE_MIN: [nombre]
 SHOTS_RANGE_MAX: [nombre]
+
+SHOTS_ON_TARGET: [nombre_precis] (tirs cadrés prediction centrale)
+SHOTS_ON_TARGET_MIN: [nombre]
+SHOTS_ON_TARGET_MAX: [nombre]
 """
 
         # Appel à l'IA
@@ -809,25 +821,31 @@ SHOTS_RANGE_MAX: [nombre]
             print(f"[ERREUR IA DEEP REASONING] {e}")
             # Fallback
             total_shots = home_stats.get('avg_shots', 15) + away_stats.get('avg_shots', 10)
+            total_sot = home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 15) * 0.45) + away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 10) * 0.45)
 
             return {
-                'shots_range': {'min': int(total_shots - 5), 'max': int(total_shots + 5)},
+                'shots_range': {'min': int(total_shots - 5), 'max': int(total_shots + 5), 'predicted': int(total_shots)},
+                'shots_on_target_range': {'min': int(total_sot - 2), 'max': int(total_sot + 2), 'predicted': int(total_sot)},
                 'reasoning': f'Erreur IA: {e}. Utilisation baseline historique.'
             }
 
     def _parse_response(self, text: str) -> Dict:
-        """Parse la réponse de l'IA"""
+        """Parse la réponse de l'IA pour extraire shots et shots_on_target"""
         import re
 
         result = {
             'shots': 25,
-            'shots_range': {'min': 20, 'max': 30}
+            'shots_range': {'min': 20, 'max': 30, 'predicted': 25},
+            'shots_on_target': 11,
+            'shots_on_target_range': {'min': 9, 'max': 13, 'predicted': 11}
         }
 
+        # ===== TIRS TOTAUX =====
         # Extraire SHOTS (nombre précis)
         match = re.search(r'SHOTS:\s*(\d+)', text)
         if match:
             result['shots'] = int(match.group(1))
+            result['shots_range']['predicted'] = int(match.group(1))
 
         # Extraire SHOTS_RANGE_MIN
         match = re.search(r'SHOTS_RANGE_MIN:\s*(\d+)', text)
@@ -838,6 +856,23 @@ SHOTS_RANGE_MAX: [nombre]
         match = re.search(r'SHOTS_RANGE_MAX:\s*(\d+)', text)
         if match:
             result['shots_range']['max'] = int(match.group(1))
+
+        # ===== TIRS CADRES =====
+        # Extraire SHOTS_ON_TARGET (nombre précis)
+        match = re.search(r'SHOTS_ON_TARGET:\s*(\d+)', text)
+        if match:
+            result['shots_on_target'] = int(match.group(1))
+            result['shots_on_target_range']['predicted'] = int(match.group(1))
+
+        # Extraire SHOTS_ON_TARGET_MIN
+        match = re.search(r'SHOTS_ON_TARGET_MIN:\s*(\d+)', text)
+        if match:
+            result['shots_on_target_range']['min'] = int(match.group(1))
+
+        # Extraire SHOTS_ON_TARGET_MAX
+        match = re.search(r'SHOTS_ON_TARGET_MAX:\s*(\d+)', text)
+        if match:
+            result['shots_on_target_range']['max'] = int(match.group(1))
 
         return result
 
