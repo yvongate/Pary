@@ -94,6 +94,7 @@ class DynamicPredictor:
                             'opponent': row['AwayTeam'],
                             'home': True,
                             'shots': int(row['HS']),
+                            'shots_on_target': int(row['HST']) if pd.notna(row.get('HST')) else None,
                             'corners': int(row['HC']),
                             'goals_for': int(row['FTHG']) if pd.notna(row.get('FTHG')) else None,
                             'goals_against': int(row['FTAG']) if pd.notna(row.get('FTAG')) else None,
@@ -110,6 +111,7 @@ class DynamicPredictor:
                             'opponent': row['HomeTeam'],
                             'home': False,
                             'shots': int(row['AS']),
+                            'shots_on_target': int(row['AST']) if pd.notna(row.get('AST')) else None,
                             'corners': int(row['AC']),
                             'goals_for': int(row['FTAG']) if pd.notna(row.get('FTAG')) else None,
                             'goals_against': int(row['FTHG']) if pd.notna(row.get('FTHG')) else None,
@@ -785,6 +787,7 @@ Analyse et ajuste maintenant:"""
         # Collecter données HOME
         X_home = []
         y_shots_home = []
+        y_shots_on_target_home = []
 
         for match in home_matches:
             opponent = match['opponent']
@@ -800,10 +803,14 @@ Analyse et ajuste maintenant:"""
 
                 X_home.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_home.append(match['shots'])
+                # Ajouter tirs cadrés (si disponibles)
+                if match.get('shots_on_target') is not None:
+                    y_shots_on_target_home.append(match['shots_on_target'])
 
         # Collecter données AWAY
         X_away = []
         y_shots_away = []
+        y_shots_on_target_away = []
 
         for match in away_matches:
             opponent = match['opponent']
@@ -818,11 +825,16 @@ Analyse et ajuste maintenant:"""
 
                 X_away.append([1.0, off_inv, def_inv, form_inv])  # Ajouter intercept (1.0)
                 y_shots_away.append(match['shots'])
+                # Ajouter tirs cadrés (si disponibles)
+                if match.get('shots_on_target') is not None:
+                    y_shots_on_target_away.append(match['shots_on_target'])
 
         X_home = np.array(X_home)
         y_shots_home = np.array(y_shots_home)
+        y_shots_on_target_home = np.array(y_shots_on_target_home) if y_shots_on_target_home else None
         X_away = np.array(X_away)
         y_shots_away = np.array(y_shots_away)
+        y_shots_on_target_away = np.array(y_shots_on_target_away) if y_shots_on_target_away else None
 
         # Fonction de log-vraisemblance Poisson pour TIRS (bidirectionnel)
         def poisson_log_likelihood_shots(params):
@@ -861,6 +873,20 @@ Analyse et ajuste maintenant:"""
             options={'maxiter': 1000}
         )
 
+        # Calculer les stats des tirs cadrés
+        avg_shots_on_target_home = None
+        avg_shots_on_target_away = None
+        ratio_on_target_home = None
+        ratio_on_target_away = None
+
+        if y_shots_on_target_home is not None and len(y_shots_on_target_home) > 0:
+            avg_shots_on_target_home = float(np.mean(y_shots_on_target_home))
+            ratio_on_target_home = avg_shots_on_target_home / float(np.mean(y_shots_home)) if np.mean(y_shots_home) > 0 else 0
+
+        if y_shots_on_target_away is not None and len(y_shots_on_target_away) > 0:
+            avg_shots_on_target_away = float(np.mean(y_shots_on_target_away))
+            ratio_on_target_away = avg_shots_on_target_away / float(np.mean(y_shots_away)) if np.mean(y_shots_away) > 0 else 0
+
         return {
             'shots': {
                 'beta_home': result_shots.x[0:4].tolist(),
@@ -872,7 +898,11 @@ Analyse et ajuste maintenant:"""
                 'home_matches_analyzed': len(X_home),
                 'away_matches_analyzed': len(X_away),
                 'avg_shots_home': float(np.mean(y_shots_home)),
-                'avg_shots_away': float(np.mean(y_shots_away))
+                'avg_shots_away': float(np.mean(y_shots_away)),
+                'avg_shots_on_target_home': avg_shots_on_target_home,
+                'avg_shots_on_target_away': avg_shots_on_target_away,
+                'ratio_on_target_home': ratio_on_target_home,
+                'ratio_on_target_away': ratio_on_target_away
             },
             'max_rank': max_rank
         }
@@ -1223,6 +1253,13 @@ Analyse et ajuste maintenant:"""
         home_shots = max(0, home_shots_raw)
         away_shots = max(0, away_shots_raw)
 
+        # Calculer tirs cadrés basés sur les ratios historiques
+        ratio_home = poisson_model['stats']['ratio_on_target_home'] or 0.45  # Default ~45% if not available
+        ratio_away = poisson_model['stats']['ratio_on_target_away'] or 0.45
+
+        home_shots_on_target = home_shots * ratio_home
+        away_shots_on_target = away_shots * ratio_away
+
         # Calculer fourchettes par équipe (±15% pour créer une plage réaliste)
         variance_shots = 0.15  # 15% de variance
 
@@ -1230,6 +1267,12 @@ Analyse et ajuste maintenant:"""
         home_shots_max = int(home_shots * (1 + variance_shots))
         away_shots_min = int(max(0, away_shots * (1 - variance_shots)))
         away_shots_max = int(away_shots * (1 + variance_shots))
+
+        # Fourchettes pour tirs cadrés
+        home_shots_on_target_min = int(max(0, home_shots_on_target * (1 - variance_shots)))
+        home_shots_on_target_max = int(home_shots_on_target * (1 + variance_shots))
+        away_shots_on_target_min = int(max(0, away_shots_on_target * (1 - variance_shots)))
+        away_shots_on_target_max = int(away_shots_on_target * (1 + variance_shots))
 
         # 8. Construire le rsultat
         result = {
@@ -1245,6 +1288,11 @@ Analyse et ajuste maintenant:"""
                 'away_team_shots': round(away_shots, 1),
                 'total_shots': round(home_shots + away_shots, 1),
 
+                # TIRS CADRES
+                'home_team_shots_on_target': round(home_shots_on_target, 1),
+                'away_team_shots_on_target': round(away_shots_on_target, 1),
+                'total_shots_on_target': round(home_shots_on_target + away_shots_on_target, 1),
+
                 # Intervalles de confiance (optionnel)
                 'home_shots_range': {
                     'min': home_shots_min,
@@ -1255,6 +1303,18 @@ Analyse et ajuste maintenant:"""
                     'min': away_shots_min,
                     'max': away_shots_max,
                     'predicted': round(away_shots, 1)
+                },
+
+                # Intervalles pour tirs cadrés
+                'home_shots_on_target_range': {
+                    'min': home_shots_on_target_min,
+                    'max': home_shots_on_target_max,
+                    'predicted': round(home_shots_on_target, 1)
+                },
+                'away_shots_on_target_range': {
+                    'min': away_shots_on_target_min,
+                    'max': away_shots_on_target_max,
+                    'predicted': round(away_shots_on_target, 1)
                 },
 
                 # Baseline Poisson (avant ajustements IA)

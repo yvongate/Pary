@@ -114,9 +114,11 @@ SECTION 2: STATISTIQUES HISTORIQUES (BASELINE)
 
 {home_team}:
   - Moyenne tirs: {home_stats.get('avg_shots', 0):.1f} tirs/match
+  - Moyenne tirs cadrés: {home_stats.get('avg_shots_on_target', home_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
 
 {away_team}:
   - Moyenne tirs: {away_stats.get('avg_shots', 0):.1f} tirs/match
+  - Moyenne tirs cadrés: {away_stats.get('avg_shots_on_target', away_stats.get('avg_shots', 0) * 0.45):.1f} tirs/match
 
 """
 
@@ -888,7 +890,9 @@ def generate_deep_analysis_prediction(
     # CONSTRUIRE LE PROMPT ULTRA-DETAILLE
     # ================================================================
 
-    prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT. Tu dois predire le nombre de TIRS pour ce match.
+    prompt = f"""Tu es un ANALYSTE FOOTBALL EXPERT. Tu dois predire DEUX METRIQUES pour ce match:
+1. Le nombre de TIRS (tirs totaux)
+2. Le nombre de TIRS CADRES (shots on target)
 
 IMPORTANT: Tu dois raisonner ETAPE PAR ETAPE avec des "SI/ALORS" en cherchant des PATTERNS dans l'historique.
 
@@ -1381,16 +1385,32 @@ ETAPE 9: Verification coherence
 PREDICTION FINALE:
 
 EQUIPE DOMICILE ({home_team}):
+
+TIRS TOTAUX:
 HOME_TIRS: 16 tirs (prediction centrale)
 HOME_TIRS_MIN: 15
 HOME_TIRS_MAX: 17
 
+TIRS CADRES:
+HOME_TIRS_CADRES: 7 tirs cadrés (prediction centrale)
+HOME_TIRS_CADRES_MIN: 6
+HOME_TIRS_CADRES_MAX: 8
+
 EQUIPE EXTERIEUR ({away_team}):
+
+TIRS TOTAUX:
 AWAY_TIRS: 10 tirs (prediction centrale)
 AWAY_TIRS_MIN: 9
 AWAY_TIRS_MAX: 12
 
+TIRS CADRES:
+AWAY_TIRS_CADRES: 4 tirs cadrés (prediction centrale)
+AWAY_TIRS_CADRES_MIN: 3
+AWAY_TIRS_CADRES_MAX: 5
+
+TOTAUX:
 TOTAL_TIRS: 26 tirs au total (somme des predictions centrales)
+TOTAL_TIRS_CADRES: 11 tirs cadrés au total
 
 CONFIANCE: 82%
 """
@@ -1522,14 +1542,22 @@ def _parse_ai_prediction(text: str) -> Dict:
         'home_shots': 14,
         'home_shots_min': 10,
         'home_shots_max': 18,
+        'home_shots_on_target': 6,
+        'home_shots_on_target_min': 5,
+        'home_shots_on_target_max': 8,
         'away_shots': 10,
         'away_shots_min': 8,
         'away_shots_max': 16,
+        'away_shots_on_target': 4,
+        'away_shots_on_target_min': 3,
+        'away_shots_on_target_max': 6,
         'total_shots': 24,
+        'total_shots_on_target': 10,
         'confidence': 50,
         'reasoning': text
     }
 
+    # ===== TIRS TOTAUX =====
     # Extraire HOME_TIRS (nombre précis)
     match = re.search(r'HOME_TIRS:\s*(\d+)', text)
     if match:
@@ -1564,6 +1592,42 @@ def _parse_ai_prediction(text: str) -> Dict:
     match = re.search(r'TOTAL_TIRS:\s*(\d+)', text)
     if match:
         result['total_shots'] = int(match.group(1))
+
+    # ===== TIRS CADRES =====
+    # Extraire HOME_TIRS_CADRES
+    match = re.search(r'HOME_TIRS_CADRES:\s*(\d+)', text)
+    if match:
+        result['home_shots_on_target'] = int(match.group(1))
+
+    # Extraire HOME_TIRS_CADRES_MIN
+    match = re.search(r'HOME_TIRS_CADRES_MIN:\s*(\d+)', text)
+    if match:
+        result['home_shots_on_target_min'] = int(match.group(1))
+
+    # Extraire HOME_TIRS_CADRES_MAX
+    match = re.search(r'HOME_TIRS_CADRES_MAX:\s*(\d+)', text)
+    if match:
+        result['home_shots_on_target_max'] = int(match.group(1))
+
+    # Extraire AWAY_TIRS_CADRES
+    match = re.search(r'AWAY_TIRS_CADRES:\s*(\d+)', text)
+    if match:
+        result['away_shots_on_target'] = int(match.group(1))
+
+    # Extraire AWAY_TIRS_CADRES_MIN
+    match = re.search(r'AWAY_TIRS_CADRES_MIN:\s*(\d+)', text)
+    if match:
+        result['away_shots_on_target_min'] = int(match.group(1))
+
+    # Extraire AWAY_TIRS_CADRES_MAX
+    match = re.search(r'AWAY_TIRS_CADRES_MAX:\s*(\d+)', text)
+    if match:
+        result['away_shots_on_target_max'] = int(match.group(1))
+
+    # Extraire TOTAL_TIRS_CADRES
+    match = re.search(r'TOTAL_TIRS_CADRES:\s*(\d+)', text)
+    if match:
+        result['total_shots_on_target'] = int(match.group(1))
 
     # Extraire CONFIANCE
     match = re.search(r'CONFIANCE:\s*(\d+)', text)
